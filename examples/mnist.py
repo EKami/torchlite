@@ -1,11 +1,9 @@
 from torchvision import datasets, transforms
 from torchlight.classifier import Classifier
 from torchlight.metrics import CategoricalAccuracy
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 
@@ -47,7 +45,7 @@ def main():
     net = Net()
     classifier = Classifier(net)
 
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.99)
+    optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
     loss = F.nll_loss
     metrics = [CategoricalAccuracy()]
 

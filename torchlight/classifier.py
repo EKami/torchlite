@@ -178,8 +178,7 @@ class Classifier:
                 # If there are callback call their __call__ method and pass in some arguments
                 if callbacks:
                     for cb in callbacks:
-                        cb(step_name="predict",
-                           net=self.net,
+                        cb(net=self.net,
                            probs=probs,
                            files_name=files_name
                            )
