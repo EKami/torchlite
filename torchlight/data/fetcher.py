@@ -10,7 +10,8 @@ class KaggleDatasetFetcher:
     """
 
     @staticmethod
-    def download_dataset(competition_name, competition_files, output_folder, to_feather=False):
+    def download_dataset(competition_name: str, competition_files: list,
+                         output_folder: str, to_feather=False):
         """
             Downloads the dataset and return the input paths.
             You need to define $KAGGLE_USER and $KAGGLE_PASSWD in your environment
@@ -42,7 +43,7 @@ class KaggleDatasetFetcher:
 
         if not is_dataset_present:
             # Put your Kaggle user name and password in a $KAGGLE_USER and $KAGGLE_PASSWD env vars respectively
-            downloader = KaggleDataDownloader(os.getenv("$KAGGLE_USER"), os.getenv("KAGGLE_PASSWD"), competition_name)
+            downloader = KaggleDataDownloader(os.getenv("KAGGLE_USER"), os.getenv("KAGGLE_PASSWD"), competition_name)
 
             zipfiles = [file + ".7z" for file in competition_files]
             for file in zipfiles:
