@@ -1,6 +1,6 @@
 from torchvision import datasets, transforms
-from torchlight.classifier import Classifier
-from torchlight.metrics import CategoricalAccuracy
+from torchlight.nn.classifier import Classifier
+from torchlight.nn.metrics import CategoricalAccuracy
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader

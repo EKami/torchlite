@@ -1,12 +1,12 @@
 import torch
-import tools
-from torch.autograd import Variable
 import torch.nn.functional as F
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from nn import tools
+from nn.metrics import MetricsList
 from .callbacks import CallbackList, TQDM
-from .metrics import MetricsList
 
 
 class Classifier:
