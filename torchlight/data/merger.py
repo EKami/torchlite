@@ -1,62 +1,44 @@
 import pandas as pd
-from multiprocessing import cpu_count
-from multiprocessing import Pool
-import uuid
-import time
-
-g_from_df = None
-g_merge_fnc_param = None
-g_on_df_tranformer = None
-g_output_file = None
+import dask
+import os
+import shutil
+from dask.diagnostics import ProgressBar
 
 
-def _evaluate_chunk(chunk):
-    global g_from_df, g_merge_fnc_param, g_on_df_tranformer, g_output_file
-    identifier = uuid.uuid4()
-    output_file = g_output_file + '_' + str(identifier)
-    chunk = g_on_df_tranformer(chunk)
-    chunk = chunk.merge(g_from_df, **g_merge_fnc_param)
-    chunk.to_csv(output_file, header=False)
-    chunk_types = [(name, dtype) for name, dtype in zip(chunk.columns.tolist(), chunk.dtypes.tolist())]
-    return output_file
-
-
-def merge_df(from_df: pd.DataFrame, on_df: pd.io.parsers.TextFileReader,
-             output_file: str, merge_fnc_param: dict,
-             on_df_tranformer: callable = None,
-             nthreads=cpu_count(), verbose=True) -> list:
+def merge_datasets(on_df: list, from_df: list, merge_fnc: list, output_files: list,
+                   replace_if_exist=False):
     """
-    This function is useful when you want to merge a little dataframe `from_df` into a big one `on_df`.
-    It uses `on_df` (a DataFrame opened in chunks) and avoid using too much RAM.
-    Merges from_df into on_df while loading into memory on_df up to its chunksize defined at its creation.
-    The input dataframes rest untouched.
+    Merges pandas/dask dataframes from from_df to on_df. This allow
+    for efficient merging of tables
+
     Args:
-        from_df (pd.DataFrame):
-        on_df (pd.io.parsers.TextFileReader): A pandas DataFrame opened with a `chunksize` parameter
-        output_file (str): The resulting output file
-        merge_fnc_param (dict): The pandas.DataFrame.merge() function named parameters
-        on_df_tranformer (callable): A function which operates at each read of a chunk and apply some
-            preprocessing to the read chunk. Signature: func(pd.Dataframe) -> pd.Dataframe
-        nthreads (int): Number of threads to use for merging
-        verbose (bool): Display information messages
+        on_df (list): List of main dataframes which will get metadata merged from from_df
+        from_df (list):
+        merge_fnc (list): List of functions for merging with signature
+            (on_df, from_df) -> on_df. Must be the same size as from_df.
+        output_files (list): List of output files. Will be saved into the Apache Parquet format.
+            Must be of the same size as on_df
+        replace_if_exist (bool): Replace if the files already exists
     Returns:
-        list: A list of tuple each containing the type and name of each columns of the resulting output file
+
     """
-    global g_from_df, g_merge_fnc_param, g_on_df_tranformer, g_output_file
-    g_from_df = from_df
-    g_merge_fnc_param = merge_fnc_param
-    g_on_df_tranformer = on_df_tranformer
-    g_output_file = output_file
+    assert len(from_df) == len(merge_fnc), "from_df and merge_fnc length differs"
+    assert len(output_files) == len(on_df), "on_df and output_files length differs"
 
-    start_time = time.time()
-    header_set = False
-    chunk_types = None
-    output_files = []
-    with Pool(processes=nthreads) as pool:
-        output_files.append(pool.map(_evaluate_chunk, on_df))
+    for df_opath in output_files:
+        if os.path.exists(df_opath):
+            if replace_if_exist:
+                shutil.rmtree(df_opath)
+            else:
+                print("Datasets already merged")
+                return
 
-    del g_from_df, g_merge_fnc_param, g_on_df_tranformer, g_output_file
-    if verbose:
-        print("--- Merging finished in %s minutes ---" % round((time.time() - start_time) / 60, 2))
+    for idf_main in range(len(on_df)):
+        for df_second, df_second_fnc in zip(from_df, merge_fnc):
+            df_main = on_df[idf_main]
+            on_df[idf_main] = df_second_fnc(df_main, df_second)
 
-    return chunk_types
+    for main_df, df_ofile in zip(on_df, output_files):
+        print(f"Processing {df_ofile}")
+        with ProgressBar():
+            main_df.to_parquet(df_ofile)
