@@ -16,6 +16,9 @@ class KaggleDatasetFetcher:
             Downloads the dataset and return the input paths.
             You need to define $KAGGLE_USER and $KAGGLE_PASSWD in your environment
             and you must accept the competition rules beforehand.
+
+            This downloader uses https://github.com/EKami/kaggle-data-downloader
+            and assumes everything is properly installed.
         Args:
             competition_name (str): The name of the competition
             competition_files (list): List of files for the competition
