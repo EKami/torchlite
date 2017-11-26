@@ -2,12 +2,12 @@ import os
 import sklearn
 from sklearn.preprocessing.data import StandardScaler
 from sklearn_pandas.dataframe_mapper import DataFrameMapper
+from dask.diagnostics import ProgressBar
 import warnings
 import pandas as pd
 
 import dask
-import dask.dataframe as dd
-from dask.diagnostics import ProgressBar
+from tqdm import tqdm
 import numpy as np
 from pandas.api.types import is_numeric_dtype
 
@@ -61,43 +61,32 @@ def fix_missing(df, col, name, na_dict):
     1   500    2
     2     3    2
     """
-    with ProgressBar():
-        col_c = col
-        if isinstance(col, dask.dataframe.core.Series):
-            col_c = col.compute()
-        if is_numeric_dtype(col):
-            if pd.isnull(col).sum() or (name in na_dict):
-                filler = na_dict[name] if name in na_dict else col_c.median()
-                na_dict[name] = filler
-                df[name + '_na'] = col.isnull()
-                df[name] = col.fillna(filler)
+    col_c = col
+    if is_numeric_dtype(col):
+        if pd.isnull(col).sum() or (name in na_dict):
+            filler = na_dict[name] if name in na_dict else col_c.median()
+            na_dict[name] = filler
+            df[name + '_na'] = col.isnull()
+            df[name] = col.fillna(filler)
     return na_dict
 
 
-def _fix_na(df, na_dict, verbose):
+def _fix_na(df, na_dict, verbose, name):
     columns = df.columns
     if verbose:
         print("Calculating NA...")
-        if isinstance(df, dask.dataframe.core.DataFrame):
-            print("------------ Ratio of NA values -------------\n" +
-                  str(df.isnull().sum().compute() / len(df)))
-        else:
-            print("------------ Ratio of NA values -------------\n" +
-                  str(df.isnull().sum().compute() / len(df)))
+        print(f"---------- Ratio of NA values for {name} -----------\n" +
+              str(df.isnull().sum() / len(df)))
 
     print(f"--- Fixing NA values ({len(columns)} passes) ---")
-    for i, c in enumerate(columns):
-        print(f"Pass {i+1}/{len(columns)}")
+    for c in tqdm(columns, total=len(columns)):
         na_dict = fix_missing(df, df[c], c, na_dict)
 
+    print(f"List of NA columns fixed: {list(na_dict.keys())}")
     if verbose:
         print("Calculating NA...")
-        if isinstance(df, dask.dataframe.core.DataFrame):
-            print("---------- New Ratio of NA values -----------\n" +
-                  str(df.isnull().sum().compute() / len(df)))
-        else:
-            print("---------- New Ratio of NA values -----------\n" +
-                  str(df.isnull().sum().compute() / len(df)))
+        print(f"-------- New Ratio of NA values for {name} ---------\n" +
+              str(df.isnull().sum() / len(df)))
     return df
 
 
@@ -110,12 +99,19 @@ def scale_vars(df, mapper=None):
     return mapper
 
 
+def get_all_non_numeric(df):
+    non_num_cols = []
+    for col in df.columns:
+        if not is_numeric_dtype(df[col]):
+            non_num_cols.append(col)
+    return non_num_cols
+
+
 def apply_encoding(df, numeric_features, categ_features,
                    output_file, do_scale=False,
-                   na_dict=None, verbose=False):
+                   na_dict=None, verbose=True, name='dataframe'):
     """
     Apply encoding to the passed dataframes and return a new dataframe with the encoded features.
-    /!\ At this point only pandas dataframes are accepted
 
     The features from the `dataframes` parameter which are not passed neither in `numeric_features`
     nor in `categ_features` are just ignored for the resulting dataframe.
@@ -138,6 +134,7 @@ def apply_encoding(df, numeric_features, categ_features,
             returned as DataFrame from this function.
         verbose (bool): Whether to make this function verbose. If not set the function still
         returns few messages
+        name (str): Only useful for the verbose output
 
     Returns:
         str: A path to a pandas dataframe with encoded features
@@ -145,34 +142,46 @@ def apply_encoding(df, numeric_features, categ_features,
     # Check if the encoding has already been generated with
     # https://stackoverflow.com/questions/31567401/get-the-same-hash-value-for-a-pandas-dataframe-each-time
 
-    na_dict = na_dict if na_dict else {}
     if os.path.exists(output_file):
-        print("Encoding files already generated")
+        print(f"Encoding file {name} already generated")
         return pd.read_feather(output_file)
 
-    df = _fix_na(df, na_dict, verbose)
-    if do_scale:
-        mapper = scale_vars(df)
+    if isinstance(df, dask.dataframe.core.DataFrame):
+        with ProgressBar():
+            print("Turning dask DataFrame into pandas DataFrame")
+            df = df.compute()
+    categ_feat = list(categ_features.keys())
+    all_feat = list(numeric_features.keys()) + categ_feat
+    na_dict = na_dict if na_dict else {}
+    df_columns = df.columns
+    missing_col = [col for col in df_columns if col not in all_feat]
+    df = df[[feat for feat in all_feat if feat in df_columns]].copy()
 
-    columns = df.columns
-    categ_cols = list(categ_features.keys())
-    print(f"Categorizing features {categ_cols}")
-    df[categ_cols].apply(lambda x: x.astype('category'))
+    df = _fix_na(df, na_dict, verbose, name)
 
-    all_feat = list(numeric_features.keys()) + categ_cols
-    missing_col = [col for col in columns if col not in all_feat]
+    print(f"Categorizing features {categ_feat}")
+    df[categ_feat].apply(lambda x: x.astype('category'))
+
     print(f"Warning: Missing columns: {missing_col}, dropping them...")
     for k, v in numeric_features.items():
-        if k in columns:
+        if k in df_columns:
             df[k] = df[k].astype(v)
 
-    for i, (k, v) in enumerate(categ_features.items()):
-        print(f"Categ transform {i+1}/{len(categ_cols)}")
-        if k in columns:
+    for k, v in tqdm(categ_features.items(), total=len(categ_features.items())):
+        if k in df_columns:
             if isinstance(v, str):
                 v = v.lower()
             if v == 'onehot':
                 df = pd.get_dummies(df, columns=[k])
-
-    df.to_feather(output_file)
+            elif v == 'continuous':
+                df[k] = df[k].astype('category').cat.codes
+    if do_scale:
+        mapper = scale_vars(df)
+        print(f"List of scaled columns: {mapper}")
+    non_num_cols = get_all_non_numeric(df)
+    if len(non_num_cols) > 0:
+        raise Exception(f"Not all columns are numeric: {non_num_cols}, DataFrame not saved.")
+    df.reset_index().to_feather(output_file)  # drop=True reset_index
+    print(f"---------- Dtypes of {name} -----------\n" + str(df.dtypes))
+    print("---------- Preprocessing done -----------")
     return df

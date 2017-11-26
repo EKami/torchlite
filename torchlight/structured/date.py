@@ -49,7 +49,7 @@ def add_elapsed(df, field_name, prefix, inplace=False):
         inplace (bool): Do the operation inplace or not
 
     Returns:
-
+        A pandas or dask DataFrame depending on what was passed in
     """
     day1 = np.timedelta64(1, 'D')
     last_date = np.datetime64()
@@ -66,3 +66,4 @@ def add_elapsed(df, field_name, prefix, inplace=False):
             last_date = d
         res.append(((d - last_date).astype('timedelta64[D]') / day1).astype(int))
     df[prefix + field_name] = res
+    return df

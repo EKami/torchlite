@@ -13,4 +13,6 @@ def nwrmsle(y_true: np.ndarray, y_pred: np.ndarray, weights: np.ndarray):
         int: The NWRMSLE
     """
     assert y_true.shape == y_pred.shape == weights.shape, "Arguments are not of same shape"
-    return np.sqrt((weights * np.exp((np.log1p(y_pred) - np.log1p(y_true)), 2)) / weights)
+    y_true = y_true.clip(min=0)
+    y_pred = y_pred.clip(min=0)
+    return np.sqrt(np.sum(weights * np.square(np.log1p(y_pred) - np.log1p(y_true))) / np.sum(weights))
