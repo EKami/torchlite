@@ -51,7 +51,7 @@ class Classifier:
                                                   "metrics": logs,
                                                   "iterations_count": it_count})
 
-        return losses.avg, metrics_list
+        return losses.debias_loss, metrics_list
 
     def _train_epoch(self, train_loader, optimizer, loss_fnc, metrics_list, callback_list):
         # Total training files count / batch_size
@@ -82,7 +82,7 @@ class Classifier:
                                                   "loss": loss.data[0],
                                                   "metrics": logs,
                                                   "iterations_count": it_count})
-        return losses.avg, metrics_list
+        return losses.debias_loss, metrics_list
 
     def _run_epoch(self, train_loader, valid_loader, optimizer, loss, metrics, callback_list):
 

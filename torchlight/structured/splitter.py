@@ -49,6 +49,7 @@ def split_train_val(train_df, split_on, split_train_range, split_val_range, outp
     _save_split(train_df, train_split, "Train", train_split_file)
     gc.collect()
     train_split = _read_split(train_split_file)
+    val_split = None
     if split_val_range:
         val_split_file = os.path.join(output_dir, "split_val_" + str(split_val_range[0]) +
                                       "_to_" + str(split_val_range[1]) + ".feather")
@@ -58,5 +59,4 @@ def split_train_val(train_df, split_on, split_train_range, split_val_range, outp
         _save_split(train_df, val_split, "Val", val_split_file)
         gc.collect()
         val_split = _read_split(val_split_file)
-        return train_split, val_split
-    return train_split
+    return train_split, val_split

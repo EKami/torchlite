@@ -16,9 +16,9 @@ def add_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
     Args:
         df (pd.DataFrame, dd.DataFrame): A pandas or dask dataframe
         field_name (str): A string that is the name of the date column you wish to expand.
-            Assumes the column is of type datetime64.
+            Assumes the column is of type datetime64
         transform_list (list): List of data transformations to add to the original dataset
-        drop (bool): If true then the original date column will be removed.
+        drop (bool): If true then the original date column will be removed
         inplace (bool): Do the operation inplace or not
     Returns:
         A pandas or dask DataFrame depending on what was passed in
@@ -34,36 +34,4 @@ def add_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
     df[targ_pre + 'Elapsed'] = field.astype(np.int64) // 10 ** 9
     if drop:
         df = df.drop(field_name, axis=1)
-    return df
-
-
-def add_elapsed(df, field_name, prefix, inplace=False):
-    """
-    Add durations to the dataframe. The dataframe must already
-    be sorted in the right order as the duration interval depends on
-    the time of a given row relative to the one before.
-    Args:
-        df (pd.DataFrame, dd.DataFrame): A pandas or dask dataframe
-        field_name (str): A string that is the name of the column you wish to expand
-        prefix (str): The prefix to add to the expanded field
-        inplace (bool): Do the operation inplace or not
-
-    Returns:
-        A pandas or dask DataFrame depending on what was passed in
-    """
-    day1 = np.timedelta64(1, 'D')
-    last_date = np.datetime64()
-    last_store = 0
-    res = []
-
-    if not inplace:
-        df = df.copy()
-    for s, v, d in zip(df.Store.values, df[field_name].values, df.Date.values):
-        if s != last_store:
-            last_date = np.datetime64()
-            last_store = s
-        if v:
-            last_date = d
-        res.append(((d - last_date).astype('timedelta64[D]') / day1).astype(int))
-    df[prefix + field_name] = res
     return df

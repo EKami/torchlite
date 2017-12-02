@@ -5,6 +5,7 @@ from sklearn_pandas.dataframe_mapper import DataFrameMapper
 from dask.diagnostics import ProgressBar
 import warnings
 import pandas as pd
+import types
 
 import dask
 from tqdm import tqdm
@@ -75,7 +76,7 @@ def _fix_na(df, na_dict, verbose, name):
     columns = df.columns
     if verbose:
         print("Calculating NA...")
-        print(f"---------- Ratio of NA values for {name} -----------\n" +
+        print(f"---------- Ratio of NA values for {name} with {len(df.columns)} features -----------\n" +
               str(df.isnull().sum() / len(df)))
 
     print(f"--- Fixing NA values ({len(columns)} passes) ---")
@@ -85,7 +86,7 @@ def _fix_na(df, na_dict, verbose, name):
     print(f"List of NA columns fixed: {list(na_dict.keys())}")
     if verbose:
         print("Calculating NA...")
-        print(f"-------- New Ratio of NA values for {name} ---------\n" +
+        print(f"-------- New Ratio of NA values for {name} with {len(df.columns)} features ---------\n" +
               str(df.isnull().sum() / len(df)))
     return df
 
@@ -109,7 +110,8 @@ def get_all_non_numeric(df):
 
 def apply_encoding(df, numeric_features, categ_features,
                    output_file, do_scale=False,
-                   na_dict=None, verbose=True, name='dataframe'):
+                   na_dict=None, verbose=True,
+                   name='dataframe', check_all_num=True):
     """
     Apply encoding to the passed dataframes and return a new dataframe with the encoded features.
 
@@ -120,11 +122,13 @@ def apply_encoding(df, numeric_features, categ_features,
     Args:
         df (DatFrame): DataFrame on which to apply the encoding
         numeric_features (dict): The list of features to encode as numeric values. Types can
-            be any numpy type. For instance: {"index": np.int32, "sales": np.float32, ...}
+            be any numpy type. For instance: {"index": np.int32, "sales": np.float32, ...}.
+            Can also be a function with signature: (df: DataFrame, field: Series) -> DataFrame
         categ_features (dict): The list of features to encode as categorical features.
             The types can be of the following:
                 - OneHot
                 - Continuous
+                - As_is (don't change the variable)
             Example: {"store_type": "OneHot", "holiday_type": "Continuous", ...}
         do_scale (bool): Whether or not to scale the continuous variables
         na_dict (dict, None): a dictionary of na columns to add. Na columns are also added if there
@@ -135,7 +139,7 @@ def apply_encoding(df, numeric_features, categ_features,
         verbose (bool): Whether to make this function verbose. If not set the function still
         returns few messages
         name (str): Only useful for the verbose output
-
+        check_all_num (bool): Check if all the features are numeric, raise an error if they aren't
     Returns:
         str: A path to a pandas dataframe with encoded features
     """
@@ -144,7 +148,10 @@ def apply_encoding(df, numeric_features, categ_features,
 
     if os.path.exists(output_file):
         print(f"Encoding file {name} already generated")
-        return pd.read_feather(output_file)
+        df = pd.read_parquet(output_file)
+        print(f"---------- Ratio of NA values for {name} with {len(df.columns)} features -----------\n" +
+              str(df.isnull().sum() / len(df)))
+        return df
 
     if isinstance(df, dask.dataframe.core.DataFrame):
         with ProgressBar():
@@ -165,23 +172,32 @@ def apply_encoding(df, numeric_features, categ_features,
     print(f"Warning: Missing columns: {missing_col}, dropping them...")
     for k, v in numeric_features.items():
         if k in df_columns:
-            df[k] = df[k].astype(v)
+            if isinstance(v, types.FunctionType):
+                df = v(df)
+            else:
+                df[k] = df[k].astype(v)
 
     for k, v in tqdm(categ_features.items(), total=len(categ_features.items())):
         if k in df_columns:
             if isinstance(v, str):
                 v = v.lower()
-            if v == 'onehot':
+
+            if isinstance(v, types.FunctionType):
+                df = v(df)
+            elif v == "as_is":
+                df[k] = df[k]
+            elif v == 'onehot':
                 df = pd.get_dummies(df, columns=[k])
             elif v == 'continuous':
                 df[k] = df[k].astype('category').cat.codes
     if do_scale:
         mapper = scale_vars(df)
         print(f"List of scaled columns: {mapper}")
-    non_num_cols = get_all_non_numeric(df)
-    if len(non_num_cols) > 0:
-        raise Exception(f"Not all columns are numeric: {non_num_cols}, DataFrame not saved.")
-    df.reset_index().to_feather(output_file)  # drop=True reset_index
-    print(f"---------- Dtypes of {name} -----------\n" + str(df.dtypes))
+    if check_all_num:
+        non_num_cols = get_all_non_numeric(df)
+        if len(non_num_cols) > 0:
+            raise Exception(f"Not all columns are numeric: {non_num_cols}, DataFrame not saved.")
+    df.reset_index().to_parquet(output_file)  # drop=True reset_index
+    print(f"------- Dtypes of {name} with {len(df.columns)} features -------\n" + str(df.dtypes))
     print("---------- Preprocessing done -----------")
     return df
