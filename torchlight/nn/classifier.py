@@ -24,7 +24,7 @@ class Classifier:
         """
         self.net.load_state_dict(torch.load(model_path))
 
-    def _validate_epoch(self, valid_loader, loss_fnc, metrics_list, callback_list):
+    def _validate_epoch(self, valid_loader, criterion, metrics_list, callback_list):
 
         it_count = len(valid_loader)
         batch_size = valid_loader.batch_size
@@ -44,7 +44,7 @@ class Classifier:
             # forward
             logits = self.net(inputs)
 
-            loss = loss_fnc(logits, targets)
+            loss = criterion(logits, targets)
             losses.update(loss.data[0], batch_size)
             logs = metrics_list(targets, logits)
             callback_list.on_batch_end(ind, logs={"step": "validation",
@@ -53,7 +53,7 @@ class Classifier:
 
         return losses.debias_loss, metrics_list
 
-    def _train_epoch(self, train_loader, optimizer, loss_fnc, metrics_list, callback_list):
+    def _train_epoch(self, train_loader, optimizer, criterion, metrics_list, callback_list):
         # Total training files count / batch_size
         batch_size = train_loader.batch_size
         it_count = len(train_loader)
@@ -70,7 +70,7 @@ class Classifier:
             logits = self.net.forward(inputs)
 
             # backward + optimize
-            loss = loss_fnc(logits, targets)
+            loss = criterion(logits, targets)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
