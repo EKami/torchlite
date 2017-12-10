@@ -31,7 +31,8 @@ def merge_datasets(on_df: list, from_df: list, merge_fnc: list, output_files: li
                 print("Datasets already merged")
                 return
 
-    for idf_main in range(len(on_df)):
+    on_df_size = len(on_df)
+    for idf_main in range(on_df_size):
         for df_second, df_second_fnc in zip(from_df, merge_fnc):
             df_main = on_df[idf_main]
             on_df[idf_main] = df_second_fnc(df_main, df_second)
@@ -40,3 +41,5 @@ def merge_datasets(on_df: list, from_df: list, merge_fnc: list, output_files: li
         print(f"Processing {df_ofile}")
         with ProgressBar():
             main_df.to_parquet(df_ofile, engine='fastparquet')
+    # Ensure the original df have the same number of rows
+    assert len(on_df) == on_df_size, "on_df size has changed during merging"

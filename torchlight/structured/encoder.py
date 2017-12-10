@@ -188,7 +188,8 @@ def apply_encoding(df, numeric_features, categ_features,
                 df[k] = df[k]
             elif v == 'onehot':
                 df = pd.get_dummies(df, columns=[k])
-            elif v == 'continuous':
+            # Treat pre-embedding as continuous variables which are meant to be transformed to embedding matrices
+            elif v == 'continuous' or v == 'pre_embedding':
                 df[k] = df[k].astype('category').cat.codes
     if do_scale:
         mapper = scale_vars(df)

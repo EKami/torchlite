@@ -4,7 +4,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from nn import tools
+from utils import tools
 from nn.metrics import MetricsList
 from .callbacks import CallbackList, TQDM
 
