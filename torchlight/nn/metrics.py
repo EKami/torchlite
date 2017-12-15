@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd.variable import Variable
 
+
 class Metric:
     def __call__(self, y_true, y_pred):
         raise NotImplementedError()
