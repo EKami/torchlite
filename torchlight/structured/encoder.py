@@ -181,7 +181,6 @@ def apply_encoding(df, numeric_features, categ_features,
         if k in df_columns:
             if isinstance(v, str):
                 v = v.lower()
-
             if isinstance(v, types.FunctionType):
                 df = v(df)
             elif v == "as_is":

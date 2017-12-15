@@ -1,17 +1,25 @@
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
+import numpy as np
+from torchlight.nn.callbacks import TrainCallbackList, TQDM
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from utils import tools
 from nn.metrics import MetricsList
-from .callbacks import CallbackList, TQDM
 
 
-class Classifier:
-    def __init__(self, net, use_cuda=torch.cuda.is_available()):
-        self.net = net
+class Learner:
+    def __init__(self, model: nn.Module, use_cuda=torch.cuda.is_available()):
+        """
+        The learner class used to train a model
+        Args:
+            model (nn.Module): The pytorch model
+            use_cuda (bool): If True moves the model onto the GPU
+        """
+        self.model = model
         self.use_cuda = use_cuda
         self.epoch_counter = 0
 
@@ -22,44 +30,15 @@ class Classifier:
             model_path (str): The path to the model to restore
 
         """
-        self.net.load_state_dict(torch.load(model_path))
+        self.model.load_state_dict(torch.load(model_path))
 
-    def _validate_epoch(self, valid_loader, criterion, metrics_list, callback_list):
-
-        it_count = len(valid_loader)
-        batch_size = valid_loader.batch_size
-        losses = tools.AverageMeter()
-        for ind, (inputs, targets) in enumerate(valid_loader):
-            callback_list.on_batch_begin(ind, logs={"step": "validation",
-                                                    "batch_size": batch_size})
-            if self.use_cuda:
-                inputs = inputs.cuda()
-                targets = targets.cuda()
-
-            # Volatile because we are in pure inference mode
-            # http://pytorch.org/docs/master/notes/autograd.html#volatile
-            inputs = Variable(inputs, volatile=True)
-            targets = Variable(targets, volatile=True)
-
-            # forward
-            logits = self.net(inputs)
-
-            loss = criterion(logits, targets)
-            losses.update(loss.data[0], batch_size)
-            logs = metrics_list(targets, logits)
-            callback_list.on_batch_end(ind, logs={"step": "validation",
-                                                  "metrics": logs,
-                                                  "iterations_count": it_count})
-
-        return losses.debias_loss, metrics_list
-
-    def _train_epoch(self, train_loader, optimizer, criterion, metrics_list, callback_list):
+    def _train_epoch(self, step, loader, optimizer, criterion, metrics_list, callback_list):
         # Total training files count / batch_size
-        batch_size = train_loader.batch_size
-        it_count = len(train_loader)
+        batch_size = loader.batch_size
+        it_count = len(loader)
         losses = tools.AverageMeter()
-        for ind, (inputs, targets) in enumerate(train_loader):
-            callback_list.on_batch_begin(ind, logs={"step": "training",
+        for ind, (inputs, targets) in enumerate(loader):
+            callback_list.on_batch_begin(ind, logs={"step": step,
                                                     "batch_size": batch_size})
             if self.use_cuda:
                 inputs = inputs.cuda()
@@ -67,18 +46,19 @@ class Classifier:
             inputs, targets = Variable(inputs), Variable(targets)
 
             # forward
-            logits = self.net.forward(inputs)
+            logits = self.model.forward(inputs)
 
             # backward + optimize
-            loss = criterion(logits, targets)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            if step == "training":
+                loss = criterion(logits, targets)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
             losses.update(loss.data[0], batch_size)
             logs = metrics_list(targets, logits)
 
-            callback_list.on_batch_end(ind, logs={"step": "training",
+            callback_list.on_batch_end(ind, logs={"step": step,
                                                   "loss": loss.data[0],
                                                   "metrics": logs,
                                                   "iterations_count": it_count})
@@ -87,26 +67,28 @@ class Classifier:
     def _run_epoch(self, train_loader, valid_loader, optimizer, loss, metrics, callback_list):
 
         # switch to train mode
-        self.net.train()
+        self.model.train()
 
         # Run a train pass on the current epoch
-        callback_list.on_epoch_begin(self.epoch_counter, {"step": "training", 'epoch_count': self.epoch_counter})
-        train_loss, train_metrics = self._train_epoch(train_loader, optimizer, loss, MetricsList(metrics),
+        step = "training"
+        callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
+        train_loss, train_metrics = self._train_epoch(step, train_loader, optimizer, loss, MetricsList(metrics),
                                                       callback_list)
 
-        callback_list.on_epoch_end(self.epoch_counter, {"step": "training",
+        callback_list.on_epoch_end(self.epoch_counter, {"step": step,
                                                         'train_loss': train_loss,
                                                         'train_metrics': train_metrics})
         # switch to evaluate mode
-        self.net.eval()
+        self.model.eval()
 
         # Run the validation pass
-        callback_list.on_epoch_begin(self.epoch_counter, {"step": "validation", 'epoch_count': self.epoch_counter})
+        step = "validation"
+        callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
         val_loss, val_metrics = None, None
         if valid_loader:
-            val_loss, val_metrics = self._validate_epoch(valid_loader, loss, MetricsList(metrics), callback_list)
+            val_loss, val_metrics = self._train_epoch(step, valid_loader, loss, MetricsList(metrics), callback_list)
 
-        callback_list.on_epoch_end(self.epoch_counter, {'step': 'validation',
+        callback_list.on_epoch_end(self.epoch_counter, {'step': step,
                                                         'train_loss': train_loss,
                                                         'train_metrics': train_metrics,
                                                         'val_loss': val_loss,
@@ -128,7 +110,7 @@ class Classifier:
             callbacks (list, None): List of callbacks functions to call at each epoch
         """
         if self.use_cuda:
-            self.net.cuda()
+            self.model.cuda()
 
         if not callbacks:
             callbacks = []
@@ -139,48 +121,51 @@ class Classifier:
         else:
             val_loader_len = None
 
-        callback_list = CallbackList(callbacks)
-        callback_list.set_model(self.net)
+        callback_list = TrainCallbackList(callbacks)
+        callback_list.set_model(self.model)
         callback_list.on_train_begin({'total_epochs': epochs,
                                       'epoch_count': self.epoch_counter,
                                       'train_loader_len': train_loader_len,
                                       'val_loader_len': val_loader_len})
 
-        for epoch in range(epochs):
+        for _ in range(epochs):
             self._run_epoch(train_loader, valid_loader, optimizer, loss, metrics, callback_list)
             self.epoch_counter += 1
 
-    def predict(self, test_loader, callbacks=None):
+    def predict(self, test_loader, tta=False):
         """
             Launch the prediction on the given loader and pass
             each predictions to the given callbacks.
         Args:
             test_loader (DataLoader): The loader containing the test dataset
-            callbacks (list): List of callbacks functions to call at prediction pass
+            tta (bool): Test time augmentation, set to true to have test time augmentation
         """
+        # TODO add TTA https://github.com/fastai/fastai/blob/master/fastai/learner.py#L242
         # Switch to evaluation mode
-        self.net.eval()
+        self.model.eval()
+
+        if self.use_cuda:
+            self.model.cuda()
 
         it_count = len(test_loader)
-
+        ret_logits = None
+        bs = test_loader.batch_size
         with tqdm(total=it_count, desc="Classifying") as pbar:
-            for ind, (images, files_name) in enumerate(test_loader):
+            for ind, inputs in enumerate(test_loader):
+                if isinstance(inputs, list):
+                    inputs = inputs[0]
                 if self.use_cuda:
-                    images = images.cuda()
+                    inputs = inputs.cuda()
 
-                images = Variable(images, volatile=True)
+                inputs = Variable(inputs, volatile=True)
 
                 # forward
-                logits = self.net(images)
-                probs = F.sigmoid(logits)
-                probs = probs.data.cpu().numpy()
-
-                # If there are callback call their __call__ method and pass in some arguments
-                if callbacks:
-                    for cb in callbacks:
-                        cb(net=self.net,
-                           probs=probs,
-                           files_name=files_name
-                           )
-
+                logits = self.model(inputs).data.cpu()
+                if ret_logits is None:
+                    ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
+                ret_logits[bs*ind:bs*ind+bs] = logits
                 pbar.update(1)
+
+        return ret_logits
+
+

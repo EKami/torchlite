@@ -8,7 +8,6 @@ class AverageMeter(object):
 
     def __init__(self):
         self.val = 0
-        self.avg = 0
         self.sum = 0
         self.count = 0
         self.avg_mom = 0.98
@@ -21,8 +20,11 @@ class AverageMeter(object):
         self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / self.count
         self.avg_loss_mom = self.avg_loss_mom * self.avg_mom + val * (1 - self.avg_mom)
+
+    @property
+    def avg(self):
+        return self.sum / self.count
 
     @property
     def debias_loss(self):

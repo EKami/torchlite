@@ -4,28 +4,6 @@ from collections import OrderedDict
 
 
 class Callback(object):
-    """Abstract base class used to build new callbacks.
-    # Properties
-        params: dict. Training parameters
-            (eg. verbosity, batch size, number of epochs...).
-        model: instance of `keras.models.Model`.
-            Reference of the model being trained.
-    The `logs` dictionary that callback methods
-    take as argument will contain keys for quantities relevant to
-    the current batch or epoch.
-    Currently, the `.fit()` method of the `Sequential` model class
-    will include the following quantities in the `logs` that
-    it passes to its callbacks:
-        on_epoch_end: logs include `acc` and `loss`, and
-            optionally include `val_loss`
-            (if validation is enabled in `fit`), and `val_acc`
-            (if validation and accuracy monitoring are enabled).
-        on_batch_begin: logs include `size`,
-            the number of samples in the current batch.
-        on_batch_end: logs include `loss`, and optionally `acc`
-            (if accuracy monitoring is enabled).
-    """
-
     def __init__(self):
         self.validation_data = None
         self.params = None
@@ -56,7 +34,7 @@ class Callback(object):
         pass
 
 
-class CallbackList(object):
+class TrainCallbackList(object):
     """Container abstracting a list of callbacks.
     Args:
         callbacks: List of `Callback` instances.
@@ -260,3 +238,8 @@ class ReduceLROnPlateau(Callback):
         for k, v in logs.items():
             if k == 'val_loss':
                 self.lr_sch.step(v, epoch)
+
+
+class CosineAnnealing(Callback):
+    # https://youtu.be/EKzSiuqiHNg?t=1h18m9s
+    pass

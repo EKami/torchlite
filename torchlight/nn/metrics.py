@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch.autograd.variable import Variable
 
 class Metric:
     def __call__(self, y_true, y_pred):
@@ -57,7 +57,12 @@ class CategoricalAccuracy(Metric):
         """
         _, y_pred_dense = y_pred.max(1)
         assert y_true.size() == y_pred_dense.size(), "y_true and y_pred shapes differ"
-        self.correct_count += torch.sum(y_true == y_pred_dense).float()
+        if isinstance(y_true, Variable):
+            y_true = y_true.data
+        if isinstance(y_pred_dense, Variable):
+            y_pred_dense = y_pred_dense.data
+        sm = torch.sum(y_true == y_pred_dense)
+        self.correct_count += sm
         self.count += y_true.size()[0]
         return self.avg()
 
@@ -65,7 +70,7 @@ class CategoricalAccuracy(Metric):
         return "accuracy"
 
     def avg(self):
-        return (100. * self.correct_count / self.count).data[0]
+        return 100. * self.correct_count / self.count
 
     def reset(self):
         self.correct_count = 0

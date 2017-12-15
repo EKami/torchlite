@@ -19,6 +19,7 @@ class Embeddings(nn.Module):
         for k, v in features:
             _, card = np.unique(v, return_counts=True)
             card += 1
+            # TODO let the user define the maximum embedding size: https://youtu.be/5_xFdhfUnvQ?t=36m14s
             emb_sz = min(50, (card + 1) // 2)
             e = nn.Embedding(card, emb_sz)
             e.weight.data.uniform_(0, 0.05)
