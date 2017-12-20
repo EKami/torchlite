@@ -1,5 +1,7 @@
+import urllib.request
 import os
 from kaggle_data.downloader import KaggleDataDownloader
+from tqdm import tqdm
 
 
 class KaggleDatasetFetcher:
@@ -54,3 +56,55 @@ class KaggleDatasetFetcher:
             print("All datasets are present.")
 
         return competition_files, datasets_path
+
+
+class TqdmUpTo(tqdm):
+    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+
+    def update_to(self, b=1, bsize=1, tsize=None):
+        """
+        b  : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize  : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
+
+
+class WebFetcher:
+    """
+        A tool used to automatically download datasets from the web
+    """
+
+    @staticmethod
+    def download_dataset(url: str, output_folder: str, decompress: bool):
+        """
+            Downloads the dataset and return the input paths.
+                    Do not download again if the data is already present.
+            Args:
+                url (str): Http link to the archive
+                output_folder (str): Path to save the downloaded files
+                decompress (bool): To uncompress the downloaded archive
+            Returns:
+                tuple: (file_name, file_path)
+        """
+        file_name = os.path.split(url)[-1]
+        output_file_arch = os.path.join(output_folder, file_name)
+        if not os.path.exists(output_file_arch):
+            if not os.path.exists(output_folder):
+                os.makedirs(output_folder)
+            print('Beginning file download...')
+            with TqdmUpTo(unit='B', unit_scale=True, miniters=1,
+                          desc=f"Downloading {file_name}") as t:
+                file, _ = urllib.request.urlretrieve(url, output_file_arch, reporthook=t.update_to)
+            print("Unzipping file...")
+            if decompress:
+                KaggleDataDownloader.decompress(file, output_folder)
+        else:
+            print("File already exists.")
+
+        return file_name, output_file_arch

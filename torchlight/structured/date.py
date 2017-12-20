@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import re
 
@@ -27,6 +28,9 @@ def add_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
         df = df.copy()
     field = df[field_name]
     targ_pre = re.sub('[Dd]ate$', '', field_name)
+    if isinstance(df, pd.DataFrame):
+        if not np.issubdtype(field.dtype, np.datetime64):
+            df[field_name] = field = pd.to_datetime(field, infer_datetime_format=True)
     for n in transform_list:
         df[targ_pre + n] = getattr(field.dt, n.lower())
         if df[targ_pre + n].dtype == np.int64:
