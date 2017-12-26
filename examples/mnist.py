@@ -29,6 +29,7 @@ class Net(nn.Module):
 def main():
     batch_size = 128
     epochs = 20
+    # You can add image augmentation with https://github.com/aleju/imgaug
     mnist_train_data = datasets.MNIST('/tmp/data', train=True, download=True,
                                       transform=transforms.Compose([
                                           transforms.ToTensor(),

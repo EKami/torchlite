@@ -8,6 +8,7 @@ import pandas as pd
 import types
 
 import dask
+import dask.dataframe as dd
 from tqdm import tqdm
 import numpy as np
 from pandas.api.types import is_numeric_dtype
@@ -108,8 +109,8 @@ def get_all_non_numeric(df):
     return non_num_cols
 
 
-def apply_encoding(df, numeric_features, categ_features,
-                   output_file, do_scale=False,
+def apply_encoding(df, cont_features, categ_features,
+                   output_file=None, do_scale=False,
                    na_dict=None, verbose=True,
                    name='dataframe', check_all_num=True):
     """
@@ -121,11 +122,14 @@ def apply_encoding(df, numeric_features, categ_features,
     dataset are also ignored.
     Args:
         df (DatFrame): DataFrame on which to apply the encoding
-        numeric_features (dict): The list of features to encode as numeric values. Types can
-            be any numpy type. For instance: {"index": np.int32, "sales": np.float32, ...}.
-            Can also be a function with signature: (df: DataFrame, field: Series) -> DataFrame
-        categ_features (dict): The list of features to encode as categorical features.
-            The types can be of the following:
+        cont_features (dict, list): The list of features to encode as numeric values.
+            If given as a list all continuous features are encoded as float32.
+            If given as a dictionary types can be any numpy type.
+            For instance: {"index": np.int32, "sales": np.float32, ...}.
+            The type can also be a function with signature: (df: DataFrame, field: Series) -> DataFrame
+        categ_features (dict, list): The list of features to encode as categorical features.
+            If given as a list all categorical features are encoded as pandas 'categorical' (continuous vars).
+            If given as a dictionary the types can be of the following:
                 - OneHot
                 - Continuous
                 - As_is (don't change the variable)
@@ -141,24 +145,39 @@ def apply_encoding(df, numeric_features, categ_features,
         name (str): Only useful for the verbose output
         check_all_num (bool): Check if all the features are numeric, raise an error if they aren't
     Returns:
-        str: A path to a pandas dataframe with encoded features
+        (DatFrame): A pandas DataFrame if the file already exists or the passed df
     """
     # Check if the encoding has already been generated with
     # https://stackoverflow.com/questions/31567401/get-the-same-hash-value-for-a-pandas-dataframe-each-time
 
-    if os.path.exists(output_file):
+    if output_file and os.path.exists(output_file):
         print(f"Encoding file {name} already generated")
         df = pd.read_parquet(output_file)
         print(f"---------- Ratio of NA values for {name} with {len(df.columns)} features -----------\n" +
               str(df.isnull().sum() / len(df)))
         return df
 
-    if isinstance(df, dask.dataframe.core.DataFrame):
+    if isinstance(df, dd.DataFrame):
         with ProgressBar():
             print("Turning dask DataFrame into pandas DataFrame")
             df = df.compute()
+
+    # Turn categ_feat to a dict if it's a list
+    if isinstance(categ_features, list):
+        di = {}
+        for key in categ_features:
+            di[key] = 'continuous'
+        categ_features = di
+
+    # Turn cont_features to a dict if it's a list
+    if isinstance(cont_features, list):
+        di = {}
+        for key in cont_features:
+            di[key] = np.float32
+        cont_features = di
+
     categ_feat = list(categ_features.keys())
-    all_feat = list(numeric_features.keys()) + categ_feat
+    all_feat = list(cont_features.keys()) + categ_feat
     na_dict = na_dict if na_dict else {}
     df_columns = df.columns
     missing_col = [col for col in df_columns if col not in all_feat]
@@ -170,7 +189,7 @@ def apply_encoding(df, numeric_features, categ_features,
     df[categ_feat].apply(lambda x: x.astype('category'))
 
     print(f"Warning: Missing columns: {missing_col}, dropping them...")
-    for k, v in numeric_features.items():
+    for k, v in cont_features.items():
         if k in df_columns:
             if isinstance(v, types.FunctionType):
                 df = v(df)
@@ -197,7 +216,8 @@ def apply_encoding(df, numeric_features, categ_features,
         non_num_cols = get_all_non_numeric(df)
         if len(non_num_cols) > 0:
             raise Exception(f"Not all columns are numeric: {non_num_cols}, DataFrame not saved.")
-    df.reset_index().to_parquet(output_file)  # drop=True reset_index
+    if output_file:
+        df.reset_index().to_parquet(output_file)  # drop=True reset_index
     print(f"------- Dtypes of {name} with {len(df.columns)} features -------\n" + str(df.dtypes))
     print("---------- Preprocessing done -----------")
     return df
