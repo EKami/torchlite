@@ -95,7 +95,7 @@ class Learner:
                                                         'val_metrics': val_metrics})
 
     def train(self, optimizer, loss, metrics, epochs,
-              train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
+              train_loader: DataLoader, valid_loader: DataLoader=None, callbacks=None):
         """
             Trains the neural net
         Args:

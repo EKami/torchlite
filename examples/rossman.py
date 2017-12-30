@@ -18,6 +18,8 @@ import math
 from utils.fetcher import WebFetcher
 import shortcuts
 import structured.encoder as encoder
+from nn.learner import Learner
+import torch.optim as optim
 from tqdm import tqdm
 
 
@@ -26,6 +28,32 @@ def join_df(left, right, left_on, right_on=None, suffix='_y'):
         right_on = left_on
     return left.merge(right, how='left', left_on=left_on,
                       right_on=right_on, suffixes=("", suffix))
+
+
+def get_elapsed(df, monitored_field, prefix='elapsed_'):
+    """
+    Cumulative counting across a sorted dataframe.
+    Given a particular field to monitor, this function will start tracking time since the
+    last occurrence of that field. When the field is seen again, the counter is set to zero.
+    Args:
+        df (pd.DataFrame): A pandas DataFrame
+        monitored_field (str): A string that is the name of the date column you wish to expand.
+            Assumes the column is of type datetime64 if df is a dask dataframe
+        prefix (str): The prefix to add to the newly created field.
+    """
+    day1 = np.timedelta64(1, 'D')
+    last_date = np.datetime64()
+    last_store = 0
+    res = []
+
+    for s, v, d in zip(df["Store"].values, df[monitored_field].values, df["Date"].values):
+        if s != last_store:
+            last_date = np.datetime64()
+            last_store = s
+        if v:
+            last_date = d
+        res.append(((d - last_date).astype('timedelta64[D]') / day1).astype(int))
+    df[prefix + monitored_field] = res
 
 
 def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
@@ -112,19 +140,19 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         for name, df in zip(("train", "test"), (train[columns], test[columns])):
             field = 'SchoolHoliday'
             df = df.sort_values(['Store', 'Date'])
-            date.get_elapsed(df, field, 'After', inplace=True)
+            get_elapsed(df, field, 'After')
             df = df.sort_values(['Store', 'Date'], ascending=[True, False])
-            date.get_elapsed(df, field, 'Before', inplace=True)
+            get_elapsed(df, field, 'Before')
             field = 'StateHoliday'
             df = df.sort_values(['Store', 'Date'])
-            date.get_elapsed(df, field, 'After', inplace=True)
+            get_elapsed(df, field, 'After')
             df = df.sort_values(['Store', 'Date'], ascending=[True, False])
-            date.get_elapsed(df, field, 'Before', inplace=True)
+            get_elapsed(df, field, 'Before')
             field = 'Promo'
             df = df.sort_values(['Store', 'Date'])
-            date.get_elapsed(df, field, 'After', inplace=True)
+            get_elapsed(df, field, 'After')
             df = df.sort_values(['Store', 'Date'], ascending=[True, False])
-            date.get_elapsed(df, field, 'Before', inplace=True)
+            get_elapsed(df, field, 'Before')
             # Set the active index to Date
             df = df.set_index("Date")
             # Set null values from elapsed field calculations to 0
@@ -182,9 +210,11 @@ def create_features(train_df, test_df):
     train_df.drop(y, axis=1, inplace=True)
     train_df = train_df.set_index("Date")
     test_df = test_df.set_index("Date")
+    # Get the categorical fields cardinality before turning them all to float32
+    card_cat_features = {c: len(train_df[c].astype('category').cat.categories) + 1 for c in cat_vars}
     train_df = encoder.apply_encoding(train_df, contin_vars, cat_vars, do_scale=True)
     test_df = encoder.apply_encoding(test_df, contin_vars, cat_vars, do_scale=True)
-    return train_df, test_df, yl
+    return train_df, test_df, yl, cat_vars, card_cat_features
 
 
 def exp_rmspe(y_pred, targ):
@@ -203,7 +233,10 @@ def exp_rmspe(y_pred, targ):
 
 
 def main():
+    batch_size = 128
+    epochs = 20
     output_path = "/tmp/rossman"
+
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
     WebFetcher.download_dataset("http://files.fast.ai/part2/lesson14/rossmann.tgz", output_path, True)
@@ -216,14 +249,19 @@ def main():
                                          preprocessed_train_path,
                                          preprocessed_test_path)
 
-    train_df, test_df, yl = create_features(train_df, test_df)
+    train_df, test_df, yl, cat_vars, card_cat_features = create_features(train_df, test_df)
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
     print("Preprocessing finished...")
 
     max_log_y = np.max(yl)
     y_range = (0, max_log_y * 1.2)
-    model = shortcuts.ColumnarShortcut()
+    shortcut = shortcuts.ColumnarShortcut.from_data_frame(train_df, val_idx, yl.astype(np.float32),
+                                                          cat_vars, batch_size=batch_size, test_df=test_df)
+    model = shortcut.get_model(card_cat_features, len(train_df.columns) - len(cat_vars),
+                               0.04, 1, [1000, 500], [0.001, 0.01], y_range=y_range)
+    learner = Learner(model)
+    learner.train(optim.Adam, exp_rmspe, None, epochs, shortcut.get_train_loader, shortcut.get_val_loader)
     d = 0
 
 
