@@ -5,7 +5,7 @@
 """
 from torch.utils.data import DataLoader, Dataset
 from loaders import ModelData
-from datasets import PassthruDataset, ColumnarDataset
+from datasets import ColumnarDataset
 from nn.models import MixedInputModel
 import torch.nn as nn
 
@@ -27,13 +27,6 @@ class ColumnarShortcut(ModelData):
         self.val_dl = DataLoader(val_ds, batch_size, shuffle=False) if val_ds else None
         self.test_dl = DataLoader(test_ds, batch_size, shuffle=False) if test_ds else None
         super().__init__(self.train_dl, self.val_dl, self.test_dl)
-
-    @classmethod
-    def from_arrays(cls, val_idxs, xs, y, batch_size=64, test_xs=None, shuffle=True):
-        ((val_xs, trn_xs), (val_y, trn_y)) = split_by_idx(val_idxs, xs, y)
-        test_ds = PassthruDataset(*test_xs.T, [0] * len(test_xs)) if test_xs is not None else None
-        return cls(PassthruDataset(*trn_xs.T, trn_y), PassthruDataset(*val_xs.T, val_y),
-                   test_ds, batch_size, shuffle)
 
     @classmethod
     def from_data_frames(cls, train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=None):

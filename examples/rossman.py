@@ -249,6 +249,7 @@ def main():
                                          preprocessed_train_path,
                                          preprocessed_test_path)
 
+    # TODO features are created as float64, change to float32
     train_df, test_df, yl, cat_vars, card_cat_features = create_features(train_df, test_df)
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))

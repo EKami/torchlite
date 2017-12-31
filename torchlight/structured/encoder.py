@@ -93,6 +93,7 @@ def _fix_na(df, na_dict, verbose, name):
 
 
 def scale_vars(df, mapper=None):
+    # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
     warnings.filterwarnings('ignore', category=sklearn.exceptions.DataConversionWarning)
     if mapper is None:
         map_f = [([n], StandardScaler()) for n in df.columns if is_numeric_dtype(df[n])]

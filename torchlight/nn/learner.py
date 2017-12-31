@@ -37,16 +37,17 @@ class Learner:
         batch_size = loader.batch_size
         it_count = len(loader)
         losses = tools.AverageMeter()
-        for ind, (inputs, targets) in enumerate(loader):
+        # We can have multiple inputs
+        for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs={"step": step,
                                                     "batch_size": batch_size})
             if self.use_cuda:
-                inputs = inputs.cuda()
+                inputs = [i.cuda() for i in inputs]
                 targets = targets.cuda()
-            inputs, targets = Variable(inputs), Variable(targets)
+            inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
             # forward
-            logits = self.model.forward(inputs)
+            logits = self.model.forward(*inputs)
 
             # backward + optimize
             if step == "training":
