@@ -42,13 +42,14 @@ class Learner:
             callback_list.on_batch_begin(ind, logs={"step": step,
                                                     "batch_size": batch_size})
             if self.use_cuda:
-                inputs = [i.cuda() for i in inputs]
-                targets = targets.cuda()
+                inputs = [tools.to_gpu(i) for i in inputs]
+                targets = tools.to_gpu(targets)
             inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
             # forward
             logits = self.model.forward(*inputs)
 
+            # TODO implement gradient clipping: https://github.com/fastai/fastai/blob/master/fastai/model.py#L46
             # backward + optimize
             if step == "training":
                 loss = criterion(logits, targets)
@@ -111,7 +112,7 @@ class Learner:
             callbacks (list, None): List of callbacks functions to call at each epoch
         """
         if self.use_cuda:
-            self.model.cuda()
+            tools.to_gpu(self.model)
 
         if not callbacks:
             callbacks = []
@@ -146,17 +147,15 @@ class Learner:
         self.model.eval()
 
         if self.use_cuda:
-            self.model.cuda()
+            tools.to_gpu(self.model)
 
         it_count = len(test_loader)
         ret_logits = None
-        bs = test_loader.batch_size
+        batch_size = test_loader.batch_size
         with tqdm(total=it_count, desc="Classifying") as pbar:
             for ind, inputs in enumerate(test_loader):
-                if isinstance(inputs, list):
-                    inputs = inputs[0]
                 if self.use_cuda:
-                    inputs = inputs.cuda()
+                    inputs = tools.to_gpu(inputs)
 
                 inputs = Variable(inputs, volatile=True)
 
@@ -164,7 +163,7 @@ class Learner:
                 logits = self.model(inputs).data.cpu()
                 if ret_logits is None:
                     ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
-                ret_logits[bs*ind:bs*ind+bs] = logits
+                ret_logits[batch_size*ind:batch_size*ind+batch_size] = logits
                 pbar.update(1)
 
         return ret_logits

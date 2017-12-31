@@ -262,7 +262,7 @@ def main():
                                                           cat_vars, batch_size=batch_size, test_df=test_df)
     model = shortcut.get_model(card_cat_features, len(train_df.columns) - len(cat_vars),
                                0.04, 1, [1000, 500], [0.001, 0.01], y_range=y_range)
-    learner = Learner(model)
+    learner = Learner(model, use_cuda=False)
     learner.train(optim.Adam, exp_rmspe, None, epochs, shortcut.get_train_loader, shortcut.get_val_loader)
     d = 0
 
