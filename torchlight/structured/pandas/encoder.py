@@ -65,6 +65,8 @@ def fix_missing(df, col, name, na_dict):
     """
     col_c = col
     if is_numeric_dtype(col):
+        # TODO: What if a NAN is found in the test set and not in the train set?
+        # https://github.com/fastai/fastai/issues/74
         if pd.isnull(col).sum() or (name in na_dict):
             filler = na_dict[name] if name in na_dict else col_c.median()
             na_dict[name] = filler
@@ -89,16 +91,18 @@ def _fix_na(df, na_dict, verbose, name):
         print("Calculating NA...")
         print(f"-------- New Ratio of NA values for {name} with {len(df.columns)} features ---------\n" +
               str(df.isnull().sum() / len(df)))
-    return df
+    return df, na_dict
 
 
 def scale_vars(df, mapper=None):
     # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
     warnings.filterwarnings('ignore', category=sklearn.exceptions.DataConversionWarning)
+    for col in df:
+        df[col] = df[col].astype(np.float32)
     if mapper is None:
         map_f = [([n], StandardScaler()) for n in df.columns if is_numeric_dtype(df[n])]
         mapper = DataFrameMapper(map_f).fit(df)
-    df[mapper.transformed_names_] = mapper.transform(df)
+    df[mapper.transformed_names_] = mapper.transform(df).astype(np.float32)
     return mapper
 
 
@@ -111,8 +115,7 @@ def get_all_non_numeric(df):
 
 
 def apply_encoding(df, cont_features, categ_features,
-                   output_file=None, do_scale=False,
-                   na_dict=None, verbose=True,
+                   do_scale=False, na_dict=None, verbose=True,
                    name='dataframe', check_all_num=True):
     """
     Apply encoding to the passed dataframes and return a new dataframe with the encoded features.
@@ -122,7 +125,7 @@ def apply_encoding(df, cont_features, categ_features,
     The columns which are listed in `numeric_features` and `categ_features` and not present in the
     dataset are also ignored.
     Args:
-        df (DatFrame): DataFrame on which to apply the encoding
+        df (DataFrame): DataFrame on which to apply the encoding
         cont_features (dict, list): The list of features to encode as numeric values.
             If given as a list all continuous features are encoded as float32.
             If given as a dictionary types can be any numpy type.
@@ -135,28 +138,30 @@ def apply_encoding(df, cont_features, categ_features,
                 - Continuous
                 - As_is (don't change the variable)
             Example: {"store_type": "OneHot", "holiday_type": "Continuous", ...}
-        do_scale (bool): Whether or not to scale the continuous variables
+        do_scale (bool, sklearn_pandas.dataframe_mapper.DataFrameMapper):
+            If of type bool: Whether or not to scale the continuous variables on a standard scaler
+                (mean substraction and standard deviation division).
+            If of type DataFrameMapper: A mappper variable to scale the features according to the
+                given predefined mapper. Is mostly used on the val/test sets to use the same mapper
+                returned by the train set.
+            In all case of transformation the results will be of type float32.
         na_dict (dict, None): a dictionary of na columns to add. Na columns are also added if there
-        are any missing values.
-        output_file: (str, None): The output file where the encoded DataFrame will
-            be stored. If this file already exist then the existing file is opened and
-            returned as DataFrame from this function.
+            are any missing values.
         verbose (bool): Whether to make this function verbose. If not set the function still
-        returns few messages
+            returns few messages
         name (str): Only useful for the verbose output
         check_all_num (bool): Check if all the features are numeric, raise an error if they aren't
     Returns:
-        (DatFrame): A pandas DataFrame if the file already exists or the passed df
+        DataFrame, dict, scale_mapper, sklearn_pandas.dataframe_mapper.DataFrameMapper:
+            Returns:
+                 - df: The original dataframe transformed according to the function parameters
+                 - na_dict: Containing the list of columns found with NA values in the given df
+                 - scale_mapper: The mapper for the values scaling
+            You usually want to keep na_dict and scale_mapper to use them for a similar dataset
+            on which you want the values to be on the same scale/have the same missing columns.
+            For example you would recover na_dict and scale_mapper and pass them in for
+            the test set.
     """
-    # Check if the encoding has already been generated with
-    # https://stackoverflow.com/questions/31567401/get-the-same-hash-value-for-a-pandas-dataframe-each-time
-
-    if output_file and os.path.exists(output_file):
-        print(f"Encoding file {name} already generated")
-        df = pd.read_parquet(output_file)
-        print(f"---------- Ratio of NA values for {name} with {len(df.columns)} features -----------\n" +
-              str(df.isnull().sum() / len(df)))
-        return df
 
     if isinstance(df, dd.DataFrame):
         with ProgressBar():
@@ -184,7 +189,7 @@ def apply_encoding(df, cont_features, categ_features,
     missing_col = [col for col in df_columns if col not in all_feat]
     df = df[[feat for feat in all_feat if feat in df_columns]].copy()
 
-    df = _fix_na(df, na_dict, verbose, name)
+    df, na_dict = _fix_na(df, na_dict, verbose, name)
 
     print(f"Categorizing features {categ_feat}")
     df[categ_feat].apply(lambda x: x.astype('category'))
@@ -211,14 +216,12 @@ def apply_encoding(df, cont_features, categ_features,
             elif v == 'continuous' or v == 'pre_embedding':
                 df[k] = df[k].astype('category').cat.codes
     if do_scale:
-        mapper = scale_vars(df)
-        print(f"List of scaled columns: {mapper}")
+        scale_mapper = scale_vars(df)
+        print(f"List of scaled columns: {scale_mapper}")
     if check_all_num:
         non_num_cols = get_all_non_numeric(df)
         if len(non_num_cols) > 0:
             raise Exception(f"Not all columns are numeric: {non_num_cols}, DataFrame not saved.")
-    if output_file:
-        df.reset_index().to_parquet(output_file)  # drop=True reset_index
     print(f"------- Dtypes of {name} with {len(df.columns)} features -------\n" + str(df.dtypes))
     print("---------- Preprocessing done -----------")
-    return df
+    return df, na_dict, scale_mapper

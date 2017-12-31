@@ -9,7 +9,6 @@
 """
 import os
 import pandas as pd
-import torchlight.structured.date as date
 from multiprocessing import cpu_count
 import numpy as np
 import isoweek
@@ -17,7 +16,8 @@ import datetime
 import math
 from utils.fetcher import WebFetcher
 import shortcuts
-import structured.encoder as encoder
+import structured.pandas.date as date
+import structured.pandas.encoder as encoder
 from nn.learner import Learner
 import torch.optim as optim
 from tqdm import tqdm
@@ -212,8 +212,10 @@ def create_features(train_df, test_df):
     test_df = test_df.set_index("Date")
     # Get the categorical fields cardinality before turning them all to float32
     card_cat_features = {c: len(train_df[c].astype('category').cat.categories) + 1 for c in cat_vars}
-    train_df = encoder.apply_encoding(train_df, contin_vars, cat_vars, do_scale=True)
-    test_df = encoder.apply_encoding(test_df, contin_vars, cat_vars, do_scale=True)
+
+    train_df, na_dict, scale_mapper = encoder.apply_encoding(train_df, contin_vars, cat_vars, do_scale=True)
+    test_df, na_dict, scale_mapper = encoder.apply_encoding(test_df, contin_vars, cat_vars,
+                                                            do_scale=scale_mapper, na_dict=na_dict)
     return train_df, test_df, yl, cat_vars, card_cat_features
 
 
@@ -249,7 +251,6 @@ def main():
                                          preprocessed_train_path,
                                          preprocessed_test_path)
 
-    # TODO features are created as float64, change to float32
     train_df, test_df, yl, cat_vars, card_cat_features = create_features(train_df, test_df)
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
