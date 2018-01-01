@@ -26,14 +26,6 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=-1)
 
 
-class MNIST_TEST(datasets.MNIST):
-    def __getitem__(self, item):
-        # Override the method to just return the inputs as it's
-        # what is expected from our predict() method
-        inputs, targets = super().__getitem__(item)
-        return inputs
-
-
 def main():
     batch_size = 128
     epochs = 20
@@ -46,7 +38,7 @@ def main():
                                       ]))
     train_loader = DataLoader(mnist_train_data, batch_size, shuffle=True)
 
-    mnist_test_data = MNIST_TEST('/tmp/data', train=False, transform=transforms.Compose([
+    mnist_test_data = datasets.MNIST('/tmp/data', train=False, transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ]))

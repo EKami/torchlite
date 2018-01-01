@@ -51,7 +51,7 @@ class ColumnarShortcut(ModelData):
     def get_test_loader(self):
         return self.test_dl
 
-    def get_model(self, card_cat_features, n_cont, emb_drop, output_size, hidden_sizes, hidden_dropout,
+    def get_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
                   max_embedding_size=50, y_range=None, use_bn=False):
         """
             Generates a default model. You can use it or create your own instead.
@@ -62,11 +62,11 @@ class ColumnarShortcut(ModelData):
             card_cat_features (dict): Dictionary containing the name and cardinality of each categorical features
                 Ex: {'Store': 6, 'Year': 3, 'Client_type': 5}
             n_cont (int): Number of continuous fields
-            emb_drop (float): Dropout for the embeddings
             output_size (int): Size of the output
+            emb_drop (float): Dropout for the embeddings
             hidden_sizes (list): List of hidden layers sizes.
                 Ex: [1000, 500, 200] Will create 3 hidden layers with the respective sizes
-            hidden_dropout (list): List of hidden layers dropout.
+            hidden_dropouts (list): List of hidden layers dropout.
                 Ex: [0.001, 0.01, 0.1] Will apply dropout to the 3 hidden layers respectively
             max_embedding_size (int): The maximum embedding sizes
             y_range:
@@ -80,7 +80,7 @@ class ColumnarShortcut(ModelData):
                            card_cat_features.items()]
 
         return MixedInputModel(embedding_sizes, n_cont, emb_drop, output_size,
-                               hidden_sizes, hidden_dropout, y_range, use_bn)
+                               hidden_sizes, hidden_dropouts, y_range, use_bn)
 
 
 def split_by_idx(idxs, *a):

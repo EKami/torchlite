@@ -148,19 +148,18 @@ class TQDM(Callback):
 
         if step == 'training':
             self.train_pbar.close()
-            print("train_loss = {:03f}".format(train_loss), end=' ')
         elif step == 'validation':
             self.val_pbar.close()
             val_loss = logs['val_loss']
+            print("train_loss = {:03f}".format(train_loss), end=' ')
             if val_loss:
                 print("| val_loss = {:03f}".format(val_loss), end=' ')
         print()
 
-        if step == 'training':
+        if step == 'validation':
+            val_metrics = logs['val_metrics']
             print("Train metrics:", end=' ')
             print(*["{}={:03f}".format(k, v) for k, v in train_metrics.avg().items()])
-        elif step == 'validation':
-            val_metrics = logs['val_metrics']
             if val_metrics:
                 print("Val metrics:", end=' ')
                 print(*["{}={:03f}".format(k, v) for k, v in val_metrics.avg().items()])
@@ -170,10 +169,11 @@ class TQDM(Callback):
 
     def on_batch_end(self, batch, logs=None):
         step = logs["step"]
-        loss = logs["loss"]
         metrics = logs["metrics"]
+
         if step == "validation":
             self.train_pbar.set_description(step)  # training or validating
+        loss = logs["loss"]
         postfix = OrderedDict(loss='{0:1.5f}'.format(loss))
         if metrics:
             for name, value in metrics.items():

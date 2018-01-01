@@ -3,7 +3,7 @@
   competition on Kaggle as well as this notebook by fast.ai:
   https://github.com/fastai/fastai/blob/master/courses/dl1/lesson3-rossman.ipynb
 
-  The resulting submission of this notebook can be submitted on this page:
+  The resulting csv of this notebook can be submitted on this page:
   https://www.kaggle.com/c/rossmann-store-sales
   The private leaderboard is the one to watch for the scoring
 """
@@ -11,14 +11,15 @@ import os
 import pandas as pd
 from multiprocessing import cpu_count
 import numpy as np
+import torch.nn.functional as F
 import isoweek
 import datetime
-import math
 from utils.fetcher import WebFetcher
 import shortcuts
 import structured.pandas.date as date
 import structured.pandas.encoder as encoder
 from nn.learner import Learner
+import utils.tools as tools
 import torch.optim as optim
 from tqdm import tqdm
 
@@ -221,30 +222,14 @@ def create_features(train_df, test_df):
     return train_df, test_df, yl, cat_vars, card_cat_features
 
 
-def exp_rmspe(y_pred, targ):
-    """
-    Root-mean-squared percent error is the metric Kaggle used for this competition
-    Args:
-        y_pred (list): predicted labels
-        targ (list): true labels
-
-    Returns:
-        The Root-mean-squared percent error
-    """
-    targ = np.exp(targ)
-    pct_var = (targ - np.exp(y_pred)) / targ
-    return math.sqrt((pct_var ** 2).mean())
-
-
 def main():
-    batch_size = 128
-    epochs = 20
+    batch_size = 256
+    epochs = 15
     output_path = "/tmp/rossman"
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
     WebFetcher.download_dataset("http://files.fast.ai/part2/lesson14/rossmann.tgz", output_path, True)
-    print("Preprocessing...")
     if os.path.exists(preprocessed_train_path) and os.path.exists(preprocessed_test_path):
         train_df = pd.read_feather(preprocessed_train_path, nthreads=cpu_count())
         test_df = pd.read_feather(preprocessed_test_path, nthreads=cpu_count())
@@ -256,17 +241,23 @@ def main():
     train_df, test_df, yl, cat_vars, card_cat_features = create_features(train_df, test_df)
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
-    print("Preprocessing finished...")
 
     max_log_y = np.max(yl)
     y_range = (0, max_log_y * 1.2)
     shortcut = shortcuts.ColumnarShortcut.from_data_frame(train_df, val_idx, yl.astype(np.float32),
                                                           cat_vars, batch_size=batch_size, test_df=test_df)
     model = shortcut.get_model(card_cat_features, len(train_df.columns) - len(cat_vars),
-                               0.04, 1, [1000, 500], [0.001, 0.01], y_range=y_range)
+                               output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
+                               hidden_dropouts=[0.001, 0.01], y_range=y_range)
     learner = Learner(model)
-    learner.train(optim.Adam, exp_rmspe, None, epochs, shortcut.get_train_loader, shortcut.get_val_loader)
-    d = 0
+    # TODO finish exp_rmspe metric
+    learner.train(optim.Adam(model.parameters()), F.mse_loss, None, epochs,
+                  shortcut.get_train_loader, shortcut.get_val_loader)
+    test_pred = np.exp(learner.predict(shortcut.get_test_loader))
+
+    # Save the predictions as a csv file
+    tools.to_csv(preprocessed_test_path, os.path.join(output_path, "submit.csv"),
+                 'Id', 'Sales', test_pred, read_format='feather')
 
 
 if __name__ == "__main__":

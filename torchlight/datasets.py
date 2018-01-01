@@ -8,6 +8,7 @@ class ColumnarDataset(Dataset):
         n = len(cats[0]) if cats else len(conts[0])
         self.cats = np.stack(cats, 1).astype(np.int64) if cats else np.zeros((n, 1))
         self.conts = np.stack(conts, 1).astype(np.float32) if conts else np.zeros((n, 1))
+        # Fill y with 0 for the test dataset, they will be ignored during the prediction phase
         self.y = np.zeros((n, 1)) if y is None else y[:, None]
 
     def __len__(self):

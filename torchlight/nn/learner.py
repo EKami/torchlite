@@ -48,17 +48,16 @@ class Learner:
 
             # forward
             logits = self.model.forward(*inputs)
+            logs = metrics_list(targets, logits)
+            loss = criterion(logits, targets)
+            losses.update(loss.data[0])
 
             # TODO implement gradient clipping: https://github.com/fastai/fastai/blob/master/fastai/model.py#L46
             # backward + optimize
             if step == "training":
-                loss = criterion(logits, targets)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
-            losses.update(loss.data[0], batch_size)
-            logs = metrics_list(targets, logits)
 
             callback_list.on_batch_end(ind, logs={"step": step,
                                                   "loss": loss.data[0],
@@ -74,8 +73,8 @@ class Learner:
         # Run a train pass on the current epoch
         step = "training"
         callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
-        train_loss, train_metrics = self._train_epoch(step, train_loader, optimizer, loss, MetricsList(metrics),
-                                                      callback_list)
+        train_loss, train_metrics = self._train_epoch(step, train_loader, optimizer, loss,
+                                                      MetricsList(metrics), callback_list)
 
         callback_list.on_epoch_end(self.epoch_counter, {"step": step,
                                                         'train_loss': train_loss,
@@ -88,7 +87,8 @@ class Learner:
         callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
         val_loss, val_metrics = None, None
         if valid_loader:
-            val_loss, val_metrics = self._train_epoch(step, valid_loader, loss, MetricsList(metrics), callback_list)
+            val_loss, val_metrics = self._train_epoch(step, valid_loader, optimizer, loss,
+                                                      MetricsList(metrics), callback_list)
 
         callback_list.on_epoch_end(self.epoch_counter, {'step': step,
                                                         'train_loss': train_loss,
@@ -97,7 +97,7 @@ class Learner:
                                                         'val_metrics': val_metrics})
 
     def train(self, optimizer, loss, metrics, epochs,
-              train_loader: DataLoader, valid_loader: DataLoader=None, callbacks=None):
+              train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
         """
             Trains the neural net
         Args:
@@ -139,7 +139,10 @@ class Learner:
             Launch the prediction on the given loader and pass
             each predictions to the given callbacks.
         Args:
-            test_loader (DataLoader): The loader containing the test dataset
+            test_loader (DataLoader): The loader containing the test dataset.
+                This loader is expected to returns items with the same shape
+                as the train_loader passed in train() with the difference that
+                the targets will be ignored.
             tta (bool): Test time augmentation, set to true to have test time augmentation
         """
         # TODO add TTA https://github.com/fastai/fastai/blob/master/fastai/learner.py#L242
@@ -153,19 +156,17 @@ class Learner:
         ret_logits = None
         batch_size = test_loader.batch_size
         with tqdm(total=it_count, desc="Classifying") as pbar:
-            for ind, inputs in enumerate(test_loader):
+            for ind, (*inputs, _) in enumerate(test_loader):
                 if self.use_cuda:
-                    inputs = tools.to_gpu(inputs)
+                    inputs = [tools.to_gpu(i) for i in inputs]
 
-                inputs = Variable(inputs, volatile=True)
+                inputs = [Variable(i, volatile=True) for i in inputs]
 
                 # forward
-                logits = self.model(inputs).data.cpu()
+                logits = self.model(*inputs).data
                 if ret_logits is None:
                     ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
-                ret_logits[batch_size*ind:batch_size*ind+batch_size] = logits
+                ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
                 pbar.update(1)
 
-        return ret_logits
-
-
+        return ret_logits.squeeze()

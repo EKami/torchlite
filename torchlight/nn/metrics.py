@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,6 +6,10 @@ from torch.autograd.variable import Variable
 
 
 class Metric:
+    def __init__(self):
+        self.correct_count = 0
+        self.count = 0
+
     def __call__(self, y_true, y_pred):
         raise NotImplementedError()
 
@@ -12,10 +17,10 @@ class Metric:
         raise NotImplementedError()
 
     def avg(self):
-        raise NotImplementedError()
+        return 100. * self.correct_count / self.count
 
     def reset(self):
-        raise NotImplementedError()
+        self.correct_count = 0
 
 
 class MetricsList:
@@ -45,16 +50,15 @@ class MetricsList:
 
 
 class CategoricalAccuracy(Metric):
-    def __init__(self):
-        self.correct_count = 0
-        self.count = 0
-
     def __call__(self, y_true, y_pred):
         """
         Return the accuracy of the predictions across the whole dataset
-        :param y_true (Tensor): Tensor of shape (batch_size, 1)
-        :param y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
-        :return:
+         Args:
+            y_true (Tensor): Tensor of shape (batch_size, 1)
+            y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
+
+        Returns:
+            float: Average accuracy
         """
         _, y_pred_dense = y_pred.max(1)
         assert y_true.size() == y_pred_dense.size(), "y_true and y_pred shapes differ"
@@ -70,8 +74,22 @@ class CategoricalAccuracy(Metric):
     def get_name(self):
         return "accuracy"
 
-    def avg(self):
-        return 100. * self.correct_count / self.count
 
-    def reset(self):
-        self.correct_count = 0
+class RMSPE(Metric):
+    def __call__(self, y_true, y_pred):
+        """
+        Root-mean-squared percent error
+        Args:
+            y_true (Tensor): Tensor of shape (batch_size, 1)
+            y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
+
+        Returns:
+            The Root-mean-squared percent error
+        """
+        targ = np.exp(y_true)  # Expect output to be in log format
+        pct_var = (targ - np.exp(y_pred)) / targ
+        return math.sqrt((pct_var ** 2).mean())
+
+    def get_name(self):
+        return "accuracy"
+
