@@ -1,5 +1,6 @@
 import os
 import sklearn
+import sklearn_pandas
 from sklearn.preprocessing.data import StandardScaler
 from sklearn_pandas.dataframe_mapper import DataFrameMapper
 from dask.diagnostics import ProgressBar
@@ -75,31 +76,28 @@ def fix_missing(df, col, name, na_dict):
     return na_dict
 
 
-def _fix_na(df, na_dict, verbose, name):
+def _fix_na(df, na_dict):
     columns = df.columns
-    if verbose:
-        print("Calculating NA...")
-        print(f"---------- Ratio of NA values for {name} with {len(df.columns)} features -----------\n" +
-              str(df.isnull().sum() / len(df)))
+    print("Calculating NA...")
+    print(f"---------- Ratio of NA values with {len(df.columns)} features -----------\n" +
+          str(df.isnull().sum() / len(df)))
 
     print(f"--- Fixing NA values ({len(columns)} passes) ---")
     for c in tqdm(columns, total=len(columns)):
         na_dict = fix_missing(df, df[c], c, na_dict)
 
     print(f"List of NA columns fixed: {list(na_dict.keys())}")
-    if verbose:
-        print("Calculating NA...")
-        print(f"-------- New Ratio of NA values for {name} with {len(df.columns)} features ---------\n" +
-              str(df.isnull().sum() / len(df)))
+    print("Calculating NA...")
+    print(f"-------- New Ratio of NA values with {len(df.columns)} features ---------\n" +
+          str(df.isnull().sum() / len(df)))
     return df, na_dict
 
 
 def scale_vars(df, mapper=None):
     # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
     warnings.filterwarnings('ignore', category=sklearn.exceptions.DataConversionWarning)
-    for col in df:
-        df[col] = df[col].astype(np.float32)
     if mapper is None:
+        # is_numeric_dtype will exclude categorical columns
         map_f = [([n], StandardScaler()) for n in df.columns if is_numeric_dtype(df[n])]
         mapper = DataFrameMapper(map_f).fit(df)
     df[mapper.transformed_names_] = mapper.transform(df).astype(np.float32)
@@ -115,8 +113,7 @@ def get_all_non_numeric(df):
 
 
 def apply_encoding(df, cont_features, categ_features,
-                   do_scale=False, na_dict=None, verbose=True,
-                   name='dataframe', check_all_num=True):
+                   scale_mapper=False, na_dict=None):
     """
     Apply encoding to the passed dataframes and return a new dataframe with the encoded features.
 
@@ -138,19 +135,14 @@ def apply_encoding(df, cont_features, categ_features,
                 - Continuous
                 - As_is (don't change the variable)
             Example: {"store_type": "OneHot", "holiday_type": "Continuous", ...}
-        do_scale (bool, sklearn_pandas.dataframe_mapper.DataFrameMapper):
-            If of type bool: Whether or not to scale the continuous variables on a standard scaler
+        scale_mapper (bool, sklearn_pandas.dataframe_mapper.DataFrameMapper):
+            If of type bool: Whether or not to scale the *continuous variables* on a standard scaler
                 (mean substraction and standard deviation division).
             If of type DataFrameMapper: A mappper variable to scale the features according to the
                 given predefined mapper. Is mostly used on the val/test sets to use the same mapper
                 returned by the train set.
-            In all case of transformation the results will be of type float32.
         na_dict (dict, None): a dictionary of na columns to add. Na columns are also added if there
             are any missing values.
-        verbose (bool): Whether to make this function verbose. If not set the function still
-            returns few messages
-        name (str): Only useful for the verbose output
-        check_all_num (bool): Check if all the features are numeric, raise an error if they aren't
     Returns:
         DataFrame, dict, scale_mapper, sklearn_pandas.dataframe_mapper.DataFrameMapper:
             Returns:
@@ -189,7 +181,7 @@ def apply_encoding(df, cont_features, categ_features,
     missing_col = [col for col in df_columns if col not in all_feat]
     df = df[[feat for feat in all_feat if feat in df_columns]].copy()
 
-    df, na_dict = _fix_na(df, na_dict, verbose, name)
+    df, na_dict = _fix_na(df, na_dict)
 
     print(f"Categorizing features {categ_feat}")
     df[categ_feat].apply(lambda x: x.astype('category'))
@@ -214,14 +206,19 @@ def apply_encoding(df, cont_features, categ_features,
                 df = pd.get_dummies(df, columns=[k])
             # Treat pre-embedding as continuous variables which are meant to be transformed to embedding matrices
             elif v == 'continuous' or v == 'pre_embedding':
-                df[k] = df[k].astype('category').cat.codes
-    if do_scale:
-        scale_mapper = scale_vars(df)
+                df[k] = df[k].astype('category')
+    if scale_mapper:
+        if isinstance(scale_mapper, sklearn_pandas.dataframe_mapper.DataFrameMapper):
+            scale_mapper = scale_vars(df, scale_mapper)
+        else:
+            scale_mapper = scale_vars(df)
         print(f"List of scaled columns: {scale_mapper}")
-    if check_all_num:
-        non_num_cols = get_all_non_numeric(df)
-        if len(non_num_cols) > 0:
-            raise Exception(f"Not all columns are numeric: {non_num_cols}, DataFrame not saved.")
+    for name, col in df.items():
+        if not is_numeric_dtype(col):
+            df[name] = col.cat.codes + 1
+    non_num_cols = get_all_non_numeric(df)
+    if len(non_num_cols) > 0:
+        raise Exception(f"Not all columns are numeric: {non_num_cols}.")
     print(f"------- Dtypes of {name} with {len(df.columns)} features -------\n" + str(df.dtypes))
     print("---------- Preprocessing done -----------")
     return df, na_dict, scale_mapper

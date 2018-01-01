@@ -213,9 +213,11 @@ def create_features(train_df, test_df):
     # Get the categorical fields cardinality before turning them all to float32
     card_cat_features = {c: len(train_df[c].astype('category').cat.categories) + 1 for c in cat_vars}
 
-    train_df, na_dict, scale_mapper = encoder.apply_encoding(train_df, contin_vars, cat_vars, do_scale=True)
+    train_df, na_dict, scale_mapper = encoder.apply_encoding(train_df, contin_vars, cat_vars, scale_mapper=True)
     test_df, na_dict, scale_mapper = encoder.apply_encoding(test_df, contin_vars, cat_vars,
-                                                            do_scale=scale_mapper, na_dict=na_dict)
+                                                            scale_mapper=scale_mapper, na_dict=na_dict)
+
+    assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
 
 
@@ -262,7 +264,7 @@ def main():
                                                           cat_vars, batch_size=batch_size, test_df=test_df)
     model = shortcut.get_model(card_cat_features, len(train_df.columns) - len(cat_vars),
                                0.04, 1, [1000, 500], [0.001, 0.01], y_range=y_range)
-    learner = Learner(model, use_cuda=False)
+    learner = Learner(model)
     learner.train(optim.Adam, exp_rmspe, None, epochs, shortcut.get_train_loader, shortcut.get_val_loader)
     d = 0
 
