@@ -97,10 +97,14 @@ class Learner:
                                                         'val_metrics': val_metrics})
 
     def train(self, optimizer, loss, metrics, epochs,
-              train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
+              train_loader: DataLoader, valid_loader: DataLoader = None,
+              callbacks=None, cycle_len=None):
         """
             Trains the neural net
         Args:
+            cycle_len (int): Number of cycles before lr is reset to the initial value.
+                E.g if cycle_len = 3, then the lr is varied between a maximum
+                and minimum value over 3 epochs.
             optimizer (Optimizer): The optimizer function
             loss (function): The objective function.
             metrics (list, None): Metrics to be evaluated by the model
@@ -111,6 +115,7 @@ class Learner:
             valid_loader (DataLoader, optional): The Dataloader for validation
             callbacks (list, None): List of callbacks functions to call at each epoch
         """
+        # TODO implement cycle_len (learner.py in fast.ai) in callbacks?
         if self.use_cuda:
             tools.to_gpu(self.model)
 

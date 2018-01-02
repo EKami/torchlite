@@ -1,15 +1,11 @@
-import numpy as np
 import torch
+import copy
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd.variable import Variable
 
 
 class Metric:
-    def __init__(self):
-        self.correct_count = 0
-        self.count = 0
-
     def __call__(self, y_true, y_pred):
         raise NotImplementedError()
 
@@ -17,16 +13,17 @@ class Metric:
         raise NotImplementedError()
 
     def avg(self):
-        return 100. * self.correct_count / self.count
+        raise NotImplementedError()
 
     def reset(self):
-        self.correct_count = 0
+        raise NotImplementedError()
 
 
 class MetricsList:
     def __init__(self, metrics):
         if metrics:
-            self.metrics = metrics
+            self.metrics = [copy.deepcopy(m) for m in metrics]
+            d = 0
         else:
             self.metrics = []
 
@@ -50,6 +47,10 @@ class MetricsList:
 
 
 class CategoricalAccuracy(Metric):
+    def __init__(self):
+        self.correct_count = 0
+        self.count = 0
+
     def __call__(self, y_true, y_pred):
         """
         Return the accuracy of the predictions across the whole dataset
@@ -71,11 +72,29 @@ class CategoricalAccuracy(Metric):
         self.count += y_true.size()[0]
         return self.avg()
 
+    def avg(self):
+        return 100. * self.correct_count / self.count
+
     def get_name(self):
         return "accuracy"
 
+    def reset(self):
+        self.correct_count = 0
+
 
 class RMSPE(Metric):
+    def __init__(self, to_exp=False):
+        """
+
+        Args:
+            to_exp (bool): Set to True if the targets need to be turned
+            to exponential before the metric is processed
+        """
+        super().__init__()
+        self.to_exp = to_exp
+        self.count = 0
+        self.sum = 0
+
     def __call__(self, y_true, y_pred):
         """
         Root-mean-squared percent error
@@ -86,10 +105,23 @@ class RMSPE(Metric):
         Returns:
             The Root-mean-squared percent error
         """
-        targ = np.exp(y_true)  # Expect output to be in log format
-        pct_var = (targ - np.exp(y_pred)) / targ
-        return math.sqrt((pct_var ** 2).mean())
+        if self.to_exp:
+            targ = torch.exp(y_true)
+        else:
+            targ = y_true
+        pct_var = (targ - torch.exp(y_pred)) / targ
+        res = torch.sqrt((pct_var ** 2).mean()).data[0]
+        self.count += 1
+        self.sum += res
+        return res
 
     def get_name(self):
-        return "accuracy"
+        return "rmspe"
+
+    def avg(self):
+        return self.sum / self.count
+
+    def reset(self):
+        self.count = 0
+        self.sum = 0
 

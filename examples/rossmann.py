@@ -14,11 +14,12 @@ import numpy as np
 import torch.nn.functional as F
 import isoweek
 import datetime
-from utils.fetcher import WebFetcher
+from torchlight.data.fetcher import WebFetcher
 import shortcuts
 import structured.pandas.date as date
 import structured.pandas.encoder as encoder
 from nn.learner import Learner
+import nn.metrics as metrics
 import utils.tools as tools
 import torch.optim as optim
 from tqdm import tqdm
@@ -58,6 +59,7 @@ def get_elapsed(df, monitored_field, prefix='elapsed_'):
 
 
 def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
+    print("Preparing data...")
     with tqdm(total=16) as pbar:
         table_names = ['train', 'store', 'store_states', 'state_names', 'googletrend', 'weather', 'test']
         train, store, store_states, state_names, googletrend, weather, test = \
@@ -224,7 +226,7 @@ def create_features(train_df, test_df):
 
 def main():
     batch_size = 256
-    epochs = 15
+    epochs = 30
     output_path = "/tmp/rossman"
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
@@ -250,8 +252,8 @@ def main():
                                output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                hidden_dropouts=[0.001, 0.01], y_range=y_range)
     learner = Learner(model)
-    # TODO finish exp_rmspe metric
-    learner.train(optim.Adam(model.parameters()), F.mse_loss, None, epochs,
+    learner.train(optim.RMSprop(model.parameters(), lr=1e-3), F.mse_loss,
+                  [metrics.RMSPE(to_exp=True)], epochs,
                   shortcut.get_train_loader, shortcut.get_val_loader)
     test_pred = np.exp(learner.predict(shortcut.get_test_loader))
 

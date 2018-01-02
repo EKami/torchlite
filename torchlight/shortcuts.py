@@ -4,8 +4,8 @@
     but don't want to spend time creating the architecture of a model.
 """
 from torch.utils.data import DataLoader, Dataset
-from loaders import ModelData
-from datasets import ColumnarDataset
+from torchlight.data.loaders import ModelData
+from torchlight.data.datasets import ColumnarDataset
 from nn.models import MixedInputModel
 import torch.nn as nn
 
