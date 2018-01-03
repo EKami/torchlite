@@ -216,17 +216,18 @@ def create_features(train_df, test_df):
     # Get the categorical fields cardinality before turning them all to float32
     card_cat_features = {c: len(train_df[c].astype('category').cat.categories) + 1 for c in cat_vars}
 
-    train_df, na_dict, scale_mapper = encoder.apply_encoding(train_df, contin_vars, cat_vars, scale_mapper=True)
-    test_df, na_dict, scale_mapper = encoder.apply_encoding(test_df, contin_vars, cat_vars,
-                                                            scale_mapper=scale_mapper, na_dict=na_dict)
+    # TODO the test set is screwed: ['Year', 'Month'] are fucked
+    for v in cat_vars:
+        train_df[v] = train_df[v].astype('category').cat.as_ordered()
+    train_df, encoderBlueprint = encoder.apply_encoding(train_df, contin_vars, cat_vars, do_scale=True)
+    test_df, _ = encoder.apply_encoding(test_df, contin_vars, cat_vars,
+                                        do_scale=True, encoder_blueprint=encoderBlueprint)
 
     assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
 
 
 def main():
-    batch_size = 256
-    epochs = 30
     output_path = "/tmp/rossman"
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
@@ -241,8 +242,14 @@ def main():
                                          preprocessed_test_path)
 
     train_df, test_df, yl, cat_vars, card_cat_features = create_features(train_df, test_df)
+
+    # -- Model parameters
+    batch_size = 256
+    epochs = 20
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
+    val_idx = [0]  # Uncomment this to train on the whole dataset
+    # --
 
     max_log_y = np.max(yl)
     y_range = (0, max_log_y * 1.2)
@@ -258,8 +265,9 @@ def main():
     test_pred = np.exp(learner.predict(shortcut.get_test_loader))
 
     # Save the predictions as a csv file
-    tools.to_csv(preprocessed_test_path, os.path.join(output_path, "submit.csv"),
-                 'Id', 'Sales', test_pred, read_format='feather')
+    sub_file_path = os.path.join(output_path, "submit.csv")
+    tools.to_csv(preprocessed_test_path, sub_file_path, 'Id', 'Sales', test_pred, read_format='feather')
+    print(f"Predictions saved to {sub_file_path}")
 
 
 if __name__ == "__main__":
