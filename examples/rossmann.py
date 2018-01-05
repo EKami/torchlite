@@ -227,7 +227,7 @@ def create_features(train_df, test_df):
 
 
 def main():
-    output_path = "/tmp/rossman"
+    output_path = "/tmp/rossmann"
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
@@ -244,10 +244,10 @@ def main():
 
     # -- Model parameters
     batch_size = 256
-    epochs = 20
+    epochs = 30
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
-    # val_idx = [0]  # Uncomment this to train on the whole dataset
+    val_idx = [0]  # Comment this to train on train/val datasets
     # --
 
     max_log_y = np.max(yl)
@@ -258,7 +258,7 @@ def main():
                                output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                hidden_dropouts=[0.001, 0.01], y_range=y_range)
     learner = Learner(model)
-    learner.train(optim.RMSprop(model.parameters(), lr=1e-3), F.mse_loss,
+    learner.train(optim.Adam(model.parameters()), F.mse_loss,
                   [metrics.RMSPE(to_exp=True)], epochs,
                   shortcut.get_train_loader, shortcut.get_val_loader)
     test_pred = np.exp(learner.predict(shortcut.get_test_loader))
