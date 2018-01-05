@@ -16,13 +16,6 @@ class EncoderBlueprint:
         """
         This class keeps all the transformations that went through
         the encoding of a dataframe for later use on another dataframe
-        Args:
-            scale_mapper (sklearn_pandas.dataframe_mapper.DataFrameMapper, None):
-                A mappper variable to scale the features according to the
-                given predefined mapper. Is mostly used on the val/test sets to use the same mapper
-                returned by the train set.
-            na_dict (dict, None): a dictionary of na columns to add. Na columns are also added if there
-                are any missing values.
         """
         self.scale_mapper = None
         self.na_dict = None
@@ -79,11 +72,13 @@ def _fix_na(df, na_dict):
 def scale_vars(df, mapper=None):
     # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
     warnings.filterwarnings('ignore', category=sklearn.exceptions.DataConversionWarning)
+    numeric_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
     if mapper is None:
         # is_numeric_dtype will exclude categorical columns
-        map_f = [([n], StandardScaler()) for n in df.columns if is_numeric_dtype(df[n])]
+        map_f = [([n], StandardScaler()) for n in numeric_cols]
         mapper = DataFrameMapper(map_f).fit(df)
     df[mapper.transformed_names_] = mapper.transform(df).astype(np.float32)
+    df[numeric_cols] = df[numeric_cols].astype(np.float32)
     return mapper
 
 
@@ -95,8 +90,8 @@ def get_all_non_numeric(df):
     return non_num_cols
 
 
-def apply_encoding(df, cont_features, categ_features,
-                   do_scale=False, encoder_blueprint=None):
+def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
+                   categ_encoding="categorical", encoder_blueprint=None):
     """
     Changes the passed dataframe to an entirely numeric dataframe and return
     a new dataframe with the encoded features.
@@ -104,24 +99,21 @@ def apply_encoding(df, cont_features, categ_features,
     The features from the `dataframes` parameter which are not passed neither in `numeric_features`
     nor in `categ_features` are just ignored for the resulting dataframe.
     The columns which are listed in `numeric_features` and `categ_features` and not present in the
-    dataset are also ignored.
+    dataframe are also ignored.
     Args:
         df (DataFrame): DataFrame on which to apply the encoding
-        cont_features (dict, list): The list of features to encode as numeric values.
-            If given as a list all continuous features are encoded as float32.
-            If given as a dictionary types can be any numpy type.
-            For instance: {"index": np.int32, "sales": np.float32, ...}
-        categ_features (dict, list): The list of features to encode as categorical features.
-            If given as a list all categorical features are encoded as pandas 'categorical' (continuous vars).
-            If given as a dictionary the types can be of the following:
-                - OneHot: Will create new columns corresponding to onehot encoding
-                - Categorical: Will treat the column as continuous (to fit it into an embedding for example)
-            Example: {"store_type": "OneHot", "holiday_type": "Categorical", ...}
-            /!\ The specific encodings from this dict will be ignored if an encoder_blueprint
-            has been passed as well. Intead the encoding from encoder_blueprint will be used
-            and
-        do_scale (bool): Whether or not to scale the *continuous variables* on a standard scaler
-                (mean substraction and standard deviation division)
+        cont_features (list): The list of features to encode as continuous values.
+        categ_features (list): The list of features to encode as categorical features.
+        scale_continuous (bool): Whether or not to scale the *continuous variables* on a standard scaler
+                (mean substraction and standard deviation division).
+                All features types will be encoded as float32.
+        categ_encoding (str): The type of encoding for the categorical variables.
+            - "Categorical": Encode the categorical variables as pandas "categorical" type
+                (turn them to discrete codes).
+            - "OneHot": Turn the categorical variables to onehot encoding (pandas dummy variables).
+            /!\ The specific encodings from this parameter will be ignored if an encoder_blueprint
+            has been passed as well. Instead the encoding from encoder_blueprint will be used.
+
         encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
             the passed df. Typically the first time you run this method you won't have any, a new
             EncoderBlueprint will be returned from this function that you need to pass in to this
@@ -147,61 +139,43 @@ def apply_encoding(df, cont_features, categ_features,
             print("Turning dask DataFrame into pandas DataFrame")
             df = df.compute()
 
-    # Turn categ_feat to a dict if it's a list
-    if isinstance(categ_features, list):
-        di = {}
-        for key in categ_features:
-            di[key] = 'continuous'
-        categ_features = di
-
-    # Turn cont_features to a dict if it's a list
-    if isinstance(cont_features, list):
-        di = {}
-        for key in cont_features:
-            di[key] = np.float32
-        cont_features = di
-
+    categ_encoding = categ_encoding.lower()
     encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
-    categ_feat = list(categ_features.keys())
-    all_feat = categ_feat + list(cont_features.keys())
+    all_feat = categ_features + cont_features
     df_columns = df.columns
     missing_col = [col for col in df_columns if col not in all_feat]
     df = df[[feat for feat in all_feat if feat in df_columns]].copy()
 
     df, encoder_blueprint.na_dict = _fix_na(df, encoder_blueprint.na_dict)
 
-    print(f"Categorizing features {categ_feat}")
-    df[categ_feat].apply(lambda x: x.astype('category'))
+    print(f"Categorizing features {categ_features}")
+    df[categ_features].apply(lambda x: x.astype('category'))
 
     print(f"Warning: Missing columns: {missing_col}, dropping them...")
-    for k, v in cont_features.items():
-        if k in df_columns:
-            df[k] = df[k].astype(v)
 
     # If the categorical mapping exists
     if encoder_blueprint.categ_var_map:
         for col_name, values in df.items():
             if col_name in categ_features:
                 var_map = encoder_blueprint.categ_var_map
+                # If the passed df has more categories than its predecessor ValueError will be raised
                 df[col_name] = pd.Categorical(values,
                                               categories=var_map[col_name].cat.categories,
                                               ordered=True)
     else:
-        for k, v in tqdm(categ_features.items(), total=len(categ_features.items())):
-            if k in df_columns:
-                if isinstance(v, str):
-                    v = v.lower()
-                if v == 'onehot':
+        for feat in tqdm(categ_features, total=len(categ_features)):
+            if feat in df_columns:
+                if categ_encoding == 'onehot':
                     # TODO newly created onehot columns are not turned to categorical
                     # TODO newly created onehot should be saved into encoderBlueprint
-                    df = pd.get_dummies(df, columns=[k])
+                    df = pd.get_dummies(df, columns=[feat], dummy_na=True)
 
                 # Transform all types of categorical columns to pandas category type
                 # Usually useful to make embeddings or keep the columns as continuous
-                df[k] = df[k].astype('category').cat.as_ordered()
+                df[feat] = df[feat].astype('category').cat.as_ordered()
 
     # Scale continuous vars
-    if do_scale:
+    if scale_continuous:
         encoder_blueprint.scale_mapper = scale_vars(df, encoder_blueprint.scale_mapper)
         print(f"List of scaled columns: {encoder_blueprint.scale_mapper.transformed_names_}")
 
