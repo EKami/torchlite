@@ -218,9 +218,10 @@ def create_features(train_df, test_df):
 
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
-    train_df, encoder_blueprint = encoder.apply_encoding(train_df, contin_vars, cat_vars, scale_continuous=True)
-    test_df, _ = encoder.apply_encoding(test_df, contin_vars, cat_vars,
-                                        scale_continuous=True, encoder_blueprint=encoder_blueprint)
+    train_df, encoder_blueprint = encoder.apply_encoding(train_df, contin_vars, cat_vars,
+                                                         scale_continuous=True)
+    test_df, _ = encoder.apply_encoding(test_df, contin_vars, cat_vars, scale_continuous=True,
+                                        encoder_blueprint=encoder_blueprint)
 
     assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
@@ -247,7 +248,7 @@ def main():
     epochs = 30
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
-    val_idx = [0]  # Comment this to train on train/val datasets
+    val_idx = [0]  # Uncomment this to train on the whole dataset
     # --
 
     max_log_y = np.max(yl)

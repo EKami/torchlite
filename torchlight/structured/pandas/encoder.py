@@ -71,14 +71,13 @@ def _fix_na(df, na_dict):
 
 def scale_vars(df, mapper=None):
     # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
-    warnings.filterwarnings('ignore', category=sklearn.exceptions.DataConversionWarning)
-    numeric_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
+    num_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
+    df[num_cols] = df[num_cols].astype(np.float32)
     if mapper is None:
         # is_numeric_dtype will exclude categorical columns
-        map_f = [([n], StandardScaler()) for n in numeric_cols]
+        map_f = [([n], StandardScaler()) for n in num_cols]
         mapper = DataFrameMapper(map_f).fit(df)
     df[mapper.transformed_names_] = mapper.transform(df)
-    df[numeric_cols] = df[numeric_cols].astype(np.float32)
     return mapper
 
 
@@ -93,9 +92,8 @@ def get_all_non_numeric(df):
 def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
                    categ_encoding="categorical", encoder_blueprint=None):
     """
-    Changes the passed dataframe to an entirely numeric dataframe and return
+        Changes the passed dataframe to an entirely numeric dataframe and return
     a new dataframe with the encoded features.
-
     The features from the `dataframes` parameter which are not passed neither in `numeric_features`
     nor in `categ_features` are just ignored for the resulting dataframe.
     The columns which are listed in `numeric_features` and `categ_features` and not present in the
@@ -113,7 +111,6 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
             - "OneHot": Turn the categorical variables to onehot encoding (pandas dummy variables).
             /!\ The specific encodings from this parameter will be ignored if an encoder_blueprint
             has been passed as well. Instead the encoding from encoder_blueprint will be used.
-
         encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
             the passed df. Typically the first time you run this method you won't have any, a new
             EncoderBlueprint will be returned from this function that you need to pass in to this
@@ -142,17 +139,12 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
     categ_encoding = categ_encoding.lower()
     encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
     all_feat = categ_features + cont_features
-    df_columns = df.columns
-    missing_col = [col for col in df_columns if col not in all_feat]
-    df = df[[feat for feat in all_feat if feat in df_columns]].copy()
+    missing_col = [col for col in df.columns if col not in all_feat]
+    df = df[[feat for feat in all_feat if feat in df.columns]].copy()
 
     df, encoder_blueprint.na_dict = _fix_na(df, encoder_blueprint.na_dict)
-
-    print(f"Categorizing features {categ_features}")
-    df[categ_features].apply(lambda x: x.astype('category'))
-
     print(f"Warning: Missing columns: {missing_col}, dropping them...")
-
+    print(f"Categorizing features {categ_features}")
     # If the categorical mapping exists
     if encoder_blueprint.categ_var_map:
         for col_name, values in df.items():
@@ -164,7 +156,7 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
                                               ordered=True)
     else:
         for feat in tqdm(categ_features, total=len(categ_features)):
-            if feat in df_columns:
+            if feat in df.columns:
                 if categ_encoding == 'onehot':
                     # TODO newly created onehot columns are not turned to categorical
                     # TODO newly created onehot should be saved into encoderBlueprint
