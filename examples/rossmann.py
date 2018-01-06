@@ -245,7 +245,7 @@ def main():
 
     # -- Model parameters
     batch_size = 256
-    epochs = 30
+    epochs = 20
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
     val_idx = [0]  # Uncomment this to train on the whole dataset
