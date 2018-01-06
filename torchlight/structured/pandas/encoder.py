@@ -83,7 +83,7 @@ def scale_vars(df, mapper=None):
         # is_numeric_dtype will exclude categorical columns
         map_f = [([n], StandardScaler()) for n in df.columns if is_numeric_dtype(df[n])]
         mapper = DataFrameMapper(map_f).fit(df)
-    df[mapper.transformed_names_] = mapper.transform(df).astype(np.float32)
+    df[mapper.transformed_names_] = mapper.transform(df)
     return mapper
 
 
@@ -149,15 +149,9 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
     df = df[[feat for feat in all_feat if feat in df.columns]].copy()
 
     df, encoder_blueprint.na_dict = _fix_na(df, encoder_blueprint.na_dict)
+    print(f"Warning: Missing columns: {missing_col}, dropping them...")
 
     print(f"Categorizing features {categ_features}")
-    df[categ_features].apply(lambda x: x.astype('category'))
-
-    print(f"Warning: Missing columns: {missing_col}, dropping them...")
-    for k in cont_features:
-        if k in df.columns:
-            df[k] = df[k].astype(np.float32)
-
     # If the categorical mapping exists
     if encoder_blueprint.categ_var_map:
         for col_name, values in df.items():
