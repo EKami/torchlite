@@ -77,7 +77,7 @@ def scale_vars(df, mapper=None):
         # is_numeric_dtype will exclude categorical columns
         map_f = [([n], StandardScaler()) for n in numeric_cols]
         mapper = DataFrameMapper(map_f).fit(df)
-    df[mapper.transformed_names_] = mapper.transform(df).astype(np.float32)
+    df[mapper.transformed_names_] = mapper.transform(df)
     df[numeric_cols] = df[numeric_cols].astype(np.float32)
     return mapper
 
