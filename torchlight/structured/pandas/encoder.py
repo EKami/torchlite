@@ -1,8 +1,5 @@
-import sklearn
 from sklearn.preprocessing.data import StandardScaler
-from sklearn_pandas.dataframe_mapper import DataFrameMapper
 from dask.diagnostics import ProgressBar
-import warnings
 import pandas as pd
 
 import dask.dataframe as dd
@@ -17,7 +14,7 @@ class EncoderBlueprint:
         This class keeps all the transformations that went through
         the encoding of a dataframe for later use on another dataframe
         """
-        self.scale_mapper = None
+        self.scaler = None
         self.na_dict = None
         self.categ_var_map = None
 
@@ -69,16 +66,16 @@ def _fix_na(df, na_dict):
     return df, na_dict
 
 
-def scale_vars(df, mapper=None):
+def scale_vars(df, scaler=None):
     # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
     num_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
+    # This previous transformation to float32 is very important
     df[num_cols] = df[num_cols].astype(np.float32)
-    if mapper is None:
-        # is_numeric_dtype will exclude categorical columns
-        map_f = [([n], StandardScaler()) for n in num_cols]
-        mapper = DataFrameMapper(map_f).fit(df)
-    df[mapper.transformed_names_] = mapper.transform(df)
-    return mapper
+    if scaler is None:
+        scaler = StandardScaler().fit(df[num_cols].as_matrix())
+    df[num_cols] = scaler.transform(df[num_cols])
+    print(f"List of scaled columns: {num_cols}")
+    return scaler
 
 
 def get_all_non_numeric(df):
@@ -159,7 +156,7 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
             if feat in df.columns:
                 if categ_encoding == 'onehot':
                     # TODO newly created onehot columns are not turned to categorical
-                    # TODO newly created onehot should be saved into encoderBlueprint
+                    # TODO newly created onehot should be saved into encoderBlueprint (see sklearn OneHotEncoder)
                     df = pd.get_dummies(df, columns=[feat], dummy_na=True)
 
                 # Transform all types of categorical columns to pandas category type
@@ -168,8 +165,7 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
 
     # Scale continuous vars
     if scale_continuous:
-        encoder_blueprint.scale_mapper = scale_vars(df, encoder_blueprint.scale_mapper)
-        print(f"List of scaled columns: {encoder_blueprint.scale_mapper.transformed_names_}")
+        encoder_blueprint.scaler = scale_vars(df, encoder_blueprint.scaler)
 
     # Save categorical codes into encoderBlueprint
     encoder_blueprint.save_categ_vars_map(df)
