@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-import numpy as np
 from torchlight.nn.callbacks import TrainCallbackList, TQDM
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -12,7 +11,7 @@ from nn.metrics import MetricsList
 
 
 class Learner:
-    def __init__(self, model: nn.Module, use_cuda=torch.cuda.is_available()):
+    def __init__(self, model: nn.Module, use_cuda=True):
         """
         The learner class used to train a model
         Args:
@@ -20,8 +19,13 @@ class Learner:
             use_cuda (bool): If True moves the model onto the GPU
         """
         self.model = model
-        self.use_cuda = use_cuda
         self.epoch_counter = 0
+        self.use_cuda = False
+        if use_cuda:
+            if torch.cuda.is_available():
+                self.use_cuda = True
+            else:
+                print("/!\ Warning: Cuda set but not available, using CPU...")
 
     def restore_model(self, model_path):
         """

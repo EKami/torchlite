@@ -142,58 +142,42 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
             print("Turning dask DataFrame into pandas DataFrame")
             df = df.compute()
 
-    # Turn categ_feat to a dict if it's a list
-    if isinstance(categ_features, list):
-        di = {}
-        for key in categ_features:
-            di[key] = 'continuous'
-        categ_features = di
-
-    # Turn cont_features to a dict if it's a list
-    if isinstance(cont_features, list):
-        di = {}
-        for key in cont_features:
-            di[key] = np.float32
-        cont_features = di
-
+    categ_encoding = categ_encoding.lower()
     encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
-    categ_feat = list(categ_features.keys())
-    all_feat = categ_feat + list(cont_features.keys())
-    df_columns = df.columns
-    missing_col = [col for col in df_columns if col not in all_feat]
-    df = df[[feat for feat in all_feat if feat in df_columns]].copy()
+    all_feat = categ_features + cont_features
+    missing_col = [col for col in df.columns if col not in all_feat]
+    df = df[[feat for feat in all_feat if feat in df.columns]].copy()
 
     df, encoder_blueprint.na_dict = _fix_na(df, encoder_blueprint.na_dict)
 
-    print(f"Categorizing features {categ_feat}")
-    df[categ_feat].apply(lambda x: x.astype('category'))
+    print(f"Categorizing features {categ_features}")
+    df[categ_features].apply(lambda x: x.astype('category'))
 
     print(f"Warning: Missing columns: {missing_col}, dropping them...")
-    for k, v in cont_features.items():
-        if k in df_columns:
-            df[k] = df[k].astype(v)
+    for k in cont_features:
+        if k in df.columns:
+            df[k] = df[k].astype(np.float32)
 
     # If the categorical mapping exists
     if encoder_blueprint.categ_var_map:
         for col_name, values in df.items():
             if col_name in categ_features:
                 var_map = encoder_blueprint.categ_var_map
+                # If the passed df has more categories than its predecessor ValueError will be raised
                 df[col_name] = pd.Categorical(values,
                                               categories=var_map[col_name].cat.categories,
                                               ordered=True)
     else:
-        for k, v in tqdm(categ_features.items(), total=len(categ_features.items())):
-            if k in df_columns:
-                if isinstance(v, str):
-                    v = v.lower()
-                if v == 'onehot':
+        for feat in tqdm(categ_features, total=len(categ_features)):
+            if feat in df.columns:
+                if categ_encoding == 'onehot':
                     # TODO newly created onehot columns are not turned to categorical
                     # TODO newly created onehot should be saved into encoderBlueprint
-                    df = pd.get_dummies(df, columns=[k])
+                    df = pd.get_dummies(df, columns=[feat], dummy_na=True)
 
                 # Transform all types of categorical columns to pandas category type
                 # Usually useful to make embeddings or keep the columns as continuous
-                df[k] = df[k].astype('category').cat.as_ordered()
+                df[feat] = df[feat].astype('category').cat.as_ordered()
 
     # Scale continuous vars
     if scale_continuous:
