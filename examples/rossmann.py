@@ -218,16 +218,17 @@ def create_features(train_df, test_df):
 
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
-    train_df, encoder_blueprint = encoder.apply_encoding(train_df, contin_vars, cat_vars, do_scale=True)
-    test_df, _ = encoder.apply_encoding(test_df, contin_vars, cat_vars,
-                                        do_scale=True, encoder_blueprint=encoder_blueprint)
+    train_df, encoder_blueprint = encoder.apply_encoding(train_df, contin_vars, cat_vars,
+                                                         scale_continuous=True)
+    test_df, _ = encoder.apply_encoding(test_df, contin_vars, cat_vars, scale_continuous=True,
+                                        encoder_blueprint=encoder_blueprint)
 
     assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
 
 
 def main():
-    output_path = "/tmp/rossman"
+    output_path = "/tmp/rossmann"
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
@@ -247,7 +248,7 @@ def main():
     epochs = 20
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
-    # val_idx = [0]  # Uncomment this to train on the whole dataset
+    val_idx = [0]  # Uncomment this to train on the whole dataset
     # --
 
     max_log_y = np.max(yl)
@@ -258,7 +259,7 @@ def main():
                                output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                hidden_dropouts=[0.001, 0.01], y_range=y_range)
     learner = Learner(model)
-    learner.train(optim.RMSprop(model.parameters(), lr=1e-3), F.mse_loss,
+    learner.train(optim.Adam(model.parameters()), F.mse_loss,
                   [metrics.RMSPE(to_exp=True)], epochs,
                   shortcut.get_train_loader, shortcut.get_val_loader)
     test_pred = np.exp(learner.predict(shortcut.get_test_loader))

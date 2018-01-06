@@ -95,33 +95,28 @@ def get_all_non_numeric(df):
     return non_num_cols
 
 
-def apply_encoding(df, cont_features, categ_features,
-                   do_scale=False, encoder_blueprint=None):
+def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
+                   categ_encoding="categorical", encoder_blueprint=None):
     """
-    Changes the passed dataframe to an entirely numeric dataframe and return
+        Changes the passed dataframe to an entirely numeric dataframe and return
     a new dataframe with the encoded features.
-
     The features from the `dataframes` parameter which are not passed neither in `numeric_features`
     nor in `categ_features` are just ignored for the resulting dataframe.
     The columns which are listed in `numeric_features` and `categ_features` and not present in the
-    dataset are also ignored.
+    dataframe are also ignored.
     Args:
         df (DataFrame): DataFrame on which to apply the encoding
-        cont_features (dict, list): The list of features to encode as numeric values.
-            If given as a list all continuous features are encoded as float32.
-            If given as a dictionary types can be any numpy type.
-            For instance: {"index": np.int32, "sales": np.float32, ...}
-        categ_features (dict, list): The list of features to encode as categorical features.
-            If given as a list all categorical features are encoded as pandas 'categorical' (continuous vars).
-            If given as a dictionary the types can be of the following:
-                - OneHot: Will create new columns corresponding to onehot encoding
-                - Categorical: Will treat the column as continuous (to fit it into an embedding for example)
-            Example: {"store_type": "OneHot", "holiday_type": "Categorical", ...}
-            /!\ The specific encodings from this dict will be ignored if an encoder_blueprint
-            has been passed as well. Intead the encoding from encoder_blueprint will be used
-            and
-        do_scale (bool): Whether or not to scale the *continuous variables* on a standard scaler
-                (mean substraction and standard deviation division)
+        cont_features (list): The list of features to encode as continuous values.
+        categ_features (list): The list of features to encode as categorical features.
+        scale_continuous (bool): Whether or not to scale the *continuous variables* on a standard scaler
+                (mean substraction and standard deviation division).
+                All features types will be encoded as float32.
+        categ_encoding (str): The type of encoding for the categorical variables.
+            - "Categorical": Encode the categorical variables as pandas "categorical" type
+                (turn them to discrete codes).
+            - "OneHot": Turn the categorical variables to onehot encoding (pandas dummy variables).
+            /!\ The specific encodings from this parameter will be ignored if an encoder_blueprint
+            has been passed as well. Instead the encoding from encoder_blueprint will be used.
         encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
             the passed df. Typically the first time you run this method you won't have any, a new
             EncoderBlueprint will be returned from this function that you need to pass in to this
@@ -201,7 +196,7 @@ def apply_encoding(df, cont_features, categ_features,
                 df[k] = df[k].astype('category').cat.as_ordered()
 
     # Scale continuous vars
-    if do_scale:
+    if scale_continuous:
         encoder_blueprint.scale_mapper = scale_vars(df, encoder_blueprint.scale_mapper)
         print(f"List of scaled columns: {encoder_blueprint.scale_mapper.transformed_names_}")
 
