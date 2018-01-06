@@ -76,11 +76,11 @@ def _fix_na(df, na_dict):
     return df, na_dict
 
 
-def scale_vars(df, cont_features, mapper=None):
+def scale_vars(df, mapper=None):
     # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
     if mapper is None:
         # is_numeric_dtype will exclude categorical columns
-        map_f = [([n], StandardScaler()) for n in cont_features]
+        map_f = [([n], StandardScaler()) for n in df.columns if is_numeric_dtype(df[n])]
         mapper = DataFrameMapper(map_f).fit(df)
     df[mapper.transformed_names_] = mapper.transform(df)
     return mapper
@@ -176,7 +176,7 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
         for k in cont_features:
             if k in df.columns:
                 df[k] = df[k].astype(np.float32)
-        encoder_blueprint.scale_mapper = scale_vars(df, cont_features, encoder_blueprint.scale_mapper)
+        encoder_blueprint.scale_mapper = scale_vars(df, encoder_blueprint.scale_mapper)
         print(f"List of scaled columns: {encoder_blueprint.scale_mapper.transformed_names_}")
 
     # Save categorical codes into encoderBlueprint
