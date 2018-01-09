@@ -74,6 +74,7 @@ def scale_vars(df, scaler=None):
     if scaler is None:
         scaler = StandardScaler().fit(df[num_cols].as_matrix())
     df[num_cols] = scaler.transform(df[num_cols])
+    df[num_cols] = df[num_cols].astype(np.float32)
     print(f"List of scaled columns: {num_cols}")
     return scaler
 
