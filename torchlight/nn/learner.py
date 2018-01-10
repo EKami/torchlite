@@ -1,3 +1,4 @@
+from datetime import datetime
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -140,7 +141,9 @@ class Learner:
                                       'val_loader_len': val_loader_len})
 
         for _ in range(epochs):
+            start_time = datetime.now()
             self._run_epoch(train_loader, valid_loader, optimizer, loss, metrics, callback_list)
+            print('Epoch time (hh:mm:ss.ms) {}'.format(datetime.now() - start_time))
             self.epoch_counter += 1
 
     def predict(self, test_loader, tta=False):

@@ -20,7 +20,7 @@ def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
             Assumes the column is of type datetime64 if df is a dask dataframe
         transform_list (list): List of data transformations to add to the original dataset
         drop (bool): If true then the original date column will be removed
-
+        inplace (bool): If the operations are done inplace or not
     Returns:
         A pandas or dask DataFrame depending on what was passed in
     """

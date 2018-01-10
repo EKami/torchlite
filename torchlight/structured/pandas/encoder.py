@@ -148,7 +148,7 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
         for col_name, values in df.items():
             if col_name in categ_features:
                 var_map = encoder_blueprint.categ_var_map
-                # If the passed df has more categories than its predecessor ValueError will be raised
+                print(f"Encoding categorical feature {col_name}...")
                 df[col_name] = pd.Categorical(values,
                                               categories=var_map[col_name].cat.categories,
                                               ordered=True)

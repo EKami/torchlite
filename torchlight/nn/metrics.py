@@ -1,5 +1,6 @@
 import torch
 import copy
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd.variable import Variable
@@ -85,7 +86,7 @@ class CategoricalAccuracy(Metric):
 class RMSPE(Metric):
     def __init__(self, to_exp=False):
         """
-
+        Root-mean-squared percent error
         Args:
             to_exp (bool): Set to True if the targets need to be turned
             to exponential before the metric is processed
@@ -124,4 +125,3 @@ class RMSPE(Metric):
     def reset(self):
         self.count = 0
         self.sum = 0
-
