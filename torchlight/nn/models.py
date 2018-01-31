@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import tools
+import torchlight.nn.tools as tools
 
 
 def emb_init(x):
@@ -65,3 +65,11 @@ class StructuredModel(BasicModel):
     def get_layer_groups(self, do_fc=False):
         m = self.model
         return [m.embs, tools.children(m.lins) + tools.children(m.bns), m.outp]
+
+
+class Flatten(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x.view(x.size(0), -1)

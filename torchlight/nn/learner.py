@@ -1,14 +1,13 @@
 from datetime import datetime
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
 from torchlight.nn.callbacks import TrainCallbackList, TQDM
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from utils import tools
-from nn.metrics import MetricsList
+from torchlight.nn import tools
+from torchlight.nn.metrics import MetricsList
 
 
 class Learner:

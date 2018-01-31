@@ -3,11 +3,15 @@
     in them. The serve as the "default way to go" when you train for a particular dataset
     but don't want to spend time creating the architecture of a model.
 """
+from typing import Union
+from pathlib import Path
+import torchvision
 from torch.utils.data import DataLoader, Dataset
 from torchlight.data.loaders import ModelData
 from torchlight.data.datasets import ColumnarDataset
-from nn.models import MixedInputModel
+from torchlight.nn.models import MixedInputModel
 import torch.nn as nn
+import os
 
 import numpy as np
 
@@ -83,7 +87,57 @@ class ColumnarShortcut(ModelData):
                                hidden_sizes, hidden_dropouts, y_range, use_bn)
 
 
+class ImageClassifierShortcut(ModelData):
+    @classmethod
+    def from_paths(cls, root_dir: Path, preprocess_dir: Union[Path, None],
+                   train_folder_name='train', val_folder_name='valid', test_folder_name=None,
+                   batch_size=64, transforms=None, num_workers=os.cpu_count()):
+        """
+        Read in images and their labels given as sub-folder names
+
+        Args:
+            root_dir (Path): The root directory where the datasets are stored.
+            preprocess_dir (Path, None): The directory where the preprocessed images will be stored or
+                None to not preprocess the images.
+                The preprocessing consist of converting the image files to blosc arrays so they
+                are loaded from disk much faster.
+            train_folder_name (str): The name of the train folder to append to the root_dir
+            val_folder_name (str, None) : The name of the validation folder to append to the root_dir
+            test_folder_name (str, None) : The name of the test folder to append to the root_dir
+            batch_size (int): The batch_size
+            transforms (torchvision.transforms.Compose): List of transformations (for data augmentation)
+            num_workers (int): The number of workers for preprocessing
+
+        Returns:
+
+        """
+        trn, val = [folder_source(root_dir, o) for o in (train_folder_name, val_folder_name)]
+        # test_fnames = read_dir(path, test_name) if test_name else None
+        # datasets = cls.get_ds(FilesIndexArrayDataset, trn, val, tfms, path=path, test=test_fnames)
+        # return cls(path, datasets, batch_size, num_workers, classes=trn[2])
+
+
 def split_by_idx(idxs, *a):
     mask = np.zeros(len(a[0]), dtype=bool)
     mask[np.array(idxs)] = True
     return [(o[mask], o[~mask]) for o in a]
+
+
+def read_dirs(path, folder):
+    labels, filenames, all_labels = [], [], []
+    full_path = os.path.join(path, folder)
+    for label in sorted(os.listdir(full_path)):
+        all_labels.append(label)
+        for fname in os.listdir(os.path.join(full_path, label)):
+            filenames.append(os.path.join(folder, label, fname))
+            labels.append(label)
+    return filenames, labels, all_labels
+
+
+def folder_source(path, folder):
+    fnames, lbls, all_labels = read_dirs(path, folder)
+    label2idx = {v:k for k,v in enumerate(all_labels)}
+    idxs = [label2idx[lbl] for lbl in lbls]
+    c = len(all_labels)
+    label_arr = np.array(idxs, dtype=int)
+    return fnames, label_arr, all_labels

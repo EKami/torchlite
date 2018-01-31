@@ -84,7 +84,7 @@ class WebFetcher:
     def download_dataset(url: str, output_folder: str, decompress: bool):
         """
             Downloads the dataset and return the input paths.
-                    Do not download again if the data is already present.
+            Do not download again if the data is already present.
             Args:
                 url (str): Http link to the archive
                 output_folder (str): Path to save the downloaded files

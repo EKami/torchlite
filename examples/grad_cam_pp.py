@@ -9,14 +9,20 @@ task as a demo of using Grad-cam++ in that context.
 https://github.com/fastai/fastai/blob/master/courses/dl1/lesson7-CAM.ipynb
 https://github.com/adityac94/Grad_CAM_plus_plus
 """
+import torchvision
+import torchvision.transforms as transforms
 from pathlib import Path
 import pandas as pd
 from skimage import io
+import torchlight.data.fetcher as fetcher
+import torchlight.nn.tools as tools
+import torchlight.nn.models as models
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learner import Learner
 from torchlight.nn.metrics import CategoricalAccuracy
-import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 
 
@@ -38,14 +44,35 @@ class CatsDogsDataset(Dataset):
         img_infos = self.root_dir / self.data_df.iloc[idx, 0]
 
         image = io.imread(img_infos["image_name"])
+        # TODO resize
+        # TODO normalize
 
         return image, img_infos['type'].cat.codes
 
 
 def main():
-    test_data = CatsDogsDataset(csv_file=Path("datasets/catsdogs/labels.csv"),
-                                root_dir=Path("datasets/catsdogs/"))
-    net = None
+    root_dir = "/tmp/dogscat"
+    fetcher.WebFetcher.download_dataset("https://www.dropbox.com/s/3ua7ocnuhukmvzs/dogscats.zip", root_dir, True)
+    root_dir = Path(root_dir)
+    tmp_dir = root_dir / "tmp"
+
+    resnet = torchvision.models.resnet34(pretrained=True)
+    # Take the head of resnet up until AdaptiveAvgPool2d
+    resnet_head = tools.children(resnet)[:-2]
+    # Fine tuning
+    net = nn.Sequential(*resnet_head,
+                        nn.Conv2d(512, 2, 3, padding=1),
+                        nn.AdaptiveAvgPool2d(1), models.Flatten(),
+                        nn.LogSoftmax())
+
+    # Image augmentation
+    transformations = transforms.Compose([transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                               std=[0.229, 0.224, 0.225]),
+                                          transforms.Resize((224, 224)),
+                                          ])
+    shortcut = ImageClassifierShortcut.from_paths(root_dir=root_dir,
+                                                  preprocess_dir=tmp_dir,
+                                                  transforms=transformations)
 
 
 if __name__ == "__main__":

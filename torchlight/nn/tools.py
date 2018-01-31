@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Variable
 import numpy as np
 import pandas as pd
+import torch.nn as nn
 
 
 class AverageMeter(object):
@@ -69,5 +70,14 @@ def to_csv(test_file, output_file, identifier_field, predicted_field,
     df.to_csv(output_file, index=False)
 
 
-def children(m):
-    return m if isinstance(m, (list, tuple)) else list(m.children())
+def children(module: nn.Module):
+    """
+        Returns a list of an nn.Module children modules
+        (in other terms the list of layers of a given model)
+    Args:
+        module (nn.Module):
+            A Pytorch module
+    Returns:
+        list: A list of the module children
+    """
+    return module if isinstance(module, (list, tuple)) else list(module.children())
