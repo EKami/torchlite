@@ -52,7 +52,8 @@ class CatsDogsDataset(Dataset):
 
 def main():
     root_dir = "/tmp/dogscat"
-    fetcher.WebFetcher.download_dataset("https://www.dropbox.com/s/3ua7ocnuhukmvzs/dogscats.zip", root_dir, True)
+    fetcher.WebFetcher.download_dataset("https://dl.dropboxusercontent.com/s/3ua7ocnuhukmvzs/dogscats.zip", root_dir,
+                                        True)
     root_dir = Path(root_dir)
     tmp_dir = root_dir / "tmp"
 
