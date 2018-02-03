@@ -4,6 +4,23 @@ import torchlight.nn.tools as tools
 import numpy as np
 
 
+class ImagesDataset(Dataset):
+    def __init__(self, images, y, transforms=None):
+        self.transforms = transforms
+        self.images = images
+        self.y = y
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx):
+        image = io.imread(self.images[idx])
+        # TODO resize
+        # TODO normalize
+
+        return image, self.y[idx]
+
+
 class ColumnarDataset(Dataset):
     # https://github.com/EKami/carvana-challenge/blob/master/src/data/dataset.py
     def __init__(self, cats, conts, y):
@@ -28,23 +45,3 @@ class ColumnarDataset(Dataset):
     @classmethod
     def from_data_frame(cls, df, cat_flds, y=None):
         return cls.from_data_frames(df[cat_flds], df.drop(cat_flds, axis=1), y)
-
-
-class ImagesDataset(Dataset):
-    def __init__(self, images, y, transforms=None):
-        self.transforms = transforms
-        self.images = images
-        self.y = y
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, idx):
-        image = io.imread(self.images[idx])
-        # TODO resize
-        # TODO normalize
-
-        return image, self.y[idx]
-
-
-

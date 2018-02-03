@@ -1,10 +1,10 @@
 from torchvision import datasets, transforms
-from torchlight.nn.learner import Learner
-from torchlight.nn.metrics import CategoricalAccuracy
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torchlight.nn.learner import Learner
+from torchlight.nn.metrics import CategoricalAccuracy
 
 
 class Net(nn.Module):

@@ -14,15 +14,15 @@ import numpy as np
 import torch.nn.functional as F
 import isoweek
 import datetime
-from torchlight.data.fetcher import WebFetcher
-import shortcuts
-import structured.pandas.date as date
-import structured.pandas.encoder as encoder
-from nn.learner import Learner
-import nn.metrics as metrics
-import utils.tools as tools
 import torch.optim as optim
 from tqdm import tqdm
+from torchlight.nn.learner import Learner
+import torchlight.nn.metrics as metrics
+from torchlight.data.fetcher import WebFetcher
+import torchlight.shortcuts as shortcuts
+import torchlight.structured.pandas.date as date
+import torchlight.structured.pandas.encoder as encoder
+import torchlight.nn.tools as tools
 
 
 def join_df(left, right, left_on, right_on=None, suffix='_y'):

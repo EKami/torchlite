@@ -15,16 +15,16 @@ Resources:
 import torchvision
 import torchvision.transforms as transforms
 from pathlib import Path
+from torch.utils.data import Dataset, DataLoader
+import torch.optim as optim
+import torch.nn.functional as F
 import torchlight.data.fetcher as fetcher
 import torchlight.nn.tools as tools
 import torchlight.nn.models as models
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
 from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learner import Learner
 from torchlight.nn.metrics import CategoricalAccuracy
-import torch.optim as optim
-import torch.nn.functional as F
 
 
 def main():
