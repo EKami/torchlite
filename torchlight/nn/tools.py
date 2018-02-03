@@ -102,7 +102,8 @@ def get_labels_from_folders(path, y_mapping=None):
     if not y_mapping:
         y_mapping = {v: k for k, v in enumerate(y_all)}
 
-    files = [[(file, y_mapping[label]) for file in os.listdir(os.path.join(path, label))] for label in y_all]
+    files = [[(os.path.join(path, label, file), y_mapping[label]) for file in
+              os.listdir(os.path.join(path, label))] for label in y_all]
     files = np.array(files).reshape(-1, 2)
     return files, y_mapping
 

@@ -12,15 +12,11 @@ Resources:
  - https://github.com/fastai/fastai/blob/master/courses/dl1/lesson7-CAM.ipynb
  - https://github.com/adityac94/Grad_CAM_plus_plus
 """
-import torchvision
 import torchvision.transforms as transforms
 from pathlib import Path
-from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 import torch.nn.functional as F
 import torchlight.data.fetcher as fetcher
-import torchlight.nn.tools as tools
-import torch.nn as nn
 from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learner import Learner
 from torchlight.nn.metrics import CategoricalAccuracy
@@ -50,7 +46,8 @@ def main():
     net = shortcut.get_resnet_model()
     learner = Learner(net)
 
-    optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
+    # Don't optimize the frozen layers parameters of resnet
+    optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3)
     loss = F.nll_loss
     metrics = [CategoricalAccuracy()]
 

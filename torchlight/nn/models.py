@@ -71,12 +71,13 @@ class FinetunedModelTools:
 
 class FinetunedConvModel(nn.Module):
 
-    def __init__(self, base_model_head):
+    def __init__(self, base_model_head, output_layer):
         """
         A convolutional neural net model used for categorical classification
         Args:
             base_model_head (list): The list of pretrained layers which will
-            be added on top of this model like Resnet or Vgg.
+                be added on top of this model like Resnet or Vgg.
+            output_layer (nn.Module): The output layer (usually softmax or sigmoid)
             E.g:
                 resnet = torchvision.models.resnet34(pretrained=True)
                 # Take the head of resnet up until AdaptiveAvgPool2d
@@ -90,7 +91,7 @@ class FinetunedConvModel(nn.Module):
         self.conv1 = nn.Conv2d(512, 2, 3, padding=1)
         self.adp1 = nn.AdaptiveAvgPool2d(1)
         self.flatten = Flatten()
-        self.out = nn.LogSoftmax()
+        self.out = output_layer
 
     def forward(self, *input):
         x = self.base_model_head(input)
