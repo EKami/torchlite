@@ -7,6 +7,7 @@ from tqdm import tqdm
 class KaggleDatasetFetcher:
     """
         A tool used to automatically download datasets from Kaggle
+        TODO: Use https://github.com/Kaggle/kaggle-api
     """
 
     @staticmethod

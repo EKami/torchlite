@@ -255,9 +255,9 @@ def main():
     y_range = (0, max_log_y * 1.2)
     shortcut = shortcuts.ColumnarShortcut.from_data_frame(train_df, val_idx, yl.astype(np.float32),
                                                           cat_vars, batch_size=batch_size, test_df=test_df)
-    model = shortcut.get_model(card_cat_features, len(train_df.columns) - len(cat_vars),
-                               output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
-                               hidden_dropouts=[0.001, 0.01], y_range=y_range)
+    model = shortcut.get_stationary_model(card_cat_features, len(train_df.columns) - len(cat_vars),
+                                          output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
+                                          hidden_dropouts=[0.001, 0.01], y_range=y_range)
     learner = Learner(model)
     learner.train(optim.Adam(model.parameters()), F.mse_loss,
                   [metrics.RMSPE(to_exp=True)], epochs,

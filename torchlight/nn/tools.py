@@ -1,3 +1,5 @@
+import itertools
+import os
 import torch
 from torch.autograd import Variable
 import numpy as np
@@ -81,3 +83,31 @@ def children(module: nn.Module):
         list: A list of the module children
     """
     return module if isinstance(module, (list, tuple)) else list(module.children())
+
+
+def get_labels_from_folders(path, y_mapping=None):
+    """
+    Get labels from folder names as well as the absolute path to the files
+    from the folders
+    Args:
+        path (str): The path to inspect
+        y_mapping (dict): If the labels were already mapped to an integer,
+        give that mapping here in the form of {index: label}
+
+    Returns:
+        files (tuple): A tuple containing (file_path, label)
+        y_mapping (dict): The mapping between the label and their index
+    """
+    y_all = [label for label in os.listdir(path) if os.path.isdir(os.path.join(path, label))]
+    if not y_mapping:
+        y_mapping = {v: k for k, v in enumerate(y_all)}
+
+    files = [[(file, y_mapping[label]) for file in os.listdir(os.path.join(path, label))] for label in y_all]
+    files = np.array(files).reshape(-1, 2)
+    return files, y_mapping
+
+
+def split_by_idx(idxs, *a):
+    mask = np.zeros(len(a[0]), dtype=bool)
+    mask[np.array(idxs)] = True
+    return [(o[mask], o[~mask]) for o in a]

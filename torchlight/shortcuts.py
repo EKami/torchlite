@@ -4,33 +4,28 @@
     but don't want to spend time creating the architecture of a model.
 """
 from typing import Union
-from pathlib import Path
 import torchvision
-from torch.utils.data import DataLoader, Dataset
-from torchlight.data.loaders import ModelData
-from torchlight.data.datasets import ColumnarDataset
+from torch.utils.data import Dataset
+from torchlight.data.datasets import ColumnarDataset, ImagesDataset
 from torchlight.nn.models import MixedInputModel
+from torchlight.data.loaders import BaseLoader
+import torchlight.nn.tools as tools
 import torch.nn as nn
 import os
 
-import numpy as np
 
-
-class ColumnarShortcut(ModelData):
+class ColumnarShortcut(BaseLoader):
     def __init__(self, train_ds, val_ds=None, test_ds=None, batch_size=64, shuffle=True):
         """
         A shortcut used for structured/columnar data
         Args:
-            trn_ds (Dataset): The train dataset
+            train_ds (Dataset): The train dataset
             val_ds (Dataset): The validation dataset
             test_ds (Dataset): The test dataset
             batch_size (int): The batch size for the training
             shuffle (bool): If True shuffle the training set
         """
-        self.train_dl = DataLoader(train_ds, batch_size, shuffle=shuffle)
-        self.val_dl = DataLoader(val_ds, batch_size, shuffle=False) if val_ds else None
-        self.test_dl = DataLoader(test_ds, batch_size, shuffle=False) if test_ds else None
-        super().__init__(self.train_dl, self.val_dl, self.test_dl)
+        super().__init__(train_ds, val_ds, batch_size, shuffle, test_ds)
 
     @classmethod
     def from_data_frames(cls, train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=None):
@@ -40,28 +35,19 @@ class ColumnarShortcut(ModelData):
 
     @classmethod
     def from_data_frame(cls, df, val_idxs, y, cat_fields, batch_size, test_df=None):
-        ((val_df, trn_df), (val_y, train_y)) = split_by_idx(val_idxs, df, y)
-        return cls.from_data_frames(trn_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=test_df)
+        ((val_df, train_df), (val_y, train_y)) = tools.split_by_idx(val_idxs, df, y)
+        return cls.from_data_frames(train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=test_df)
 
-    @property
-    def get_train_loader(self):
-        return self.train_dl
-
-    @property
-    def get_val_loader(self):
-        return self.val_dl
-
-    @property
-    def get_test_loader(self):
-        return self.test_dl
-
-    def get_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
-                  max_embedding_size=50, y_range=None, use_bn=False):
+    def get_stationary_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
+                             max_embedding_size=50, y_range=None, use_bn=False):
         """
             Generates a default model. You can use it or create your own instead.
             This model will automatically create embeddings for the cat_features
             passed in this method. All the other features will be treated as
-            continuous up to n_cont
+            continuous up to n_cont.
+
+            /!\ This model is useful only for data which were turned stationary. Otherwise it will give
+            very bad results.
         Args:
             card_cat_features (dict): Dictionary containing the name and cardinality of each categorical features
                 Ex: {'Store': 6, 'Year': 3, 'Client_type': 5}
@@ -73,7 +59,7 @@ class ColumnarShortcut(ModelData):
             hidden_dropouts (list): List of hidden layers dropout.
                 Ex: [0.001, 0.01, 0.1] Will apply dropout to the 3 hidden layers respectively
             max_embedding_size (int): The maximum embedding sizes
-            y_range:
+            y_range (tuple): The range in which y must fit
             use_bn (bool): Use batch normalization
 
         Returns:
@@ -87,57 +73,53 @@ class ColumnarShortcut(ModelData):
                                hidden_sizes, hidden_dropouts, y_range, use_bn)
 
 
-class ImageClassifierShortcut(ModelData):
+class ImageClassifierShortcut(BaseLoader):
+    def __init__(self, train_ds, val_ds=None, test_ds=None, batch_size=64, shuffle=True):
+        """
+        A shortcut used for image data
+        Args:
+            train_ds (Dataset): The train dataset
+            val_ds (Dataset): The validation dataset
+            test_ds (Dataset): The test dataset
+            batch_size (int): The batch size for the training
+            shuffle (bool): If True shuffle the training set
+        """
+        super().__init__(train_ds, val_ds, batch_size, shuffle, test_ds)
+
     @classmethod
-    def from_paths(cls, root_dir: Path, preprocess_dir: Union[Path, None],
-                   train_folder_name='train', val_folder_name='valid', test_folder_name=None,
-                   batch_size=64, transforms=None, num_workers=os.cpu_count()):
+    def from_paths(cls, train_folder: str, val_folder: Union[str, None], test_folder: Union[str, None]=None,
+                   preprocess_dir: Union[str, None]=None, batch_size=64, transforms=None, num_workers=os.cpu_count()):
         """
         Read in images and their labels given as sub-folder names
 
         Args:
-            root_dir (Path): The root directory where the datasets are stored.
-            preprocess_dir (Path, None): The directory where the preprocessed images will be stored or
+            train_folder (str): The path to the train folder
+            val_folder (str, None): The path to the validation folder
+            test_folder (str, None): The path to the test folder
+            preprocess_dir (str, None): The directory where the preprocessed images will be stored or
                 None to not preprocess the images.
                 The preprocessing consist of converting the image files to blosc arrays so they
-                are loaded from disk much faster.
-            train_folder_name (str): The name of the train folder to append to the root_dir
-            val_folder_name (str, None) : The name of the validation folder to append to the root_dir
-            test_folder_name (str, None) : The name of the test folder to append to the root_dir
+                are loaded from disk much faster. If the folder already exists it won't be
+                regenerated.
             batch_size (int): The batch_size
             transforms (torchvision.transforms.Compose): List of transformations (for data augmentation)
             num_workers (int): The number of workers for preprocessing
 
         Returns:
-
+            ImageClassifierShortcut: A ImageClassifierShortcut object
         """
-        trn, val = [folder_source(root_dir, o) for o in (train_folder_name, val_folder_name)]
-        # test_fnames = read_dir(path, test_name) if test_name else None
-        # datasets = cls.get_ds(FilesIndexArrayDataset, trn, val, tfms, path=path, test=test_fnames)
-        # return cls(path, datasets, batch_size, num_workers, classes=trn[2])
+        # TODO preprocess to bcolz and change folders
+        train_files, y_mapping = tools.get_labels_from_folders(train_folder)
+        train_ds = ImagesDataset(train_files[:, 0], train_files[:, 1], transforms)
+        val_ds = None
+        test_ds = None
 
+        if val_folder:
+            val_files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
+            val_ds = ImagesDataset(val_files[:, 0], val_files[:, 1], transforms)
 
-def split_by_idx(idxs, *a):
-    mask = np.zeros(len(a[0]), dtype=bool)
-    mask[np.array(idxs)] = True
-    return [(o[mask], o[~mask]) for o in a]
+        if test_folder:
+            test_files, _ = tools.get_labels_from_folders(test_folder, y_mapping)
+            test_ds = ImagesDataset(test_files[:, 0], test_files[:, 1], transforms)
 
-
-def read_dirs(path, folder):
-    labels, filenames, all_labels = [], [], []
-    full_path = os.path.join(path, folder)
-    for label in sorted(os.listdir(full_path)):
-        all_labels.append(label)
-        for fname in os.listdir(os.path.join(full_path, label)):
-            filenames.append(os.path.join(folder, label, fname))
-            labels.append(label)
-    return filenames, labels, all_labels
-
-
-def folder_source(path, folder):
-    fnames, lbls, all_labels = read_dirs(path, folder)
-    label2idx = {v:k for k,v in enumerate(all_labels)}
-    idxs = [label2idx[lbl] for lbl in lbls]
-    c = len(all_labels)
-    label_arr = np.array(idxs, dtype=int)
-    return fnames, label_arr, all_labels
+        return cls(train_ds, val_ds, test_ds, batch_size)
