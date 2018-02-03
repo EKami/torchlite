@@ -18,3 +18,8 @@ class BaseLoader:
     @property
     def get_test_loader(self):
         return self.test_dl
+
+    def freeze_to(self, n):
+        c=self.get_layer_groups()
+        for l in c:     set_trainable(l, False)
+        for l in c[n:]: set_trainable(l, True)

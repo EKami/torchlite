@@ -20,7 +20,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchlight.data.fetcher as fetcher
 import torchlight.nn.tools as tools
-import torchlight.nn.models as models
 import torch.nn as nn
 from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learner import Learner
@@ -28,6 +27,8 @@ from torchlight.nn.metrics import CategoricalAccuracy
 
 
 def main():
+    batch_size = 128
+    epochs = 20
     root_dir = "/tmp/dogscat"
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip", root_dir,
                                         True)
@@ -35,15 +36,6 @@ def main():
     tmp_dir = root_dir / "tmp"
     train_folder = root_dir / "train"
     val_folder = root_dir / "valid"
-
-    resnet = torchvision.models.resnet34(pretrained=True)
-    # Take the head of resnet up until AdaptiveAvgPool2d
-    resnet_head = tools.children(resnet)[:-2]
-    # Fine tuning
-    net = nn.Sequential(*resnet_head,
-                        nn.Conv2d(512, 2, 3, padding=1),
-                        nn.AdaptiveAvgPool2d(1), models.Flatten(),
-                        nn.LogSoftmax())
 
     # Image augmentation
     transformations = transforms.Compose([transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -53,7 +45,16 @@ def main():
     shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
                                                   val_folder=val_folder.absolute(),
                                                   preprocess_dir=tmp_dir.absolute(),
-                                                  transforms=transformations)
+                                                  transforms=transformations,
+                                                  batch_size=batch_size)
+    net = shortcut.get_resnet_model()
+    learner = Learner(net)
+
+    optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
+    loss = F.nll_loss
+    metrics = [CategoricalAccuracy()]
+
+    learner.train(optimizer, loss, metrics, epochs, shortcut.get_train_loader, None, callbacks=None)
 
 
 if __name__ == "__main__":

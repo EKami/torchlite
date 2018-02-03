@@ -5,17 +5,19 @@ import numpy as np
 
 
 class ImagesDataset(Dataset):
-    def __init__(self, images, y, transforms=None):
+    def __init__(self, images_path, y, transforms=None):
         self.transforms = transforms
-        self.images = images
+        self.images_path = images_path
         self.y = y
 
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, idx):
-        image = io.imread(self.images[idx])
+        image = io.imread(self.images_path[idx])
         # TODO resize
+        if self.transforms:
+            image = self.transforms(image)
         # TODO normalize
 
         return image, self.y[idx]

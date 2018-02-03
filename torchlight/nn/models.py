@@ -10,6 +10,97 @@ def emb_init(x):
     x.uniform_(-sc, sc)
 
 
+class FinetunedModelTools:
+    @staticmethod
+    def _get_layer_groups(layers):
+        return tools.children(layers)
+
+    @staticmethod
+    def _set_trainable_attr(m, b):
+        m.trainable = b
+        for p in m.parameters():
+            p.requires_grad = b
+
+    @staticmethod
+    def _apply_leaf(layer, func):
+        c = tools.children(layer)
+        if isinstance(layer, nn.Module):
+            func(layer)
+        if len(c) > 0:
+            for l in c:
+                FinetunedModelTools._apply_leaf(l, func)
+
+    @staticmethod
+    def set_trainable(leaf, trainable):
+        FinetunedModelTools._apply_leaf(leaf, lambda m: FinetunedModelTools._set_trainable_attr(m, trainable))
+
+    @staticmethod
+    def freeze_to(layers, index):
+        """
+        Freeze all but the layers up until index.
+        Make all layers untrainable (i.e. frozen) up to the index layer.
+
+        Args:
+            layers (list): The layers to freeze
+            index (int): The index on which to freeze up to
+
+        Returns:
+
+        """
+        c = FinetunedModelTools._get_layer_groups(layers)
+        for l in c:
+            FinetunedModelTools.set_trainable(l, False)
+        for l in c[index:]:
+            FinetunedModelTools.set_trainable(l, True)
+        return layers
+
+    @staticmethod
+    def freeze(layers):
+        """
+        Freeze all but the very last layer.
+        Make all layers untrainable (i.e. frozen) except for the last layer.
+
+        Args:
+            layers (list): The layers to freeze
+
+        Returns:
+            model: The passed model
+        """
+        return FinetunedModelTools.freeze_to(layers, -1)
+
+
+class FinetunedConvModel(nn.Module):
+
+    def __init__(self, base_model_head):
+        """
+        A convolutional neural net model used for categorical classification
+        Args:
+            base_model_head (list): The list of pretrained layers which will
+            be added on top of this model like Resnet or Vgg.
+            E.g:
+                resnet = torchvision.models.resnet34(pretrained=True)
+                # Take the head of resnet up until AdaptiveAvgPool2d
+                resnet_head = tools.children(resnet)[:-2]
+                net = FinetunedConvModel(resnet_head)
+        """
+        super().__init__()
+        self.base_model_head = nn.Sequential(*FinetunedModelTools.freeze(base_model_head))
+
+        # Fine tuning
+        self.conv1 = nn.Conv2d(512, 2, 3, padding=1)
+        self.adp1 = nn.AdaptiveAvgPool2d(1)
+        self.flatten = Flatten()
+        self.out = nn.LogSoftmax()
+
+    def forward(self, *input):
+        x = self.base_model_head(input)
+        x = self.conv1(x)
+        x = self.adp1(x)
+        x = self.flatten(x)
+        x = self.out(x)
+        return x
+
+
 class MixedInputModel(nn.Module):
     def __init__(self, embedding_sizes, n_continuous, emb_drop, output_sizes, hidden_sizes,
                  hidden_dropouts, y_range=None, use_bn=False):
@@ -53,16 +144,11 @@ class MixedInputModel(nn.Module):
         return x
 
 
-class BasicModel:
+class StructuredModel:
     def __init__(self, model, name='unnamed'):
         self.model, self.name = model, name
 
-    def get_layer_groups(self, do_fc=False):
-        return tools.children(self.model)
-
-
-class StructuredModel(BasicModel):
-    def get_layer_groups(self, do_fc=False):
+    def get_layer_groups(self):
         m = self.model
         return [m.embs, tools.children(m.lins) + tools.children(m.bns), m.outp]
 
