@@ -1,4 +1,4 @@
-import itertools
+from PIL import Image
 import os
 import torch
 from torch.autograd import Variable
@@ -34,6 +34,23 @@ class AverageMeter(object):
     def debias_loss(self):
         # More info: https://youtu.be/J99NV9Cr75I?t=2h4m
         return self.avg_loss_mom / (1 - self.avg_mom ** self.count)
+
+
+def image_to_tensor(image, mean=0, std=1.):
+    """
+    Transforms an image to a tensor and eventually normalize it
+    Args:
+        image (np.ndarray): A RGB array image
+        mean: The mean of the image values
+        std: The standard deviation of the image values
+    Returns:
+        tensor: A Pytorch tensor
+    """
+    image = image.astype(np.float32)
+    image = (image - mean) / std
+    image = image.transpose((2, 0, 1))
+    tensor = torch.from_numpy(image)
+    return tensor
 
 
 def to_np(v):

@@ -1,11 +1,23 @@
-from torch.utils.data import Dataset
+import torch
+from PIL import Image
 from skimage import io
-import torchlight.nn.tools as tools
+from torch.utils.data import Dataset
 import numpy as np
 
 
 class ImagesDataset(Dataset):
-    def __init__(self, images_path, y, transforms=None):
+    def __init__(self, images_path, y, transforms=None, image_type="image"):
+        """
+            Dataset class for images classification
+        Args:
+            images_path (list): The path the images
+            y (list): The image labels as int
+            transforms (Compose): A list of composable transforms
+            image_type (str): Either:
+             - image
+             - blosc-array
+        """
+        self.image_type = image_type
         self.transforms = transforms
         self.images_path = images_path
         self.y = y
@@ -14,12 +26,15 @@ class ImagesDataset(Dataset):
         return len(self.y)
 
     def __getitem__(self, idx):
-        image = io.imread(self.images_path[idx])
-        # TODO resize
+        if self.image_type == "blosc-array":
+            # TODO finish
+            image = Image.fromarray(io.imread(self.images_path[idx]))
+        else:
+            image = Image.open(self.images_path[idx])
+
+        # Transforms can include resize, normalization and torch tensor transformation
         if self.transforms:
             image = self.transforms(image)
-        # TODO normalize
-
         return image, self.y[idx]
 
 

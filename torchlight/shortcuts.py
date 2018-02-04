@@ -110,17 +110,17 @@ class ImageClassifierShortcut(BaseLoader):
         """
         # TODO preprocess to bcolz and change folders
         train_files, y_mapping = tools.get_labels_from_folders(train_folder)
-        train_ds = ImagesDataset(train_files[:, 0], train_files[:, 1], transforms)
+        train_ds = ImagesDataset(train_files[:, 0], train_files[:, 1], transforms=transforms)
         val_ds = None
         test_ds = None
 
         if val_folder:
             val_files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
-            val_ds = ImagesDataset(val_files[:, 0], val_files[:, 1], transforms)
+            val_ds = ImagesDataset(val_files[:, 0], val_files[:, 1], transforms=transforms)
 
         if test_folder:
             test_files, _ = tools.get_labels_from_folders(test_folder, y_mapping)
-            test_ds = ImagesDataset(test_files[:, 0], test_files[:, 1], transforms)
+            test_ds = ImagesDataset(test_files[:, 0], test_files[:, 1], transforms=transforms)
 
         return cls(train_ds, val_ds, test_ds, batch_size)
 

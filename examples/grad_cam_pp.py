@@ -12,6 +12,7 @@ Resources:
  - https://github.com/fastai/fastai/blob/master/courses/dl1/lesson7-CAM.ipynb
  - https://github.com/adityac94/Grad_CAM_plus_plus
 """
+import torchlight.nn.transforms as ltrans
 import torchvision.transforms as transforms
 from pathlib import Path
 import torch.optim as optim
@@ -33,10 +34,12 @@ def main():
     train_folder = root_dir / "train"
     val_folder = root_dir / "valid"
 
-    # Image augmentation
-    transformations = transforms.Compose([transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    # Image augmentation/transformations
+    # TODO add center cropping from torchlight.nn.transforms.CenterCropping
+    transformations = transforms.Compose([transforms.Resize((224, 224)),
+                                          transforms.ToTensor(),
+                                          transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                std=[0.229, 0.224, 0.225]),
-                                          transforms.Resize((224, 224)),
                                           ])
     shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
                                                   val_folder=val_folder.absolute(),
