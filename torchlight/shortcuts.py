@@ -109,20 +109,17 @@ class ImageClassifierShortcut(BaseLoader):
             ImageClassifierShortcut: A ImageClassifierShortcut object
         """
         # TODO preprocess to bcolz and change folders
-        train_files, y_mapping = tools.get_labels_from_folders(train_folder)
-        train_ds = ImagesDataset(train_files[:, 0], train_files[:, 1], transforms=transforms)
-        val_ds = None
-        test_ds = None
 
-        if val_folder:
-            val_files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
-            val_ds = ImagesDataset(val_files[:, 0], val_files[:, 1], transforms=transforms)
+        y_mapping = None
+        datasets = []
+        for folder in (train_folder, val_folder, test_folder):
+            if folder:
+                files, y_mapping = tools.get_labels_from_folders(folder, y_mapping)
+                datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+            else:
+                datasets.append(None)
 
-        if test_folder:
-            test_files, _ = tools.get_labels_from_folders(test_folder, y_mapping)
-            test_ds = ImagesDataset(test_files[:, 0], test_files[:, 1], transforms=transforms)
-
-        return cls(train_ds, val_ds, test_ds, batch_size)
+        return cls(datasets[0], datasets[1], datasets[2], batch_size)
 
     def get_resnet_model(self):
         resnet = torchvision.models.resnet34(pretrained=True)

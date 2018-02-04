@@ -6,8 +6,6 @@ its predictions. Link to the paper: https://arxiv.org/abs/1710.11063
 The presented code uses a pretrained VGG model on a cat/dog classification
 task as a demo of using Grad-cam++ in that context.
 
-In
-
 Resources:
  - https://github.com/fastai/fastai/blob/master/courses/dl1/lesson7-CAM.ipynb
  - https://github.com/adityac94/Grad_CAM_plus_plus

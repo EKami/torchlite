@@ -6,12 +6,13 @@ import numpy as np
 
 
 class ImagesDataset(Dataset):
-    def __init__(self, images_path, y, transforms=None, image_type="image"):
+    def __init__(self, images_path: list, y: np.ndarray, transforms=None, image_type="image"):
         """
-            Dataset class for images classification
+            Dataset class for images classification.
+            Works for single and multi label classes.
         Args:
             images_path (list): The path the images
-            y (list): The image labels as int
+            y (np.ndarray): The image labels as int
             transforms (Compose): A list of composable transforms
             image_type (str): Either:
              - image
@@ -20,10 +21,13 @@ class ImagesDataset(Dataset):
         self.image_type = image_type
         self.transforms = transforms
         self.images_path = images_path
-        self.y = y
+        self.y_onehot = torch.LongTensor(len(y), len(np.unique(y)))
+        self.y_onehot.zero_()
+        labels_tensors = torch.unsqueeze(torch.from_numpy(y.astype(np.long)), 1)
+        self.y_onehot.scatter_(1, labels_tensors, 1)
 
     def __len__(self):
-        return len(self.y)
+        return len(self.y_onehot)
 
     def __getitem__(self, idx):
         if self.image_type == "blosc-array":
@@ -35,7 +39,8 @@ class ImagesDataset(Dataset):
         # Transforms can include resize, normalization and torch tensor transformation
         if self.transforms:
             image = self.transforms(image)
-        return image, self.y[idx]
+
+        return image, self.y_onehot[idx]
 
 
 class ColumnarDataset(Dataset):
