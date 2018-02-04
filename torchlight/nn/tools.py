@@ -129,3 +129,19 @@ def split_by_idx(idxs, *a):
     mask = np.zeros(len(a[0]), dtype=bool)
     mask[np.array(idxs)] = True
     return [(o[mask], o[~mask]) for o in a]
+
+
+def to_onehot_tensor(y: np.ndarray):
+    """
+    Turn a numpy array with indices to a torch onehot tensor
+    Args:
+        y (np.ndarray): The numpy array with indices
+
+    Returns:
+        torch.IntTensor: The onehot tensor
+    """
+    y_onehot = torch.IntTensor(len(y), len(np.unique(y)))
+    y_onehot.zero_()
+    labels_tensors = torch.unsqueeze(torch.from_numpy(y.astype(np.long)), 1)
+    y_onehot.scatter_(1, labels_tensors, 1)
+    return y_onehot

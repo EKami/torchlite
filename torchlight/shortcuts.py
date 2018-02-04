@@ -125,5 +125,5 @@ class ImageClassifierShortcut(BaseLoader):
         resnet = torchvision.models.resnet34(pretrained=True)
         # Take the head of resnet up until AdaptiveAvgPool2d
         resnet_head = tools.children(resnet)[:-2]
-        net = FinetunedConvModel(resnet_head, nn.LogSoftmax())
+        net = FinetunedConvModel(resnet_head, nn.LogSoftmax(dim=1))
         return net

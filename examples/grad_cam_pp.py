@@ -23,7 +23,7 @@ from torchlight.nn.metrics import CategoricalAccuracy
 
 def main():
     batch_size = 128
-    epochs = 20
+    epochs = 3
     root_dir = "/tmp/dogscat"
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip", root_dir,
                                         True)

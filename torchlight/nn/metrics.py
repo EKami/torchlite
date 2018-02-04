@@ -24,7 +24,6 @@ class MetricsList:
     def __init__(self, metrics):
         if metrics:
             self.metrics = [copy.deepcopy(m) for m in metrics]
-            d = 0
         else:
             self.metrics = []
 

@@ -93,7 +93,7 @@ class FinetunedConvModel(nn.Module):
         self.flatten = Flatten()
         self.out = output_layer
 
-    def forward(self, *input):
+    def forward(self, input):
         x = self.base_model_head(input)
         x = self.conv1(x)
         x = self.adp1(x)
