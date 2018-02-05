@@ -10,9 +10,9 @@ from torchlight.data.datasets import ColumnarDataset, ImagesDataset
 from torchlight.nn.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
 import torchlight.nn.tools as tools
+import torchlight.data.cache as cache
 import numpy as np
 import torch.nn as nn
-import os
 
 
 class ColumnarShortcut(BaseLoader):
@@ -91,7 +91,7 @@ class ImageClassifierShortcut(BaseLoader):
 
     @classmethod
     def from_paths(cls, train_folder: str, val_folder: Union[str, None], test_folder: Union[str, None] = None,
-                   preprocess_dir: Union[str, None] = None, batch_size=64, transforms=None, num_workers=os.cpu_count()):
+                   preprocess_dir: Union[str, None] = None, batch_size=64, transforms=None):
         """
         Read in images and their labels given as sub-folder names
 
@@ -106,26 +106,26 @@ class ImageClassifierShortcut(BaseLoader):
                 regenerated.
             batch_size (int): The batch_size
             transforms (torchvision.transforms.Compose): List of transformations (for data augmentation)
-            num_workers (int): The number of workers for preprocessing
 
         Returns:
             ImageClassifierShortcut: A ImageClassifierShortcut object
         """
-        # TODO preprocess to bcolz and change folders
-
         datasets = []
 
         files, y_mapping = tools.get_labels_from_folders(train_folder)
+        files = cache.to_blosc_arrays(files, preprocess_dir) if preprocess_dir else files
         datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
             files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
+            files = cache.to_blosc_arrays(files, preprocess_dir) if preprocess_dir else files
             datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
             files = tools.get_files(test_folder)
+            files = cache.to_blosc_arrays(files, preprocess_dir) if preprocess_dir else files
             datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)
