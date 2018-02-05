@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torchlight.nn.learner import Learner
 from torchlight.nn.metrics import CategoricalAccuracy
+import os
 
 
 class Net(nn.Module):
@@ -28,19 +29,19 @@ class Net(nn.Module):
 
 def main():
     batch_size = 128
-    epochs = 2
+    epochs = 20
     mnist_train_data = datasets.MNIST('/tmp/data', train=True, download=True,
                                       transform=transforms.Compose([
                                           transforms.ToTensor(),
                                           transforms.Normalize((0.1307,), (0.3081,))
                                       ]))
-    train_loader = DataLoader(mnist_train_data, batch_size, shuffle=True)
+    train_loader = DataLoader(mnist_train_data, batch_size, shuffle=True, num_workers=os.cpu_count())
 
     mnist_test_data = datasets.MNIST('/tmp/data', train=False, transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ]))
-    test_loader = DataLoader(mnist_test_data, batch_size, shuffle=False)
+    test_loader = DataLoader(mnist_test_data, batch_size, shuffle=False, num_workers=os.cpu_count())
 
     net = Net()
     learner = Learner(net)
