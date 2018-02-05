@@ -3,7 +3,7 @@ from tqdm import tqdm
 from collections import OrderedDict
 
 
-class Callback(object):
+class Callback:
     def __init__(self):
         self.validation_data = None
         self.params = None
@@ -118,6 +118,26 @@ class TrainCallbackList(object):
 
     def __iter__(self):
         return iter(self.callbacks)
+
+
+class TensorboardVisualizerCallback(Callback):
+    def __init__(self, path_to_files):
+        """
+            Callback intended to be executed at each epoch
+            of the training which goal is to display the result
+            of the last validation batch in Tensorboard
+        Args:
+            path_to_files (str): The path where to store the log files
+        """
+        # TODO finish https://github.com/EKami/carvana-challenge/blob/master/src/nn/train_callbacks.py#L13
+        super().__init__()
+        self.path_to_files = path_to_files
+
+    def on_epoch_begin(self, epoch, logs=None):
+        pass
+
+    def on_epoch_end(self, epoch, logs=None):
+        pass
 
 
 class TQDM(Callback):

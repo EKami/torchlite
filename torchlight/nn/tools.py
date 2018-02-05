@@ -36,6 +36,25 @@ class AverageMeter(object):
         return self.avg_loss_mom / (1 - self.avg_mom ** self.count)
 
 
+def denormalize(image: np.ndarray, std, mean, channel_type="channel_first"):
+    """
+        Reverse the normalization done to an image.
+    Args:
+        image (np.ndarray): Image matrix
+        std (np.ndarray, list): Standard deviation over channels
+        mean (np.ndarray, list): Mean over channels
+        channel_type (str): Either channel_first or channel_last
+    Returns:
+        np.ndarray: The image denormalized as (Height, Width, Channels)
+    """
+    if channel_type == "channel_first":
+        image = np.transpose(image, (1, 2, 0))
+
+    image = image * std + mean
+    image = (image * 255).astype(np.uint8)
+    return image
+
+
 def image_to_tensor(image, mean=0, std=1.):
     """
     Transforms an image to a tensor and eventually normalize it
@@ -107,7 +126,7 @@ def get_labels_from_folders(path, y_mapping=None):
     Get labels from folder names as well as the absolute path to the files
     from the folders
     Args:
-        path (str): The path to inspect
+        path (str): The directory to inspect
         y_mapping (dict): If the labels were already mapped to an integer,
         give that mapping here in the form of {index: label}
 
@@ -123,6 +142,20 @@ def get_labels_from_folders(path, y_mapping=None):
               os.listdir(os.path.join(path, label))] for label in y_all]
     files = np.array(files).reshape(-1, 2)
     return files, y_mapping
+
+
+def get_files(path):
+    """
+    Returns the files from a folder
+    Args:
+        path (str): The directory to inspect
+
+    Returns:
+        list: A list of files
+    """
+    all_files = os.listdir(path)
+    ret_files = [os.path.join(path, file) for file in all_files if os.path.isfile(os.path.join(path, file))]
+    return ret_files
 
 
 def split_by_idx(idxs, *a):

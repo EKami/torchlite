@@ -4,6 +4,7 @@ from skimage import io
 from torch.utils.data import Dataset
 import numpy as np
 import torchlight.nn.tools as tools
+import os
 
 
 class ImagesDataset(Dataset):
@@ -39,6 +40,21 @@ class ImagesDataset(Dataset):
             image = self.transforms(image)
 
         return image, self.y[idx]
+
+    def get_by_name(self, name):
+        """
+        Get an image given name.
+        The image will pass through the preprocessing operations/transformations.
+        Args:
+            name (str): The image name
+
+        Returns:
+            tuple: (image, label, image_index)
+        """
+        for i, path in enumerate(self.images_path):
+            _, file = os.path.split(path)
+            if name == file:
+                return self[i][0], self[i][1], i
 
 
 class ColumnarDataset(Dataset):

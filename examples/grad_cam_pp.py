@@ -9,8 +9,8 @@ task as a demo of using Grad-cam++ in that context.
 Resources:
  - https://github.com/fastai/fastai/blob/master/courses/dl1/lesson7-CAM.ipynb
  - https://github.com/adityac94/Grad_CAM_plus_plus
+ - http://www.gitxiv.com/posts/JradqzFyKi4pHebB4/grad-cam-generalized-gradient-based-visual-explanations-for
 """
-import torchlight.nn.transforms as ltrans
 import torchvision.transforms as transforms
 from pathlib import Path
 import torch.optim as optim
@@ -19,28 +19,45 @@ import torchlight.data.fetcher as fetcher
 from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learner import Learner
 from torchlight.nn.metrics import CategoricalAccuracy
+import matplotlib.pyplot as plt
+import numpy as np
+import torchlight.nn.tools as tools
+
+
+def show_test_image(test_image_name, shortcut, y_mapping, y_pred, resnet_std, resnet_mean):
+    image_mat, _, image_index = shortcut.get_test_loader.dataset.get_by_name(test_image_name)
+    image_mat = tools.denormalize(tools.to_np(image_mat), resnet_std, resnet_mean)
+    plt.imshow(image_mat)
+    plt.title("Predicted: " + str(y_mapping[np.argmax(y_pred[image_index])]))
+    plt.show()
 
 
 def main():
-    batch_size = 128
-    epochs = 3
-    root_dir = "/tmp/dogscat"
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip", root_dir,
-                                        True)
+    batch_size = 512
+    epochs = 1
+    root_dir = "/tmp"
+    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip",
+                                        root_dir, True)
+    root_dir = "/tmp/dogscats"
     root_dir = Path(root_dir)
     tmp_dir = root_dir / "tmp"
     train_folder = root_dir / "train"
     val_folder = root_dir / "valid"
+    test_folder = root_dir / "test"
+    test_image_name = "12500.jpg"
+
+    resnet_mean = [0.485, 0.456, 0.406]  # Over RGB channel
+    resnet_std = [0.229, 0.224, 0.225]
 
     # Image augmentation/transformations
-    # TODO add center cropping from torchlight.nn.transforms.CenterCropping
     transformations = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.ToTensor(),
-                                          transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                               std=[0.229, 0.224, 0.225]),
+                                          transforms.Normalize(mean=resnet_mean,
+                                                               std=resnet_std),
                                           ])
     shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
                                                   val_folder=val_folder.absolute(),
+                                                  test_folder=test_folder.absolute(),
                                                   preprocess_dir=tmp_dir.absolute(),
                                                   transforms=transformations,
                                                   batch_size=batch_size)
@@ -53,6 +70,10 @@ def main():
     metrics = [CategoricalAccuracy()]
 
     learner.train(optimizer, loss, metrics, epochs, shortcut.get_train_loader, None, callbacks=None)
+
+    y_mapping = shortcut.get_y_mapping
+    y_pred = learner.predict(shortcut.get_test_loader)
+    show_test_image(test_image_name, shortcut, y_mapping, y_pred, resnet_std, resnet_mean)
 
 
 if __name__ == "__main__":

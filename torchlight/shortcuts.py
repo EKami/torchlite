@@ -10,6 +10,7 @@ from torchlight.data.datasets import ColumnarDataset, ImagesDataset
 from torchlight.nn.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
 import torchlight.nn.tools as tools
+import numpy as np
 import torch.nn as nn
 import os
 
@@ -74,16 +75,18 @@ class ColumnarShortcut(BaseLoader):
 
 
 class ImageClassifierShortcut(BaseLoader):
-    def __init__(self, train_ds, val_ds=None, test_ds=None, batch_size=64, shuffle=True):
+    def __init__(self, train_ds, val_ds=None, test_ds=None, y_mapping=None, batch_size=64, shuffle=True):
         """
         A shortcut used for image data
         Args:
             train_ds (Dataset): The train dataset
             val_ds (Dataset): The validation dataset
             test_ds (Dataset): The test dataset
+            y_mapping (dict): Mapping between the labels and the indexes
             batch_size (int): The batch size for the training
             shuffle (bool): If True shuffle the training set
         """
+        self.y_mapping = y_mapping
         super().__init__(train_ds, val_ds, batch_size, shuffle, test_ds)
 
     @classmethod
@@ -110,16 +113,34 @@ class ImageClassifierShortcut(BaseLoader):
         """
         # TODO preprocess to bcolz and change folders
 
-        y_mapping = None
         datasets = []
-        for folder in (train_folder, val_folder, test_folder):
-            if folder:
-                files, y_mapping = tools.get_labels_from_folders(folder, y_mapping)
-                datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
-            else:
-                datasets.append(None)
 
-        return cls(datasets[0], datasets[1], datasets[2], batch_size)
+        files, y_mapping = tools.get_labels_from_folders(train_folder)
+        datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+
+        if val_folder:
+            files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
+            datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+        else:
+            datasets.append(None)
+
+        if test_folder:
+            files = tools.get_files(test_folder)
+            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
+        else:
+            datasets.append(None)
+
+        return cls(datasets[0], datasets[1], datasets[2], y_mapping, batch_size)
+
+    @property
+    def get_y_mapping(self):
+        """
+            The mapping between labels and indexes
+        Returns:
+            dict: The {index: label} mapping
+        """
+        mapping = {v: k for k, v in self.y_mapping.items()}
+        return mapping
 
     def get_resnet_model(self):
         resnet = torchvision.models.resnet34(pretrained=True)
