@@ -13,6 +13,7 @@ import torchlight.nn.tools as tools
 import torchlight.data.cache as cache
 import numpy as np
 import torch.nn as nn
+import os
 
 
 class ColumnarShortcut(BaseLoader):
@@ -91,7 +92,7 @@ class ImageClassifierShortcut(BaseLoader):
 
     @classmethod
     def from_paths(cls, train_folder: str, val_folder: Union[str, None], test_folder: Union[str, None] = None,
-                   preprocess_dir: Union[str, None] = None, batch_size=64, transforms=None):
+                   cache_dir: Union[str, None] = None, batch_size=64, transforms=None):
         """
         Read in images and their labels given as sub-folder names
 
@@ -99,11 +100,9 @@ class ImageClassifierShortcut(BaseLoader):
             train_folder (str): The path to the train folder
             val_folder (str, None): The path to the validation folder
             test_folder (str, None): The path to the test folder
-            preprocess_dir (str, None): The directory where the preprocessed images will be stored or
-                None to not preprocess the images.
-                The preprocessing consist of converting the image files to blosc arrays so they
-                are loaded from disk much faster. If the folder already exists it won't be
-                regenerated.
+            cache_dir (str, None): The directory where the images will be cached or None to not cache the images.
+                The cache consist of converting the image files to blosc arrays so they
+                are loaded from disk much faster. If the cache files already exists they won't be regenerated.
             batch_size (int): The batch_size
             transforms (torchvision.transforms.Compose): List of transformations (for data augmentation)
 
@@ -113,20 +112,25 @@ class ImageClassifierShortcut(BaseLoader):
         datasets = []
 
         files, y_mapping = tools.get_labels_from_folders(train_folder)
-        files = cache.to_blosc_arrays(files[:, 0], preprocess_dir) if preprocess_dir else files
-        datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+        files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "train")) \
+            if cache_dir else files
+        datasets.append(ImagesDataset(files[:, 0], files[:, 1],
+                                      transforms=transforms, image_type="blosc-array"))
 
         if val_folder:
             files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
-            files = cache.to_blosc_arrays(files[:, 0], preprocess_dir) if preprocess_dir else files
-            datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+            files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "val")) \
+                if cache_dir else files
+            datasets.append(ImagesDataset(files[:, 0], files[:, 1],
+                                          transforms=transforms, image_type="blosc-array"))
         else:
             datasets.append(None)
 
         if test_folder:
             files = tools.get_files(test_folder)
-            files = cache.to_blosc_arrays(files[:, 0], preprocess_dir) if preprocess_dir else files
-            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
+            files = cache.to_blosc_arrays(files, os.path.join(cache_dir, "test")) if cache_dir else files
+            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)),
+                                          transforms=transforms, image_type="blosc-array"))
         else:
             datasets.append(None)
 

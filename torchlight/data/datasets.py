@@ -1,10 +1,9 @@
 import torch
 from PIL import Image
-from skimage import io
 from torch.utils.data import Dataset
 import numpy as np
-import torchlight.nn.tools as tools
 import os
+import bcolz
 
 
 class ImagesDataset(Dataset):
@@ -30,8 +29,8 @@ class ImagesDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.image_type == "blosc-array":
-            # TODO finish
-            image = Image.fromarray(io.imread(self.images_path[idx]))
+            img = bcolz.open(rootdir=self.images_path[idx])
+            image = Image.fromarray(img[:])
         else:
             image = Image.open(self.images_path[idx])
 

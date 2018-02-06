@@ -23,13 +23,12 @@ def to_blosc_arrays(files, to_dir):
     """
     files_exists = True
     blosc_files = []
-    bcolz_dir = os.path.join(to_dir, "blosc_files")
-    if not os.path.exists(bcolz_dir):
-        os.makedirs(bcolz_dir)
+    if not os.path.exists(to_dir):
+        os.makedirs(to_dir)
 
     for file_path in files:
         _, file_name = os.path.split(file_path)
-        img_blosc_path = os.path.join(bcolz_dir, file_name)
+        img_blosc_path = os.path.join(to_dir, file_name)
         blosc_files.append(img_blosc_path)
         if not os.path.isdir(img_blosc_path):
             files_exists = False
