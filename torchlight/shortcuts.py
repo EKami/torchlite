@@ -113,19 +113,19 @@ class ImageClassifierShortcut(BaseLoader):
         datasets = []
 
         files, y_mapping = tools.get_labels_from_folders(train_folder)
-        files = cache.to_blosc_arrays(files, preprocess_dir) if preprocess_dir else files
+        files = cache.to_blosc_arrays(files[:, 0], preprocess_dir) if preprocess_dir else files
         datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
             files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
-            files = cache.to_blosc_arrays(files, preprocess_dir) if preprocess_dir else files
+            files = cache.to_blosc_arrays(files[:, 0], preprocess_dir) if preprocess_dir else files
             datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
             files = tools.get_files(test_folder)
-            files = cache.to_blosc_arrays(files, preprocess_dir) if preprocess_dir else files
+            files = cache.to_blosc_arrays(files[:, 0], preprocess_dir) if preprocess_dir else files
             datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)
