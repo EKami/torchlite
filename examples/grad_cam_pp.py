@@ -40,7 +40,6 @@ def main():
                                         root_dir, True)
     root_dir = "/tmp/dogscats"
     root_dir = Path(root_dir)
-    tmp_dir = root_dir / "tmp"
     train_folder = root_dir / "train"
     val_folder = root_dir / "valid"
     test_folder = root_dir / "test"
@@ -58,7 +57,7 @@ def main():
     shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
                                                   val_folder=val_folder.absolute(),
                                                   test_folder=test_folder.absolute(),
-                                                  cache_dir=tmp_dir.absolute(),
+                                                  cache_dir=None,
                                                   transforms=transformations,
                                                   batch_size=batch_size)
     net = shortcut.get_resnet_model()

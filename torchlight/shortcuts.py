@@ -102,7 +102,10 @@ class ImageClassifierShortcut(BaseLoader):
             test_folder (str, None): The path to the test folder
             cache_dir (str, None): The directory where the images will be cached or None to not cache the images.
                 The cache consist of converting the image files to blosc arrays so they
-                are loaded from disk much faster. If the cache files already exists they won't be regenerated.
+                MAY load faster from disk (to benchmark).
+                If the cache files already exists they won't be regenerated.
+
+                /!\ Caching can take a lot of disk space, use it with caution
             batch_size (int): The batch_size
             transforms (torchvision.transforms.Compose): List of transformations (for data augmentation)
 
@@ -112,25 +115,32 @@ class ImageClassifierShortcut(BaseLoader):
         datasets = []
 
         files, y_mapping = tools.get_labels_from_folders(train_folder)
-        files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "train")) \
-            if cache_dir else files
-        datasets.append(ImagesDataset(files[:, 0], files[:, 1],
-                                      transforms=transforms, image_type="blosc-array"))
+        if cache_dir:
+            files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "train"))
+            datasets.append(ImagesDataset(files[:, 0], files[:, 1],
+                                          transforms=transforms, image_type="blosc-array"))
+        else:
+            datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
             files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
-            files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "val")) \
-                if cache_dir else files
-            datasets.append(ImagesDataset(files[:, 0], files[:, 1],
-                                          transforms=transforms, image_type="blosc-array"))
+            if cache_dir:
+                files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "val"))
+                datasets.append(ImagesDataset(files[:, 0], files[:, 1],
+                                              transforms=transforms, image_type="blosc-array"))
+            else:
+                datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
             files = tools.get_files(test_folder)
-            files = cache.to_blosc_arrays(files, os.path.join(cache_dir, "test")) if cache_dir else files
-            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)),
-                                          transforms=transforms, image_type="blosc-array"))
+            if cache_dir:
+                files = cache.to_blosc_arrays(files, os.path.join(cache_dir, "test"))
+                datasets.append(ImagesDataset(files, np.repeat(-1, len(files)),
+                                              transforms=transforms, image_type="blosc-array"))
+            else:
+                datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)
 
