@@ -33,6 +33,7 @@ def show_test_image(test_image_name, shortcut, y_mapping, y_pred, resnet_std, re
 
 
 def main():
+    # TODO implement grad-cam++
     batch_size = 512
     epochs = 1
     root_dir = "/tmp"
