@@ -5,6 +5,7 @@ from torch.autograd import Variable
 import numpy as np
 import pandas as pd
 import torch.nn as nn
+import PIL
 
 
 class AverageMeter(object):
@@ -76,14 +77,16 @@ def to_np(v):
     """
 
     Args:
-        v (Variable, Tensor): Pytorch Variable/Tensor
-
+        v (Variable, Tensor, PIL.Image.Image):
+            Pytorch Variable/Tensor or Pillow image
     Returns:
         np.ndarray: A numpy array
     """
     if isinstance(v, Variable):
-        v = v.data
-    return v.cpu().numpy()
+        v = v.data.cpu().numpy()
+    elif isinstance(v, PIL.Image.Image):
+        v = np.asarray(v)
+    return v
 
 
 def to_gpu(x, *args, **kwargs):

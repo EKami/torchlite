@@ -40,12 +40,14 @@ class ImagesDataset(Dataset):
 
         return image, self.y[idx]
 
-    def get_by_name(self, name):
+    def get_by_name(self, name: str, transform: bool = False):
         """
-        Get an image given name.
-        The image will pass through the preprocessing operations/transformations.
+        Get an image given its name.
+        The image will pass through the preprocessing operations/transformations
+        if transform is True.
         Args:
             name (str): The image name
+            transform (bool): If True apply the transformations to the image
 
         Returns:
             tuple: (image, label, image_index)
@@ -53,7 +55,22 @@ class ImagesDataset(Dataset):
         for i, path in enumerate(self.images_path):
             _, file = os.path.split(path)
             if name == file:
-                return self[i][0], self[i][1], i
+                if not transform:
+                    transform_old = self.transforms
+                    self.transforms = False
+                    ret = self[i][0], self[i][1], i
+                    self.transforms = transform_old
+                else:
+                    ret = self[i][0], self[i][1], i
+                return ret
+
+    def get_activation_heatmap(self):
+        """
+        Returns an image with heatmap activations
+        using the Grad_cam++ technique: https://arxiv.org/abs/1710.11063
+        Returns:
+
+        """
 
 
 class ColumnarDataset(Dataset):
