@@ -63,7 +63,6 @@ class ImagesDataset(Dataset):
                 else:
                     ret = self[i][0], self[i][1], i
                 return ret
-        #return None, None, None
 
 
 class ColumnarDataset(Dataset):

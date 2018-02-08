@@ -71,6 +71,7 @@ def main():
 
     y_mapping = shortcut.get_y_mapping
     y_pred = learner.predict(shortcut.get_test_loader, callbacks=[grad_cam_callback])
+    heatmap = grad_cam_callback.get_heatmap
     show_test_image(test_image_name, shortcut, y_mapping, y_pred)
 
 

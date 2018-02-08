@@ -132,6 +132,7 @@ class ActivationMapVisualizerCallback(TestCallback):
         assert isinstance(ds, ImagesDataset), \
             "ActivationMapVisualizer: The loader is not an instance of torchlight.data.datasets.ImagesDataset"
         image, label, _ = ds.get_by_name(self.filename)
+        # TODO finish grad cam here https://github.com/adityac94/Grad_CAM_plus_plus/blob/master/misc/utils.py#L51
 
     @property
     def get_heatmap(self):
