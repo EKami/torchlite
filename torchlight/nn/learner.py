@@ -1,10 +1,10 @@
 from datetime import datetime
 import torch
 import torch.nn as nn
-from torchlight.nn.callbacks import TrainCallbackList, TQDM
+import torchlight.nn.train_callbacks as train_callbacks
+import torchlight.nn.test_callbacks as test_callbacks
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 from torchlight.nn import tools
 from torchlight.nn.metrics import MetricsList
@@ -39,7 +39,6 @@ class Learner:
     def _train_epoch(self, step, loader, optimizer, criterion, metrics_list, callback_list):
         # Total training files count / batch_size
         batch_size = loader.batch_size
-        it_count = len(loader)
         losses = tools.AverageMeter()
         # We can have multiple inputs
         for ind, (*inputs, targets) in enumerate(loader):
@@ -56,7 +55,6 @@ class Learner:
             loss = criterion(logits, targets)
             losses.update(loss.data[0])
 
-            # TODO implement gradient clipping: https://github.com/fastai/fastai/blob/master/fastai/model.py#L46
             # backward + optimize
             if step == "training":
                 optimizer.zero_grad()
@@ -65,8 +63,7 @@ class Learner:
 
             callback_list.on_batch_end(ind, logs={"step": step,
                                                   "loss": loss.data[0],
-                                                  "metrics": logs,
-                                                  "iterations_count": it_count})
+                                                  "metrics": logs})
         return losses.debias_loss, metrics_list
 
     def _run_epoch(self, train_loader, valid_loader, optimizer, loss, metrics, callback_list):
@@ -101,14 +98,10 @@ class Learner:
                                                         'val_metrics': val_metrics})
 
     def train(self, optimizer, loss, metrics, epochs,
-              train_loader: DataLoader, valid_loader: DataLoader = None,
-              callbacks=None, cycle_len=None):
+              train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
         """
             Trains the neural net
         Args:
-            cycle_len (int): Number of cycles before lr is reset to the initial value.
-                E.g if cycle_len = 3, then the lr is varied between a maximum
-                and minimum value over 3 epochs.
             optimizer (Optimizer): The optimizer function
             loss (function): The objective function.
             metrics (list, None): Metrics to be evaluated by the model
@@ -117,35 +110,32 @@ class Learner:
             epochs (int): number of epochs
             train_loader (DataLoader): The Dataloader for training
             valid_loader (DataLoader, optional): The Dataloader for validation
-            callbacks (list, None): List of callbacks functions to call at each epoch
+            callbacks (list, None): List of callbacks functions
         """
-        # TODO implement cycle_len (learner.py in fast.ai) in callbacks?
+        train_start_time = datetime.now()
         if self.use_cuda:
             tools.to_gpu(self.model)
 
         if not callbacks:
             callbacks = []
-        callbacks.append(TQDM())
-        train_loader_len = len(train_loader)
-        if valid_loader:
-            val_loader_len = len(valid_loader)
-        else:
-            val_loader_len = None
+        callbacks.append(train_callbacks.TQDM())
 
-        callback_list = TrainCallbackList(callbacks)
+        callback_list = train_callbacks.TrainCallbackList(callbacks)
         callback_list.set_model(self.model)
         callback_list.on_train_begin({'total_epochs': epochs,
                                       'epoch_count': self.epoch_counter,
-                                      'train_loader_len': train_loader_len,
-                                      'val_loader_len': val_loader_len})
+                                      'train_loader': train_loader,
+                                      'val_loader': valid_loader})
 
         for _ in range(epochs):
-            start_time = datetime.now()
+            epoch_start_time = datetime.now()
             self._run_epoch(train_loader, valid_loader, optimizer, loss, metrics, callback_list)
-            print('Epoch time (hh:mm:ss.ms) {}'.format(datetime.now() - start_time))
+            print('Epoch time (hh:mm:ss.ms) {}'.format(datetime.now() - epoch_start_time))
             self.epoch_counter += 1
+        callback_list.on_train_end()
+        print('Total train time (hh:mm:ss.ms) {}'.format(datetime.now() - train_start_time))
 
-    def predict(self, test_loader, tta=False):
+    def predict(self, test_loader: DataLoader, callbacks=None):
         """
             Launch the prediction on the given loader and pass
             each predictions to the given callbacks.
@@ -154,30 +144,37 @@ class Learner:
                 This loader is expected to returns items with the same shape
                 as the train_loader passed in train() with the difference that
                 the targets will be ignored.
-            tta (bool): Test time augmentation, set to true to have test time augmentation
+            callbacks (list, None): List of callbacks functions
         """
-        # TODO add TTA https://github.com/fastai/fastai/blob/master/fastai/learner.py#L242
         # Switch to evaluation mode
         self.model.eval()
 
         if self.use_cuda:
             tools.to_gpu(self.model)
 
-        it_count = len(test_loader)
+        if not callbacks:
+            callbacks = []
+        callbacks.append(test_callbacks.TQDM())
+
+        callback_list = test_callbacks.TestCallbackList(callbacks)
+        callback_list.set_model(self.model)
+        callback_list.on_test_begin({'test_loader': test_loader})
+
         ret_logits = None
         batch_size = test_loader.batch_size
-        with tqdm(total=it_count, desc="Classifying") as pbar:
-            for ind, (*inputs, _) in enumerate(test_loader):
-                if self.use_cuda:
-                    inputs = [tools.to_gpu(i) for i in inputs]
+        for ind, (*inputs, _) in enumerate(test_loader):
+            callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
+            if self.use_cuda:
+                inputs = [tools.to_gpu(i) for i in inputs]
 
-                inputs = [Variable(i, volatile=True) for i in inputs]
+            inputs = [Variable(i, volatile=True) for i in inputs]
 
-                # forward
-                logits = self.model(*inputs).data
-                if ret_logits is None:
-                    ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
-                ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
-                pbar.update(1)
+            # forward
+            logits = self.model(*inputs).data
+            if ret_logits is None:
+                ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
+            ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
+            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
+        callback_list.on_test_end({'test_loader': test_loader})
         return ret_logits.squeeze()

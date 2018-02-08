@@ -19,12 +19,13 @@ import torchlight.data.fetcher as fetcher
 from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learner import Learner
 from torchlight.nn.metrics import CategoricalAccuracy
+from torchlight.nn.test_callbacks import ActivationMapVisualizerCallback
 import matplotlib.pyplot as plt
 import numpy as np
 import torchlight.nn.tools as tools
 
 
-def show_test_image(test_image_name, shortcut, y_mapping, y_pred, resnet_std, resnet_mean):
+def show_test_image(test_image_name, shortcut, y_mapping, y_pred):
     image_mat, _, image_index = shortcut.get_test_loader.dataset.get_by_name(test_image_name, transform=False)
     image_mat = tools.to_np(image_mat)
     plt.imshow(image_mat)
@@ -45,14 +46,11 @@ def main():
     test_folder = root_dir / "test"
     test_image_name = "12500.jpg"
 
-    resnet_mean = [0.485, 0.456, 0.406]  # Over RGB channel
-    resnet_std = [0.229, 0.224, 0.225]
-
     # Image augmentation/transformations
     transformations = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.ToTensor(),
-                                          transforms.Normalize(mean=resnet_mean,
-                                                               std=resnet_std),
+                                          transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                               std=[0.229, 0.224, 0.225]),
                                           ])
     shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
                                                   val_folder=val_folder.absolute(),
@@ -67,12 +65,13 @@ def main():
     optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3)
     loss = F.nll_loss
     metrics = [CategoricalAccuracy()]
+    grad_cam_callback = ActivationMapVisualizerCallback(test_image_name)  # TODO finish grad_cam++ here
 
-    learner.train(optimizer, loss, metrics, epochs, shortcut.get_train_loader, None, callbacks=None)
+    learner.train(optimizer, loss, metrics, epochs, shortcut.get_train_loader, None)
 
     y_mapping = shortcut.get_y_mapping
-    y_pred = learner.predict(shortcut.get_test_loader)
-    show_test_image(test_image_name, shortcut, y_mapping, y_pred, resnet_std, resnet_mean)
+    y_pred = learner.predict(shortcut.get_test_loader, callbacks=[grad_cam_callback])
+    show_test_image(test_image_name, shortcut, y_mapping, y_pred)
 
 
 if __name__ == "__main__":

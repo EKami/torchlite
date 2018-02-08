@@ -63,14 +63,7 @@ class ImagesDataset(Dataset):
                 else:
                     ret = self[i][0], self[i][1], i
                 return ret
-
-    def get_activation_heatmap(self):
-        """
-        Returns an image with heatmap activations
-        using the Grad_cam++ technique: https://arxiv.org/abs/1710.11063
-        Returns:
-
-        """
+        #return None, None, None
 
 
 class ColumnarDataset(Dataset):

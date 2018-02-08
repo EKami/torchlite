@@ -1,9 +1,12 @@
+"""
+This module contains callbacks used during training/validation phases.
+"""
 import torch.optim.lr_scheduler as lr_scheduler
 from tqdm import tqdm
 from collections import OrderedDict
 
 
-class Callback:
+class TrainCallback:
     def __init__(self):
         self.validation_data = None
         self.params = None
@@ -48,6 +51,7 @@ class TrainCallbackList(object):
         self.queue_length = queue_length
 
     def append(self, callback):
+        assert isinstance(callback, TrainCallback), f"Your callback is not an instance of TrainCallback: {callback}"
         self.callbacks.append(callback)
 
     def set_params(self, params):
@@ -120,27 +124,7 @@ class TrainCallbackList(object):
         return iter(self.callbacks)
 
 
-class TensorboardVisualizerCallback(Callback):
-    def __init__(self, path_to_files):
-        """
-            Callback intended to be executed at each epoch
-            of the training which goal is to display the result
-            of the last validation batch in Tensorboard
-        Args:
-            path_to_files (str): The path where to store the log files
-        """
-        # TODO finish https://github.com/EKami/carvana-challenge/blob/master/src/nn/train_callbacks.py#L13
-        super().__init__()
-        self.path_to_files = path_to_files
-
-    def on_epoch_begin(self, epoch, logs=None):
-        pass
-
-    def on_epoch_end(self, epoch, logs=None):
-        pass
-
-
-class TQDM(Callback):
+class TQDM(TrainCallback):
     def __init__(self):
         super().__init__()
         self.train_pbar = None
@@ -204,14 +188,11 @@ class TQDM(Callback):
 
     def on_train_begin(self, logs=None):
         self.total_epochs = logs["total_epochs"]
-        self.train_loader_len = logs["train_loader_len"]
-        self.val_loader_len = logs["val_loader_len"]
-
-    def on_train_end(self, logs=None):
-        pass
+        self.train_loader_len = len(logs["train_loader"])
+        self.val_loader_len = len(logs["val_loader"]) if logs["val_loader"] else None
 
 
-class ReduceLROnPlateau(Callback):
+class ReduceLROnPlateau(TrainCallback):
     """Reduce learning rate when a metric has stopped improving.
         Models often benefit from reducing the learning rate by a factor
         of 2-10 once learning stagnates. This scheduler reads a metrics
@@ -260,6 +241,64 @@ class ReduceLROnPlateau(Callback):
                 self.lr_sch.step(v, epoch)
 
 
-class CosineAnnealing(Callback):
-    # https://youtu.be/EKzSiuqiHNg?t=1h18m9s
-    pass
+class ModelSaverCallback(TrainCallback):
+    def __init__(self, to_dir, every_n_epoch=1):
+        """
+            Saves the model every n epochs in to_dir
+        Args:
+            to_dir (str): The path where to save the model
+            every_n_epoch (int): Save the model every n epochs
+        """
+        # TODO finish
+        super().__init__()
+        self.every_n_epoch = every_n_epoch
+        self.to_dir = to_dir
+
+    def on_epoch_end(self, epoch, logs=None):
+        pass
+
+
+class CosineAnnealingCallback(TrainCallback):
+    def __init__(self):
+        # TODO https://youtu.be/EKzSiuqiHNg?t=1h18m9s
+        super().__init__()
+
+
+class CycleLenCallback(TrainCallback):
+    def __init__(self):
+        """
+            Number of cycles before lr is reset to the initial value.
+            E.g if cycle_len = 3, then the lr is varied between a maximum
+            and minimum value over 3 epochs.
+        """
+        # TODO implement (learner.py in fast.ai)
+        super().__init__()
+
+
+class GradientClippingCallback(TrainCallback):
+    def __init__(self):
+        """
+        Gradient clipping
+        # TODO implement: https://github.com/fastai/fastai/blob/master/fastai/model.py#L46
+        """
+        super().__init__()
+
+
+class TensorboardVisualizerCallback(TrainCallback):
+    def __init__(self, path_to_files):
+        """
+            Callback intended to be executed at each epoch
+            of the training which goal is to display the result
+            of the last validation batch in Tensorboard
+        Args:
+            path_to_files (str): The path where to store the log files
+        """
+        # TODO finish https://github.com/EKami/carvana-challenge/blob/master/src/nn/train_callbacks.py#L13
+        super().__init__()
+        self.path_to_files = path_to_files
+
+    def on_epoch_begin(self, epoch, logs=None):
+        pass
+
+    def on_epoch_end(self, epoch, logs=None):
+        pass
