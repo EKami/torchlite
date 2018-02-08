@@ -158,7 +158,7 @@ class Learner:
 
         callback_list = test_callbacks.TestCallbackList(callbacks)
         callback_list.set_model(self.model)
-        callback_list.on_test_begin({'test_loader': test_loader})
+        callback_list.on_test_begin({'loader': test_loader})
 
         ret_logits = None
         batch_size = test_loader.batch_size
@@ -176,5 +176,5 @@ class Learner:
             ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
             callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
-        callback_list.on_test_end({'test_loader': test_loader})
+        callback_list.on_test_end({'loader': test_loader})
         return ret_logits.squeeze()

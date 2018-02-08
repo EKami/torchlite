@@ -104,7 +104,7 @@ class TQDM(TestCallback):
         self.pbar = None
 
     def on_test_begin(self, logs=None):
-        test_loader_len = len(logs["test_loader"])
+        test_loader_len = len(logs["loader"])
         self.pbar = tqdm(total=test_loader_len, desc="Classifying")
 
     def on_batch_end(self, batch, logs=None):
@@ -124,14 +124,18 @@ class ActivationMapVisualizerCallback(TestCallback):
         """
         super().__init__()
         self.filename = filename
-        self.heatmaps = []
+        self.heatmap = None
 
     def on_test_end(self, logs=None):
         model = self.model
-        ds = logs["loader"].dataset if logs["train_loader"] else None
+        ds = logs["loader"].dataset if logs["loader"] else None
         assert isinstance(ds, ImagesDataset), \
             "ActivationMapVisualizer: The loader is not an instance of torchlight.data.datasets.ImagesDataset"
         image, label, _ = ds.get_by_name(self.filename)
+
+    @property
+    def get_heatmap(self):
+        return self.heatmap
 
 
 class TTACallback(TestCallback):
