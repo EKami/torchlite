@@ -110,6 +110,9 @@ class TQDM(TestCallback):
     def on_batch_end(self, batch, logs=None):
         self.pbar.update(1)
 
+    def on_test_end(self, logs=None):
+        print()
+
 
 class ActivationMapVisualizerCallback(TestCallback):
     def __init__(self, filename):

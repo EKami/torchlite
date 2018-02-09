@@ -146,6 +146,7 @@ class Learner:
                 the targets will be ignored.
             callbacks (list, None): List of callbacks functions
         """
+        test_start_time = datetime.now()
         # Switch to evaluation mode
         self.model.eval()
 
@@ -177,4 +178,5 @@ class Learner:
             callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         callback_list.on_test_end({'loader': test_loader})
+        print('Total prediction time (hh:mm:ss.ms) {}'.format(datetime.now() - test_start_time))
         return ret_logits.squeeze()
