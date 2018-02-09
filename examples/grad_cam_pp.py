@@ -55,7 +55,6 @@ def main():
     shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
                                                   val_folder=val_folder.absolute(),
                                                   test_folder=test_folder.absolute(),
-                                                  cache_dir=None,
                                                   transforms=transformations,
                                                   batch_size=batch_size)
     net = shortcut.get_resnet_model()

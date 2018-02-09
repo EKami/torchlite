@@ -1,6 +1,7 @@
 """
 This module contains callbacks used during training/validation phases.
 """
+import torch
 import torch.optim.lr_scheduler as lr_scheduler
 from tqdm import tqdm
 from collections import OrderedDict
@@ -253,6 +254,14 @@ class ModelSaverCallback(TrainCallback):
         super().__init__()
         self.every_n_epoch = every_n_epoch
         self.to_dir = to_dir
+
+    def restore_model(self, model_path):
+        """
+            Restore a model parameters from the one given in argument
+        Args:
+            model_path (str): The path to the model to restore
+        """
+        self.model.load_state_dict(torch.load(model_path))
 
     def on_epoch_end(self, epoch, logs=None):
         pass

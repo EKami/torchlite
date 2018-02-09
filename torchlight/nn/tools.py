@@ -1,9 +1,7 @@
 from PIL import Image
-import os
 import torch
 from torch.autograd import Variable
 import numpy as np
-import pandas as pd
 import torch.nn as nn
 import PIL
 
@@ -99,18 +97,6 @@ def to_gpu(x, *args, **kwargs):
     return x.cuda(*args, **kwargs) if torch.cuda.is_available() else x
 
 
-def to_csv(test_file, output_file, identifier_field, predicted_field,
-           predictions, read_format='csv'):
-    df = None
-    if read_format == 'csv':
-        df = pd.read_csv(test_file)
-    elif read_format == 'feather':
-        df = pd.read_feather(test_file)
-    df = df[[identifier_field]]
-    df[predicted_field] = predictions
-    df.to_csv(output_file, index=False)
-
-
 def children(module: nn.Module):
     """
         Returns a list of an nn.Module children modules
@@ -122,49 +108,6 @@ def children(module: nn.Module):
         list: A list of the module children
     """
     return module if isinstance(module, (list, tuple)) else list(module.children())
-
-
-def get_labels_from_folders(path, y_mapping=None):
-    """
-    Get labels from folder names as well as the absolute path to the files
-    from the folders
-    Args:
-        path (str): The directory to inspect
-        y_mapping (dict): If the labels were already mapped to an integer,
-        give that mapping here in the form of {index: label}
-
-    Returns:
-        files (tuple): A tuple containing (file_path, label)
-        y_mapping (dict): The mapping between the label and their index
-    """
-    y_all = [label for label in os.listdir(path) if os.path.isdir(os.path.join(path, label))]
-    if not y_mapping:
-        y_mapping = {v: int(k) for k, v in enumerate(y_all)}
-
-    files = [[(os.path.join(path, label, file), y_mapping[label]) for file in
-              os.listdir(os.path.join(path, label))] for label in y_all]
-    files = np.array(files).reshape(-1, 2)
-    return files, y_mapping
-
-
-def get_files(path):
-    """
-    Returns the files from a folder
-    Args:
-        path (str): The directory to inspect
-
-    Returns:
-        list: A list of files
-    """
-    all_files = os.listdir(path)
-    ret_files = [os.path.join(path, file) for file in all_files if os.path.isfile(os.path.join(path, file))]
-    return ret_files
-
-
-def split_by_idx(idxs, *a):
-    mask = np.zeros(len(a[0]), dtype=bool)
-    mask[np.array(idxs)] = True
-    return [(o[mask], o[~mask]) for o in a]
 
 
 def to_onehot_tensor(y: np.ndarray):

@@ -1,44 +1,46 @@
+from typing import Union
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 import numpy as np
 import os
-import bcolz
 
 
 class ImagesDataset(Dataset):
-    def __init__(self, images_path: list, y: np.ndarray, transforms=None, image_type="image"):
+    def __init__(self, images_path: list, y: Union[np.ndarray, list], transforms=None):
         """
             Dataset class for images classification.
             Works for single and multi label classes.
         Args:
-            images_path (list): The path the images
-            y (np.ndarray): The image labels as int
-            transforms (Compose): A list of composable transforms
-            image_type (str): Either:
-             - image
-             - blosc-array
+            images_path (list): A list of image path
+            y (np.ndarray, list): The image labels as int or the path to the mapping files
+            transforms (Compose): A list of composable transforms. The transformations will be
+            applied to both images_path and y if y is a list of image path
         """
-        self.image_type = image_type
         self.transforms = transforms
         self.images_path = images_path
-        self.y = torch.from_numpy(y.astype(np.int32))
+        if isinstance(y, list):
+            self.y = y
+        else:
+            self.y = torch.from_numpy(y.astype(np.int32))
 
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, idx):
-        if self.image_type == "blosc-array":
-            img = bcolz.open(rootdir=self.images_path[idx])
-            image = Image.fromarray(img[:])
-        else:
-            image = Image.open(self.images_path[idx])
+        image = Image.open(self.images_path[idx])
 
         # Transforms can include resize, normalization and torch tensor transformation
         if self.transforms:
             image = self.transforms(image)
 
-        return image, self.y[idx]
+        if isinstance(self.y, list):
+            y = Image.open(self.y[idx])
+            if self.transforms:
+                y = self.transforms(y)
+        else:
+            y = self.y[idx]
+        return image, y
 
     def get_by_name(self, name: str, transform: bool = False):
         """

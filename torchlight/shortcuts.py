@@ -6,14 +6,14 @@
 from typing import Union
 import torchvision
 from torch.utils.data import Dataset
+
+import data.files
 from torchlight.data.datasets import ColumnarDataset, ImagesDataset
 from torchlight.nn.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
 import torchlight.nn.tools as tools
-import torchlight.data.cache as cache
 import numpy as np
 import torch.nn as nn
-import os
 
 
 class ColumnarShortcut(BaseLoader):
@@ -37,7 +37,7 @@ class ColumnarShortcut(BaseLoader):
 
     @classmethod
     def from_data_frame(cls, df, val_idxs, y, cat_fields, batch_size, test_df=None):
-        ((val_df, train_df), (val_y, train_y)) = tools.split_by_idx(val_idxs, df, y)
+        ((val_df, train_df), (val_y, train_y)) = data.files.split_by_idx(val_idxs, df, y)
         return cls.from_data_frames(train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=test_df)
 
     def get_stationary_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
@@ -92,7 +92,7 @@ class ImageClassifierShortcut(BaseLoader):
 
     @classmethod
     def from_paths(cls, train_folder: str, val_folder: Union[str, None], test_folder: Union[str, None] = None,
-                   cache_dir: Union[str, None] = None, batch_size=64, transforms=None):
+                   batch_size=64, transforms=None):
         """
         Read in images and their labels given as sub-folder names
 
@@ -100,12 +100,6 @@ class ImageClassifierShortcut(BaseLoader):
             train_folder (str): The path to the train folder
             val_folder (str, None): The path to the validation folder
             test_folder (str, None): The path to the test folder
-            cache_dir (str, None): The directory where the images will be cached or None to not cache the images.
-                The cache consist of converting the image files to blosc arrays so they
-                MAY load faster from disk (to benchmark).
-                If the cache files already exists they won't be regenerated.
-
-                /!\ Caching can take a lot of disk space, use it with caution
             batch_size (int): The batch_size
             transforms (torchvision.transforms.Compose): List of transformations (for data augmentation)
 
@@ -114,33 +108,18 @@ class ImageClassifierShortcut(BaseLoader):
         """
         datasets = []
 
-        files, y_mapping = tools.get_labels_from_folders(train_folder)
-        if cache_dir:
-            files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "train"))
-            datasets.append(ImagesDataset(files[:, 0], files[:, 1],
-                                          transforms=transforms, image_type="blosc-array"))
-        else:
-            datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+        files, y_mapping = data.files.get_labels_from_folders(train_folder)
+        datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
-            files, _ = tools.get_labels_from_folders(val_folder, y_mapping)
-            if cache_dir:
-                files[:, 0] = cache.to_blosc_arrays(files[:, 0], os.path.join(cache_dir, "val"))
-                datasets.append(ImagesDataset(files[:, 0], files[:, 1],
-                                              transforms=transforms, image_type="blosc-array"))
-            else:
-                datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+            files, _ = data.files.get_labels_from_folders(val_folder, y_mapping)
+            datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
-            files = tools.get_files(test_folder)
-            if cache_dir:
-                files = cache.to_blosc_arrays(files, os.path.join(cache_dir, "test"))
-                datasets.append(ImagesDataset(files, np.repeat(-1, len(files)),
-                                              transforms=transforms, image_type="blosc-array"))
-            else:
-                datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
+            files = data.files.get_files(test_folder)
+            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)
 
