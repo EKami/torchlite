@@ -20,6 +20,7 @@ import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.losses.srgan import GeneratorLoss
 from torchlight.nn.learner import Learner
+from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
 
 
 def enhance_img(img):
@@ -70,6 +71,8 @@ def main(args):
     generator_epochs = args.gen_epochs
     adversarial_epochs = args.adv_epochs
 
+    callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
+                 ReduceLROnPlateau()]
     loss = GeneratorLoss()  # TODO try with VGG54 as in the paper
     learner = Learner(netG)
 
