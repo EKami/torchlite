@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 import data.files
 from torchlight.data.datasets import ColumnarDataset, ImagesDataset
-from torchlight.nn.models import MixedInputModel, FinetunedConvModel
+from torchlight.nn.models.general import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
 import torchlight.nn.tools as tools
 import numpy as np
