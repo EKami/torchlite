@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 from torchlight.data.datasets import ImagesDataset
 import torchlight.data.files as tfiles
+from torchlight.nn.models.srgan import Generator, Discriminator
 
 
 def enhance_img(img):
@@ -58,6 +59,8 @@ def main(args):
 
     train_loader, valid_loader, _ = get_loaders(args)
     saved_model_path = tfiles.create_dir_if_not_exists(args.models_dir) / "srgan_model.pth"
+    netG = Generator(args.upscale_factor)
+    netD = Discriminator()
     d = 0
 
 
@@ -70,5 +73,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     parser.add_argument('--models_dir', default="checkpoint", type=str,
                         help='The path to the saved model. This allow for the training to continue where it stopped')
+    parser.add_argument('--upscale_factor', default=2, type=int, choices=[2, 4, 8],
+                        help='Super resolution upscale factor')
 
     main(parser.parse_args())

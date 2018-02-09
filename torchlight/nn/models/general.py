@@ -4,71 +4,6 @@ import torch.nn.functional as F
 import torchlight.nn.tools as tools
 
 
-def emb_init(x):
-    x = x.weight.data
-    sc = 2 / (x.size(1) + 1)
-    x.uniform_(-sc, sc)
-
-
-class FinetunedModelTools:
-    @staticmethod
-    def _get_layer_groups(layers):
-        return tools.children(layers)
-
-    @staticmethod
-    def _set_trainable_attr(m, b):
-        m.trainable = b
-        for p in m.parameters():
-            p.requires_grad = b
-
-    @staticmethod
-    def _apply_leaf(layer, func):
-        c = tools.children(layer)
-        if isinstance(layer, nn.Module):
-            func(layer)
-        if len(c) > 0:
-            for l in c:
-                FinetunedModelTools._apply_leaf(l, func)
-
-    @staticmethod
-    def set_trainable(leaf, trainable):
-        FinetunedModelTools._apply_leaf(leaf, lambda m: FinetunedModelTools._set_trainable_attr(m, trainable))
-
-    @staticmethod
-    def freeze_to(layers, index):
-        """
-        Freeze all but the layers up until index.
-        Make all layers untrainable (i.e. frozen) up to the index layer.
-
-        Args:
-            layers (list): The layers to freeze
-            index (int): The index on which to freeze up to
-
-        Returns:
-
-        """
-        c = FinetunedModelTools._get_layer_groups(layers)
-        for l in c:
-            FinetunedModelTools.set_trainable(l, False)
-        for l in c[index:]:
-            FinetunedModelTools.set_trainable(l, True)
-        return layers
-
-    @staticmethod
-    def freeze(layers):
-        """
-        Freeze all but the very last layer.
-        Make all layers untrainable (i.e. frozen) except for the last layer.
-
-        Args:
-            layers (list): The layers to freeze
-
-        Returns:
-            model: The passed model
-        """
-        return FinetunedModelTools.freeze_to(layers, -1)
-
-
 class FinetunedConvModel(nn.Module):
 
     def __init__(self, base_model_head, output_layer):
@@ -160,3 +95,68 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         return x.view(x.size(0), -1)
+
+
+class FinetunedModelTools:
+    @staticmethod
+    def _get_layer_groups(layers):
+        return tools.children(layers)
+
+    @staticmethod
+    def _set_trainable_attr(m, b):
+        m.trainable = b
+        for p in m.parameters():
+            p.requires_grad = b
+
+    @staticmethod
+    def _apply_leaf(layer, func):
+        c = tools.children(layer)
+        if isinstance(layer, nn.Module):
+            func(layer)
+        if len(c) > 0:
+            for l in c:
+                FinetunedModelTools._apply_leaf(l, func)
+
+    @staticmethod
+    def set_trainable(leaf, trainable):
+        FinetunedModelTools._apply_leaf(leaf, lambda m: FinetunedModelTools._set_trainable_attr(m, trainable))
+
+    @staticmethod
+    def freeze_to(layers, index):
+        """
+        Freeze all but the layers up until index.
+        Make all layers untrainable (i.e. frozen) up to the index layer.
+
+        Args:
+            layers (list): The layers to freeze
+            index (int): The index on which to freeze up to
+
+        Returns:
+
+        """
+        c = FinetunedModelTools._get_layer_groups(layers)
+        for l in c:
+            FinetunedModelTools.set_trainable(l, False)
+        for l in c[index:]:
+            FinetunedModelTools.set_trainable(l, True)
+        return layers
+
+    @staticmethod
+    def freeze(layers):
+        """
+        Freeze all but the very last layer.
+        Make all layers untrainable (i.e. frozen) except for the last layer.
+
+        Args:
+            layers (list): The layers to freeze
+
+        Returns:
+            model: The passed model
+        """
+        return FinetunedModelTools.freeze_to(layers, -1)
+
+
+def emb_init(x):
+    x = x.weight.data
+    sc = 2 / (x.size(1) + 1)
+    x.uniform_(-sc, sc)
