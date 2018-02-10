@@ -15,15 +15,12 @@ from pathlib import Path
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
-from torchlight.data.datasets import ImageDataset
 import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.losses.srgan import GeneratorLoss
 from torchlight.nn.learner import Learner
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
-from PIL import Image
-import torchvision.transforms as transforms
-import torchlight.nn.transforms as ttransforms
+from torchlight.data.datasets.srgan import TrainDataset, ValDatasetFromFolder
 import torch.nn as nn
 
 
@@ -49,30 +46,13 @@ def get_loaders(args, num_workers=os.cpu_count()):
     val_hr_path = ds_path / "DIV2K_valid_HR"
     val_lr_path = ds_path / "DIV2K_valid_LR_bicubic" / "X4"
 
-    # TODO may not be compatible with VGG!!
-    # TODO crop here
-    x_transformations = transforms.Compose([transforms.RandomCrop((88, 88)),  # TODO change with crop?
-                                            transforms.ToTensor(),
-                                            ttransforms.FactorNormalize(),
-                                            ])
+    train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
+                            lr_image_filenames=None,  # TODO use LR images from dir
+                            crop_size=args.crop_size, upscale_factor=args.upscale_factor)
 
-    # TODO the author downsample the 386x386 HR images to 96x96
-    # TODO resize here or crop if taken from val folder
-    # https://github.com/tensorlayer/srgan/blob/cd9dc3a67275ece28165e52fbed3a81bc56c4e43/main.py#L201
-    y_transformations = transforms.Compose([transforms.Resize((96, 96), interpolation=Image.BICUBIC),
-                                            transforms.ToTensor(),
-                                            ttransforms.FactorNormalize(),
-                                            ])
-
-    train_ds = ImagesDataset(tfiles.get_files(train_lr_path.absolute()),
-                             y=tfiles.get_files(train_hr_path.absolute()),
-                             x_transforms=x_transformations,
-                             y_transforms=y_transformations)
     # Use the DIV2K dataset for validation as default
-    val_ds = ImagesDataset(tfiles.get_files(val_lr_path.absolute()),
-                           y=tfiles.get_files(val_hr_path.absolute()),
-                           x_transforms=x_transformations,
-                           y_transforms=y_transformations)
+    val_ds = ValDatasetFromFolder(tfiles.get_files(val_hr_path.absolute()),
+                                  args.upscale_factor)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)
@@ -81,11 +61,10 @@ def get_loaders(args, num_workers=os.cpu_count()):
 
 
 def main(args):
-    upscale_factor = 4  # Models with different upscale factors are not compatible together
-
     train_loader, valid_loader, _ = get_loaders(args)
-    saved_model_path = tfiles.create_dir_if_not_exists(args.models_dir) / "srgan_model.pth"
-    netG = Generator(upscale_factor)
+    saved_model_name = "srgan_model_upfac-" + str(args.upscale_factor) + "_crop-" + str(args.crop_size) + ".pth"
+    saved_model_path = tfiles.create_dir_if_not_exists(args.models_dir) / saved_model_name
+    netG = Generator(args.upscale_factor)
     netD = Discriminator()
 
     optimizer_g = optim.Adam(netG.parameters())
@@ -98,10 +77,14 @@ def main(args):
     callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5)]
 
     #  ---------------------- Train generator a bit ----------------------
-    init_callbacks = [ReduceLROnPlateau(optimizer_g)]
+    init_callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
     init_loss = nn.MSELoss()
     g_init_learner = Learner(netG)
-    g_init_learner.train(optimizer_g, init_loss, None, generator_epochs, train_loader, callbacks=init_callbacks)
+    g_init_learner.train(optimizer_g, init_loss, None, generator_epochs,
+                         train_loader, None, init_callbacks)
+
+    #  ------------------------ Train GAN (SRGAN) ------------------------
+    # TODO merge G and D in the same nn.Module and pass it to the learner
 
 
 if __name__ == "__main__":
@@ -111,6 +94,10 @@ if __name__ == "__main__":
     parser.add_argument('--gen_epochs', default=100, type=int, help='Number of epochs for the generator training')
     parser.add_argument('--adv_epochs', default=500, type=int, help='Number of epochs for the adversarial training')
     parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
+    # Models with different upscale factors and crop sizes are not compatible together
+    parser.add_argument('--crop_size', default=384, type=int, help='training images crop size')
+    parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
+                        help='super resolution upscale factor')
     parser.add_argument('--models_dir', default="checkpoint", type=str,
                         help='The path to the saved model. This allow for the training to continue where it stopped')
 

@@ -8,7 +8,7 @@ import torchvision
 from torch.utils.data import Dataset
 
 import data.files
-from torchlight.data.datasets import ColumnarDataset, ImageClassificationDataset
+from torchlight.data.datasets.datasets import ColumnarDataset, ImageClassificationDataset
 from torchlight.nn.models.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
 import torchlight.nn.tools as tools

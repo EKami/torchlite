@@ -13,7 +13,7 @@ from torchlight.nn.metrics import MetricsList
 class Learner:
     def __init__(self, model: nn.Module, use_cuda=True):
         """
-        The learner class used to train a model
+        The learner class used to train deep neural network
         Args:
             model (nn.Module): The pytorch model
             use_cuda (bool): If True moves the model onto the GPU

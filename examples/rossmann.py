@@ -24,7 +24,6 @@ from torchlight.data.fetcher import WebFetcher
 import torchlight.shortcuts as shortcuts
 import torchlight.structured.pandas.date as date
 import torchlight.structured.pandas.encoder as encoder
-import torchlight.nn.tools as tools
 
 
 def join_df(left, right, left_on, right_on=None, suffix='_y'):

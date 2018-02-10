@@ -202,6 +202,8 @@ class ReduceLROnPlateau(TrainCallback):
 
         Args:
             optimizer (Optimizer): Wrapped optimizer.
+            loss_step (str): Either "train" or "valid" to reduce the lr according
+                to the train loss of valid loss
             mode (str): One of `min`, `max`. In `min` mode, lr will
                 be reduced when the quantity monitored has stopped
                 decreasing; in `max` mode it will be reduced when the
@@ -229,17 +231,26 @@ class ReduceLROnPlateau(TrainCallback):
                 ignored. Default: 1e-8.
     """
 
-    def __init__(self, optimizer, mode='min', factor=0.1, patience=10, verbose=False, threshold=1e-4,
+    def __init__(self, optimizer, loss_step="train", mode='min', factor=0.1, patience=10, verbose=False, threshold=1e-4,
                  threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-8):
         super().__init__()
+        self.loss_step = loss_step
         self.lr_sch = lr_scheduler.ReduceLROnPlateau(optimizer, mode, factor, patience,
                                                      verbose, threshold, threshold_mode,
                                                      cooldown, min_lr, eps)
 
     def on_epoch_end(self, epoch, logs=None):
-        for k, v in logs.items():
-            if k == 'val_loss':
-                self.lr_sch.step(v, epoch)
+        step = logs["step"]
+        if step == 'validation':
+            for k, v in logs.items():
+                if self.loss_step == "valid":
+                    if k == 'val_loss':
+                        if not v:
+                            raise ValueError("ReduceLROnPlateau: No validation loss has been found")
+                        self.lr_sch.step(v, epoch)
+                else:
+                    if k == 'train_loss':
+                        self.lr_sch.step(v, epoch)
 
 
 class ModelSaverCallback(TrainCallback):

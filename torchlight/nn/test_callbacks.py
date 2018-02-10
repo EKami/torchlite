@@ -1,7 +1,7 @@
 """
 This module contains callbacks used during the test phase.
 """
-from torchlight.data.datasets import ImageDataset
+from torchlight.data.datasets.datasets import ImageDataset
 from tqdm import tqdm
 
 
