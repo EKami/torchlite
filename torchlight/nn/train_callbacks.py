@@ -281,7 +281,6 @@ class ModelSaverCallback(TrainCallback):
             print(f"Model saved in {self.to_file}")
 
 
-
 class CosineAnnealingCallback(TrainCallback):
     def __init__(self):
         # TODO https://youtu.be/EKzSiuqiHNg?t=1h18m9s

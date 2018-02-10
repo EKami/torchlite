@@ -12,7 +12,7 @@ class Generator(nn.Module):
             scale_factor (int): The new scale for the resulting image (x2, x4...)
             res_blocks_count (int): Number of residual blocks, the less there is,
             the faster the inference time will be but the network will capture
-            less inforamtions.
+            less information.
         """
         upsample_block_num = int(math.log(scale_factor, 2))
 
