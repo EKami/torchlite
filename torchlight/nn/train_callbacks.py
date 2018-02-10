@@ -254,17 +254,17 @@ class ReduceLROnPlateau(TrainCallback):
 
 
 class ModelSaverCallback(TrainCallback):
-    def __init__(self, to_dir, every_n_epoch=1):
+    def __init__(self, to_file, every_n_epoch=1):
         """
             Saves the model every n epochs in to_dir
         Args:
-            to_dir (str): The path where to save the model
+            to_file (str): The path where to save the model
             every_n_epoch (int): Save the model every n epochs
         """
         # TODO finish
         super().__init__()
         self.every_n_epoch = every_n_epoch
-        self.to_dir = to_dir
+        self.to_file = to_file
 
     def restore_model(self, model_path):
         """
@@ -275,7 +275,11 @@ class ModelSaverCallback(TrainCallback):
         self.model.load_state_dict(torch.load(model_path))
 
     def on_epoch_end(self, epoch, logs=None):
-        pass
+        step = logs["step"]
+        if step == 'validation':
+            torch.save(self.model.state_dict(), self.to_file)
+            print(f"Model saved in {self.to_file}")
+
 
 
 class CosineAnnealingCallback(TrainCallback):
