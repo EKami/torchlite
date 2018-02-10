@@ -130,8 +130,14 @@ class SRGAN(nn.Module):
             generator:
             discriminator:
         """
-        self.discriminator = discriminator
-        self.generator = generator
+        super().__init__()
+        self.netD = discriminator
+        self.netG = generator
 
-    def forward(self, *input):
-        pass
+    def forward(self, data, target):
+        # TODO will give only data (lr_image) here, targets are used for the loss
+        ############################
+        # (1) Update D network: maximize D(x)-1-D(G(z))
+        ###########################
+        fake_img = self.netG(data)
+        d = 0

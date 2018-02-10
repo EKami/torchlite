@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train Super Resolution Models')
     parser.add_argument('--train_hr', default="@default", type=str, help='The path to the HR files for training')
     parser.add_argument('--train_lr', default="@default", type=str, help='The path to the LR files for training')
-    parser.add_argument('--gen_epochs', default=100, type=int, help='Number of epochs for the generator training')
+    parser.add_argument('--gen_epochs', default=3, type=int, help='Number of epochs for the generator training')
     parser.add_argument('--adv_epochs', default=500, type=int, help='Number of epochs for the adversarial training')
     parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     # Models with different upscale factors and crop sizes are not compatible together
