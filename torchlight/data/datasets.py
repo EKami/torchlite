@@ -7,17 +7,20 @@ import os
 
 
 class ImagesDataset(Dataset):
-    def __init__(self, images_path: list, y: Union[np.ndarray, list], transforms=None):
+    def __init__(self, images_path: list, y: Union[np.ndarray, list], x_transforms=None, y_transforms=None):
         """
             Dataset class for images classification.
             Works for single and multi label classes.
         Args:
             images_path (list): A list of image path
             y (np.ndarray, list): The image labels as int or the path to the mapping files
-            transforms (Compose): A list of composable transforms. The transformations will be
-            applied to both images_path and y if y is a list of image path
+            x_transforms (Compose): A list of composable transforms. The transformations will be
+                applied to the images_path files
+            y_transforms (Compose): A list of composable transforms. The transformations will be
+                applied to the y files
         """
-        self.transforms = transforms
+        self.x_transforms = x_transforms
+        self.y_transforms = y_transforms
         self.images_path = images_path
         if isinstance(y, list):
             self.y = y
@@ -31,13 +34,13 @@ class ImagesDataset(Dataset):
         image = Image.open(self.images_path[idx])
 
         # Transforms can include resize, normalization and torch tensor transformation
-        if self.transforms:
-            image = self.transforms(image)
+        if self.x_transforms:
+            image = self.x_transforms(image)
 
         if isinstance(self.y, list):
             y = Image.open(self.y[idx])
-            if self.transforms:
-                y = self.transforms(y)
+            if self.y_transforms:
+                y = self.y_transforms(y)
         else:
             y = self.y[idx]
         return image, y
@@ -58,10 +61,10 @@ class ImagesDataset(Dataset):
             _, file = os.path.split(path)
             if name == file:
                 if not transform:
-                    transform_old = self.transforms
-                    self.transforms = False
+                    transform_old = self.x_transforms
+                    self.x_transforms = False
                     ret = self[i][0], self[i][1], i
-                    self.transforms = transform_old
+                    self.x_transforms = transform_old
                 else:
                     ret = self[i][0], self[i][1], i
                 return ret

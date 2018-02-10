@@ -21,6 +21,10 @@ from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.losses.srgan import GeneratorLoss
 from torchlight.nn.learner import Learner
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
+from PIL import Image
+import torchvision.transforms as transforms
+import torchlight.nn.transforms as ttransforms
+import torch.nn as nn
 
 
 def enhance_img(img):
@@ -45,11 +49,28 @@ def get_loaders(args, num_workers=os.cpu_count()):
     val_hr_path = ds_path / "DIV2K_valid_HR"
     val_lr_path = ds_path / "DIV2K_valid_LR_bicubic" / "X4"
 
+    # TODO may not be compatible with VGG!!
+    x_transformations = transforms.Compose([transforms.CenterCrop((384, 384)),  # TODO change with crop?
+                                            transforms.ToTensor(),
+                                            ttransforms.FactorNormalize(),
+                                            ])
+
+    # TODO the author downsample the 386x386 HR images to 96x96
+    # https://github.com/tensorlayer/srgan/blob/cd9dc3a67275ece28165e52fbed3a81bc56c4e43/main.py#L201
+    y_transformations = transforms.Compose([transforms.ToPILImage(),
+                                            transforms.Resize((96, 96), interpolation=Image.BICUBIC),
+                                            transforms.ToTensor()
+                                            ])
+
     train_ds = ImagesDataset(tfiles.get_files(train_lr_path.absolute()),
-                             y=tfiles.get_files(train_hr_path.absolute()))
+                             y=tfiles.get_files(train_hr_path.absolute()),
+                             x_transforms=x_transformations,
+                             y_transforms=y_transformations)
     # Use the DIV2K dataset for validation as default
     val_ds = ImagesDataset(tfiles.get_files(val_lr_path.absolute()),
-                           y=tfiles.get_files(val_hr_path.absolute()))
+                           y=tfiles.get_files(val_hr_path.absolute()),
+                           x_transforms=x_transformations,
+                           y_transforms=y_transformations)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)
@@ -65,16 +86,20 @@ def main(args):
     netG = Generator(upscale_factor)
     netD = Discriminator()
 
-    optimizerG = optim.Adam(netG.parameters())
-    optimizerD = optim.Adam(netD.parameters())
+    optimizer_g = optim.Adam(netG.parameters())
+    optimizer_d = optim.Adam(netD.parameters())
 
     generator_epochs = args.gen_epochs
     adversarial_epochs = args.adv_epochs
 
-    callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
-                 ReduceLROnPlateau()]
     loss = GeneratorLoss()  # TODO try with VGG54 as in the paper
-    learner = Learner(netG)
+    callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5)]
+
+    #  ---------------------- Train generator a bit ----------------------
+    init_callbacks = [ReduceLROnPlateau(optimizer_g)]
+    init_loss = nn.MSELoss
+    g_init_learner = Learner(netG)
+    g_init_learner.train(optimizer_g, init_loss, None, generator_epochs, train_loader, callbacks=init_callbacks)
 
 
 if __name__ == "__main__":

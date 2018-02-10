@@ -25,6 +25,7 @@ class Generator(nn.Module):
         for i in range(res_blocks_count):
             self.res_blocks.append(ResidualBlock(64))
 
+        self.res_blocks = nn.Sequential(*self.res_blocks)
         self.block_x1 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64)
@@ -34,12 +35,8 @@ class Generator(nn.Module):
 
     def forward(self, x):
         block1 = self.block1(x)
-
-        last_block = block1
-        for block in self.res_blocks:
-            last_block = block(last_block)
-
-        block_x1 = self.block_x1(last_block)
+        res_blocks = self.res_blocks(block1)
+        block_x1 = self.block_x1(res_blocks)
         block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
         block_x3 = self.block_x3(block_x2)
 

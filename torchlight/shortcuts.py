@@ -109,17 +109,17 @@ class ImageClassifierShortcut(BaseLoader):
         datasets = []
 
         files, y_mapping = data.files.get_labels_from_folders(train_folder)
-        datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+        datasets.append(ImagesDataset(files[:, 0], files[:, 1], x_transforms=transforms))
 
         if val_folder:
             files, _ = data.files.get_labels_from_folders(val_folder, y_mapping)
-            datasets.append(ImagesDataset(files[:, 0], files[:, 1], transforms=transforms))
+            datasets.append(ImagesDataset(files[:, 0], files[:, 1], x_transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
             files = data.files.get_files(test_folder)
-            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), transforms=transforms))
+            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), x_transforms=transforms))
         else:
             datasets.append(None)
 

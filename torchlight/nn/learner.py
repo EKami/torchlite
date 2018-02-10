@@ -103,7 +103,7 @@ class Learner:
             Trains the neural net
         Args:
             optimizer (Optimizer): The optimizer function
-            loss (function): The objective function.
+            loss (callable): The objective function.
             metrics (list, None): Metrics to be evaluated by the model
                         during training and testing.
                         Typically you will use `metrics=['accuracy']`.
