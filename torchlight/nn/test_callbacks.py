@@ -1,9 +1,8 @@
 """
 This module contains callbacks used during the test phase.
 """
-from torchlight.data.datasets import ImagesDataset
+from torchlight.data.datasets import ImageDataset
 from tqdm import tqdm
-from collections import OrderedDict
 
 
 class TestCallback:
@@ -132,7 +131,7 @@ class ActivationMapVisualizerCallback(TestCallback):
     def on_test_end(self, logs=None):
         model = self.model
         ds = logs["loader"].dataset if logs["loader"] else None
-        assert isinstance(ds, ImagesDataset), \
+        assert isinstance(ds, ImageDataset), \
             "ActivationMapVisualizer: The loader is not an instance of torchlight.data.datasets.ImagesDataset"
         image, label, _ = ds.get_by_name(self.filename)
         # TODO finish grad cam here https://github.com/adityac94/Grad_CAM_plus_plus/blob/master/misc/utils.py#L51

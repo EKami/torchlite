@@ -15,7 +15,7 @@ from pathlib import Path
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
-from torchlight.data.datasets import ImagesDataset
+from torchlight.data.datasets import ImageDataset
 import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.losses.srgan import GeneratorLoss
@@ -50,16 +50,18 @@ def get_loaders(args, num_workers=os.cpu_count()):
     val_lr_path = ds_path / "DIV2K_valid_LR_bicubic" / "X4"
 
     # TODO may not be compatible with VGG!!
-    x_transformations = transforms.Compose([transforms.CenterCrop((384, 384)),  # TODO change with crop?
+    # TODO crop here
+    x_transformations = transforms.Compose([transforms.RandomCrop((88, 88)),  # TODO change with crop?
                                             transforms.ToTensor(),
                                             ttransforms.FactorNormalize(),
                                             ])
 
     # TODO the author downsample the 386x386 HR images to 96x96
+    # TODO resize here or crop if taken from val folder
     # https://github.com/tensorlayer/srgan/blob/cd9dc3a67275ece28165e52fbed3a81bc56c4e43/main.py#L201
-    y_transformations = transforms.Compose([transforms.ToPILImage(),
-                                            transforms.Resize((96, 96), interpolation=Image.BICUBIC),
-                                            transforms.ToTensor()
+    y_transformations = transforms.Compose([transforms.Resize((96, 96), interpolation=Image.BICUBIC),
+                                            transforms.ToTensor(),
+                                            ttransforms.FactorNormalize(),
                                             ])
 
     train_ds = ImagesDataset(tfiles.get_files(train_lr_path.absolute()),
@@ -97,7 +99,7 @@ def main(args):
 
     #  ---------------------- Train generator a bit ----------------------
     init_callbacks = [ReduceLROnPlateau(optimizer_g)]
-    init_loss = nn.MSELoss
+    init_loss = nn.MSELoss()
     g_init_learner = Learner(netG)
     g_init_learner.train(optimizer_g, init_loss, None, generator_epochs, train_loader, callbacks=init_callbacks)
 

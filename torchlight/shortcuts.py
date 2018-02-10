@@ -8,7 +8,7 @@ import torchvision
 from torch.utils.data import Dataset
 
 import data.files
-from torchlight.data.datasets import ColumnarDataset, ImagesDataset
+from torchlight.data.datasets import ColumnarDataset, ImageClassificationDataset
 from torchlight.nn.models.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
 import torchlight.nn.tools as tools
@@ -109,17 +109,17 @@ class ImageClassifierShortcut(BaseLoader):
         datasets = []
 
         files, y_mapping = data.files.get_labels_from_folders(train_folder)
-        datasets.append(ImagesDataset(files[:, 0], files[:, 1], x_transforms=transforms))
+        datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
             files, _ = data.files.get_labels_from_folders(val_folder, y_mapping)
-            datasets.append(ImagesDataset(files[:, 0], files[:, 1], x_transforms=transforms))
+            datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
             files = data.files.get_files(test_folder)
-            datasets.append(ImagesDataset(files, np.repeat(-1, len(files)), x_transforms=transforms))
+            datasets.append(ImageClassificationDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)
 
