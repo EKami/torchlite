@@ -16,7 +16,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
-from torchlight.nn.models.srgan import Generator, Discriminator
+from torchlight.nn.models.srgan import Generator, Discriminator, SRGAN
 from torchlight.nn.losses.srgan import GeneratorLoss
 from torchlight.nn.learner import Learner
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
@@ -64,27 +64,22 @@ def main(args):
     train_loader, valid_loader, _ = get_loaders(args)
     saved_model_name = "srgan_model_upfac-" + str(args.upscale_factor) + "_crop-" + str(args.crop_size) + ".pth"
     saved_model_path = tfiles.create_dir_if_not_exists(args.models_dir) / saved_model_name
+
+    print("---------------------- Generator training ----------------------")
     netG = Generator(args.upscale_factor)
-    netD = Discriminator()
-
     optimizer_g = optim.Adam(netG.parameters())
-    optimizer_d = optim.Adam(netD.parameters())
+    callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
+    loss = nn.MSELoss()
+    learner = Learner(netG)
+    learner.train(optimizer_g, loss, None, args.gen_epochs, train_loader, None, callbacks)
 
-    generator_epochs = args.gen_epochs
-    adversarial_epochs = args.adv_epochs
-
+    print("----------------- Adversarial (SRGAN) training -----------------")
+    netAdv = SRGAN(netG, Discriminator())
     loss = GeneratorLoss()  # TODO try with VGG54 as in the paper
-    callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5)]
-
-    #  ---------------------- Train generator a bit ----------------------
-    init_callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
-    init_loss = nn.MSELoss()
-    g_init_learner = Learner(netG)
-    g_init_learner.train(optimizer_g, init_loss, None, generator_epochs,
-                         train_loader, None, init_callbacks)
-
-    #  ------------------------ Train GAN (SRGAN) ------------------------
-    # TODO merge G and D in the same nn.Module and pass it to the learner
+    callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
+                 ReduceLROnPlateau(optimizer_g, loss_step="valid")]
+    learner = Learner(netAdv)
+    learner.train(optimizer_g, loss, None, args.gen_epochs, train_loader, valid_loader, callbacks)
 
 
 if __name__ == "__main__":

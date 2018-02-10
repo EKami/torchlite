@@ -120,3 +120,18 @@ class Discriminator(nn.Module):
     def forward(self, x):
         batch_size = x.size(0)
         return F.sigmoid(self.net(x).view(batch_size))
+
+
+class SRGAN(nn.Module):
+    def __init__(self, generator: nn.Module, discriminator: nn.Module):
+        """
+        The SRGAN module which takes as input a generator and a discriminator
+        Args:
+            generator:
+            discriminator:
+        """
+        self.discriminator = discriminator
+        self.generator = generator
+
+    def forward(self, *input):
+        pass
