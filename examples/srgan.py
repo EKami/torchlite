@@ -20,6 +20,7 @@ from torchlight.nn.models.srgan import Generator, Discriminator, SRGAN
 from torchlight.nn.learner import Learner
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset
+from torchlight.nn.losses.srgan import AdvLoss
 import torch.nn as nn
 
 
@@ -61,10 +62,13 @@ def main(args):
     saved_model_name = "srgan_model_upfac-" + str(args.upscale_factor) + "_crop-" + str(args.crop_size) + ".pth"
     saved_model_path = tfiles.create_dir_if_not_exists(args.models_dir) / saved_model_name
 
+    netG = Generator(args.upscale_factor)
+    netD = Discriminator()
+    optimizer_g = optim.Adam(netG.parameters())
+    optimizer_d = optim.Adam(netD.parameters())
+
     print("---------------------- Generator training ----------------------")
     train_loader.dataset.set_mode(0)
-    netG = Generator(args.upscale_factor)
-    optimizer_g = optim.Adam(netG.parameters())
     callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
     loss = nn.MSELoss()
     learner = Learner(netG)
@@ -72,13 +76,13 @@ def main(args):
 
     print("----------------- Adversarial (SRGAN) training -----------------")
     train_loader.dataset.set_mode(1)
-    netD = Discriminator()
-    optimizer_d = optim.Adam(netD.parameters())
     netAdv = SRGAN(netG, netD, optimizer_g, optimizer_d)
     callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
                  ReduceLROnPlateau(optimizer_g, loss_step="valid")]
+    loss = AdvLoss()
     learner = Learner(netAdv)
-    learner.train(optimizer_g, None, None, args.gen_epochs, train_loader, valid_loader, callbacks)
+    # No optimizer given as the SRGAN model will optimize its models internally
+    learner.train(None, loss, None, args.gen_epochs, train_loader, valid_loader, callbacks)
 
 
 if __name__ == "__main__":

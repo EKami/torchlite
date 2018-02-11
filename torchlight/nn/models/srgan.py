@@ -139,29 +139,25 @@ class SRGAN(nn.Module):
         self.netG = generator
         self.generator_loss = GeneratorLoss()  # TODO try with VGG54 as in the paper
 
+    def _optimize(self, model, optim, loss, retain_graph=False):
+        model.zero_grad()
+        loss.backward(retain_graph=retain_graph)
+        optim.step()
+
     def forward(self, data, target):
-        # TODO create a Sequential model where output of first net is passed to second
-        # TODO loss should be calculated in the learner
         ############################
         # (1) Update D network: maximize D(x)-1-D(G(z))
         ###########################
-        fake_img = self.netG(data)
-        real_out = self.netD(target).mean()
-        fake_out = self.netD(fake_img).mean()
-        d_loss = 1 - real_out + fake_out
-        self.netD.zero_grad()
-        d_loss.backward()
-        self.netD_optim.step()
+        gen_img = self.netG(data)
+        d_real_out = self.netD(target).mean()
+        d_fake_out = self.netD(gen_img).mean()
+        d_loss = 1 - d_real_out + d_fake_out
+        # TODO don't optimize in val/test pass
+        self._optimize(self.netD, self.netD_optim, d_loss, retain_graph=True)
+
         ############################
         # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
         ###########################
-        g_loss = self.generator_loss(fake_out, fake_img, target)
-        self.netG.zero_grad()
-        g_loss.backward()
-        self.netG_optim.step()
-        # TODO don't optimize in the learner
-        # ------
-        # TODO The learner could use these steps: https://github.com/leftthomas/SRGAN/blob/master/train.py#L88
-        # But it has to pass d_loss and g_loss
-        # ------
-        return None
+        g_loss = self.generator_loss(d_fake_out, gen_img, target)
+        self._optimize(self.netG, self.netG_optim, g_loss)
+        return gen_img, d_real_out, d_fake_out

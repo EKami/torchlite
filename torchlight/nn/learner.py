@@ -53,17 +53,20 @@ class Learner:
             logits = self.model.forward(*inputs)
             logs = metrics_list(targets, logits)
             loss = criterion(logits, targets)
-            losses.update(loss.data[0])
+            if isinstance(loss, dict):
+                logs.update(loss)
+            else:
+                logs.update({"loss": loss.data[0]})
+                losses.update(loss.data[0])
 
-            # backward + optimize
-            if step == "training":
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                # backward + optimize
+                if step == "training" and optimizer:
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
             callback_list.on_batch_end(ind, logs={"step": step,
-                                                  "loss": loss.data[0],
-                                                  "metrics": logs})
+                                                  "batch_logs": logs})
         return losses.debias_loss, metrics_list
 
     def _run_epoch(self, train_loader, valid_loader, optimizer, loss, metrics, callback_list):

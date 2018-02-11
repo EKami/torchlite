@@ -174,14 +174,13 @@ class TQDM(TrainCallback):
 
     def on_batch_end(self, batch, logs=None):
         step = logs["step"]
-        metrics = logs["metrics"]
+        batch_logs = logs["batch_logs"]
 
         if step == "validation":
             self.train_pbar.set_description(step)  # training or validating
-        loss = logs["loss"]
-        postfix = OrderedDict(loss='{0:1.5f}'.format(loss))
-        if metrics:
-            for name, value in metrics.items():
+        postfix = OrderedDict()
+        if batch_logs:
+            for name, value in batch_logs.items():
                 postfix[name] = '{0:1.5f}'.format(value)
 
         self.train_pbar.set_postfix(postfix)
