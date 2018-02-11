@@ -6,10 +6,24 @@ from torchlight.nn.models.models import FinetunedModelTools
 
 
 class GeneratorLoss:
-    def __init__(self):
+    def __init__(self, use_cuda=True):
+        """
+        The Generator loss
+        Args:
+            use_cuda (bool): If True moves the model onto the GPU.
+            /!\ If the model is on the GPU the GeneratorLoss should be on the GPU too
+        """
         super(GeneratorLoss, self).__init__()
+
+        if use_cuda:
+            if torch.cuda.is_available():
+                self.use_cuda = True
+            else:
+                print("/!\ Warning: Cuda set but not available, using CPU...")
         vgg = vgg16(pretrained=True)
         loss_network = nn.Sequential(*FinetunedModelTools.freeze(vgg.features)).eval()
+        if use_cuda:
+            loss_network.cuda()
         self.loss_network = loss_network
         self.mse_loss = nn.MSELoss()
         self.tv_loss = TVLoss()  # Total variation loss (not included in the original paper)

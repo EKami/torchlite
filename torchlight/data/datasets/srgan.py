@@ -72,9 +72,9 @@ class TrainDataset(Dataset):
         self.mode = mode
 
 
-class AdvValDataset(Dataset):
+class ValDataset(Dataset):
     def __init__(self, hr_image_filenames, upscale_factor):
-        super(AdvValDataset, self).__init__()
+        super(ValDataset, self).__init__()
         self.upscale_factor = upscale_factor
         self.hr_image_filenames = hr_image_filenames
 

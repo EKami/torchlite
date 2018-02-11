@@ -1,7 +1,7 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from torchlight.nn.losses.srgan import GeneratorLoss
 
 
 class Generator(nn.Module):
@@ -123,21 +123,45 @@ class Discriminator(nn.Module):
 
 
 class SRGAN(nn.Module):
-    def __init__(self, generator: nn.Module, discriminator: nn.Module):
+    def __init__(self, generator: nn.Module, discriminator: nn.Module, g_optim, d_optim):
         """
         The SRGAN module which takes as input a generator and a discriminator
         Args:
-            generator:
-            discriminator:
+            g_optim (Optimizer): Generator optimizer
+            d_optim (Optimizer): Discriminator optimizer
+            generator (nn.Module): Model definition of the generator
+            discriminator (nn.Module): Model definition of the discriminator
         """
         super().__init__()
+        self.netG_optim = g_optim
+        self.netD_optim = d_optim
         self.netD = discriminator
         self.netG = generator
+        self.generator_loss = GeneratorLoss()  # TODO try with VGG54 as in the paper
 
     def forward(self, data, target):
-        # TODO will give only data (lr_image) here, targets are used for the loss
+        # TODO create a Sequential model where output of first net is passed to second
+        # TODO loss should be calculated in the learner
         ############################
         # (1) Update D network: maximize D(x)-1-D(G(z))
         ###########################
         fake_img = self.netG(data)
-        d = 0
+        real_out = self.netD(target).mean()
+        fake_out = self.netD(fake_img).mean()
+        d_loss = 1 - real_out + fake_out
+        self.netD.zero_grad()
+        d_loss.backward()
+        self.netD_optim.step()
+        ############################
+        # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
+        ###########################
+        g_loss = self.generator_loss(fake_out, fake_img, target)
+        self.netG.zero_grad()
+        g_loss.backward()
+        self.netG_optim.step()
+        # TODO don't optimize in the learner
+        # ------
+        # TODO The learner could use these steps: https://github.com/leftthomas/SRGAN/blob/master/train.py#L88
+        # But it has to pass d_loss and g_loss
+        # ------
+        return None
