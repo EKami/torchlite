@@ -128,34 +128,33 @@ class TQDM(TrainCallback):
             self.val_pbar = tqdm(total=self.val_loader_len, desc="Validating", leave=False)
 
     def on_epoch_end(self, epoch, logs=None):
-        train_loss = logs['train_loss']
-        train_metrics = logs['train_metrics']
         step = logs["step"]
 
         if step == 'training':
             self.train_pbar.close()
+            train_loss = logs['total_loss']
+            train_metrics = logs['metrics_logs']
+            print("train_loss = {:03f}".format(train_loss), end=' ')
+
+            print("Train metrics:", end=' ')
+            print(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
         elif step == 'validation':
             self.val_pbar.close()
-            val_loss = logs['val_loss']
-            print("train_loss = {:03f}".format(train_loss), end=' ')
-            if val_loss:
-                print("| val_loss = {:03f}".format(val_loss), end=' ')
-        print()
+            val_loss = logs['total_loss']
+            print("| val_loss = {:03f}".format(val_loss), end=' ')
 
-        if step == 'validation':
-            val_metrics = logs['val_metrics']
-            print("Train metrics:", end=' ')
-            print(*["{}={:03f}".format(k, v) for k, v in train_metrics.avg().items()])
-            if val_metrics:
-                print("Val metrics:", end=' ')
-                print(*["{}={:03f}".format(k, v) for k, v in val_metrics.avg().items()])
+            val_metrics = logs['metrics_logs']
+            print("Val metrics:", end=' ')
+            print(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
+
+        print()
 
     def on_batch_begin(self, batch, logs=None):
         pass
 
     def on_batch_end(self, batch, logs=None):
         step = logs["step"]
-        batch_logs = logs["batch_logs"]
+        batch_logs = logs.get("batch_logs")
 
         if step == "validation":
             self.train_pbar.set_description(step)  # training or validating

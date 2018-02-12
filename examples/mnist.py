@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from nn.learners.learner import Learner
+from torchlight.nn.learners.learner import Learner
+from torchlight.nn.learners.cores import ClassifierCore
 from torchlight.nn.metrics import CategoricalAccuracy
 import os
 
@@ -44,13 +45,13 @@ def main():
     test_loader = DataLoader(mnist_test_data, batch_size, shuffle=False, num_workers=os.cpu_count())
 
     net = Net()
-    learner = Learner(net)
-
     optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
     loss = F.nll_loss
+
+    learner = Learner(ClassifierCore(net, optimizer, loss))
     metrics = [CategoricalAccuracy()]
 
-    learner.train(optimizer, loss, metrics, epochs, train_loader, None, callbacks=None)
+    learner.train(epochs, metrics, train_loader, test_loader, callbacks=None)
 
     y_pred = learner.predict(test_loader)
     y_true = test_loader.dataset.test_labels

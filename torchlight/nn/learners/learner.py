@@ -43,7 +43,7 @@ class Learner:
             metrics_logs = metrics_list(targets, logits)
 
             logs.update(self.learner_core.get_logs)
-            logs.update(metrics_logs)
+            logs.update({"metrics_logs": metrics_logs})
             callback_list.on_batch_end(ind, logs=logs)
         return logs
 
@@ -57,29 +57,29 @@ class Learner:
         logs = {"step": step, 'epoch_count': self.epoch_counter}
         callback_list.on_epoch_begin(self.epoch_counter, logs)
         train_logs = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
+        train_logs.update(logs)
+        callback_list.on_epoch_end(self.epoch_counter, train_logs)
 
-        callback_list.on_epoch_end(self.epoch_counter, train_logs.update(logs))
         # switch to evaluate mode
         self.learner_core.on_eval_mode()
 
         # Run the validation pass
-        step = "validation"
-        logs = {"step": step, 'epoch_count': self.epoch_counter}
-        callback_list.on_epoch_begin(self.epoch_counter, logs)
-        val_logs = {}
         if valid_loader:
+            step = "validation"
+            logs = {"step": step, 'epoch_count': self.epoch_counter}
+            callback_list.on_epoch_begin(self.epoch_counter, logs)
             val_logs = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
+            val_logs.update(logs)
+            callback_list.on_epoch_end(self.epoch_counter, val_logs)
 
-        callback_list.on_epoch_end(self.epoch_counter, val_logs.update(logs))
-
-    def train(self, metrics, epochs, train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
+    def train(self, epochs, metrics, train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
         """
             Trains the neural net
         Args:
+            epochs (int): number of epochs
             metrics (list, None): Metrics to be evaluated by the model
                         during training and testing.
                         Typically you will use `metrics=['accuracy']`.
-            epochs (int): number of epochs
             train_loader (DataLoader): The Dataloader for training
             valid_loader (DataLoader, optional): The Dataloader for validation
             callbacks (list, None): List of train callbacks functions

@@ -77,8 +77,9 @@ class ClassifierCore(BaseCore):
         if step != "prediction":
             loss = self.crit(logits, targets)
 
+            # Update logs
             self.avg_meter.update(loss.data[0])
-            self.logs.update({"batch_loss": loss.data[0]})
+            self.logs.update({"batch_logs": {"loss": loss.data[0]}})
             self.logs.update({"total_loss": self.avg_meter.debias_loss})
 
             # backward + optimize
