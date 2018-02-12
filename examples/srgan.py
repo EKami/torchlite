@@ -17,10 +17,10 @@ from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator, SRGAN
-from torchlight.nn.learner import Learner
+from torchlight.nn import dnn_learner, gan_learner
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset
-from torchlight.nn.losses.srgan import AdvLoss
+from torchlight.nn.losses.srgan import GeneratorLoss
 import torch.nn as nn
 
 
@@ -43,6 +43,7 @@ def get_loaders(args, num_workers=os.cpu_count()):
         train_hr_path = Path(args.train_hr)
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
+    # TODO normalize the images
     train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
                             lr_image_filenames=None,  # Use LR images from dir?
                             crop_size=args.crop_size, upscale_factor=args.upscale_factor)
@@ -71,18 +72,22 @@ def main(args):
     train_loader.dataset.set_mode(0)
     callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
     loss = nn.MSELoss()
-    learner = Learner(netG)
+    learner = dnn_learner.DnnLearner(netG)
     learner.train(optimizer_g, loss, None, args.gen_epochs, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRGAN) training -----------------")
     train_loader.dataset.set_mode(1)
+
+    #loss = AdvLoss()
     netAdv = SRGAN(netG, netD, optimizer_g, optimizer_d)
+
     callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
                  ReduceLROnPlateau(optimizer_g, loss_step="valid")]
-    loss = AdvLoss()
-    learner = Learner(netAdv)
+
+    g_loss = GeneratorLoss()
+    learner = gan_learner.GanLearner(netG, netD)
     # No optimizer given as the SRGAN model will optimize its models internally
-    learner.train(None, loss, None, args.gen_epochs, train_loader, valid_loader, callbacks)
+    learner.train(optimizer_g, optimizer_d, g_loss, None, args.gen_epochs, train_loader, valid_loader, callbacks)
 
 
 if __name__ == "__main__":

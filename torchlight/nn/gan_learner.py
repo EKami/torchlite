@@ -10,15 +10,72 @@ from torchlight.nn import tools
 from torchlight.nn.metrics import MetricsList
 
 
+class BaseCore:
+    pass
+
+
+class ClassifierCore(BaseCore):
+    def __init__(self, model, optim, crit):
+        """
+
+        Args:
+            model (nn.Module): The pytorch model
+            optim (Optimizer): The optimizer function
+            crit (callable): The objective criterion.
+        """
+        self.crit = crit
+        self.optim = optim
+        self.model = model
+        self.logs = {}
+        self.avg_meter = tools.AverageMeter()
+
+    @property
+    def get_logs(self):
+        return self.logs
+
+    def on_train_mode(self):
+        self.model.train()
+
+    def on_eval_mode(self):
+        self.model.eval()
+
+    def to_gpu(self):
+        tools.to_gpu(self.model)
+
+    def on_forward_batch(self, step, inputs, targets):
+        # forward
+        logits = self.model.forward(*inputs)
+        loss = self.crit(logits, targets)
+
+        self.avg_meter.update(loss.data[0])
+        self.logs.update({"loss": loss.data[0]})
+        self.logs.update({"total_loss": self.avg_meter.debias_loss})
+
+        # backward + optimize
+        if step == "training":
+            self.optim.zero_grad()
+            loss.backward()
+            self.optim.step()
+        elif step == "predict":
+            # forward
+            logits = logits.data
+            if ret_logits is None:
+                ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
+            ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
+            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
+
+        # TODO return the losses as logs
+
+
 class Learner:
-    def __init__(self, model: nn.Module, use_cuda=True):
+    def __init__(self, learner_core, use_cuda=True):
         """
         The learner class used to train deep neural network
         Args:
-            model (nn.Module): The pytorch model
             use_cuda (bool): If True moves the model onto the GPU
         """
-        self.model = model
+        # TODO contains the model/models, the optimizer and the losses
+        self.learner_core = learner_core
         self.epoch_counter = 0
         self.use_cuda = False
         if use_cuda:
@@ -27,19 +84,9 @@ class Learner:
             else:
                 print("/!\ Warning: Cuda set but not available, using CPU...")
 
-    def restore_model(self, model_path):
-        """
-            Restore a model parameters from the one given in argument
-        Args:
-            model_path (str): The path to the model to restore
-
-        """
-        self.model.load_state_dict(torch.load(model_path))
-
-    def _train_epoch(self, step, loader, optimizer, criterion, metrics_list, callback_list):
+    def _train_epoch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
         batch_size = loader.batch_size
-        losses = tools.AverageMeter()
         # We can have multiple inputs
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs={"step": step,
@@ -49,50 +96,36 @@ class Learner:
                 targets = tools.to_gpu(targets)
             inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
-            # forward
-            logits = self.model.forward(*inputs)
-            logs = metrics_list(targets, logits)
-            loss = criterion(logits, targets)
-            if isinstance(loss, dict):
-                logs.update(loss)
-            else:
-                logs.update({"loss": loss.data[0]})
-                losses.update(loss.data[0])
-
-                # backward + optimize
-                if step == "training" and optimizer:
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+            logits = self.learner_core.on_forward_batch(step, inputs, targets)
+            metrics_logs = metrics_list(targets, logits)
 
             callback_list.on_batch_end(ind, logs={"step": step,
-                                                  "batch_logs": logs})
-        return losses.debias_loss, metrics_list
+                                                  "batch_logs": self.learner_core.get_logs,
+                                                  "metrics_logs": metrics_logs})
+        return metrics_list
 
-    def _run_epoch(self, train_loader, valid_loader, optimizer, loss, metrics, callback_list):
+    def _run_epoch(self, train_loader, valid_loader, metrics, callback_list):
 
         # switch to train mode
-        self.model.train()
+        self.learner_core.on_train_mode()
 
         # Run a train pass on the current epoch
         step = "training"
         callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
-        train_loss, train_metrics = self._train_epoch(step, train_loader, optimizer, loss,
-                                                      MetricsList(metrics), callback_list)
+        train_metrics = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
 
         callback_list.on_epoch_end(self.epoch_counter, {"step": step,
                                                         'train_loss': train_loss,
                                                         'train_metrics': train_metrics})
         # switch to evaluate mode
-        self.model.eval()
+        self.learner_core.on_eval_mode()
 
         # Run the validation pass
         step = "validation"
         callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
         val_loss, val_metrics = None, None
         if valid_loader:
-            val_loss, val_metrics = self._train_epoch(step, valid_loader, optimizer, loss,
-                                                      MetricsList(metrics), callback_list)
+            val_metrics = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
 
         callback_list.on_epoch_end(self.epoch_counter, {'step': step,
                                                         'train_loss': train_loss,
@@ -100,13 +133,10 @@ class Learner:
                                                         'val_loss': val_loss,
                                                         'val_metrics': val_metrics})
 
-    def train(self, optimizer, loss, metrics, epochs,
-              train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
+    def train(self, metrics, epochs, train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
         """
             Trains the neural net
         Args:
-            optimizer (Optimizer): The optimizer function
-            loss (callable): The objective function.
             metrics (list, None): Metrics to be evaluated by the model
                         during training and testing.
                         Typically you will use `metrics=['accuracy']`.
@@ -117,14 +147,13 @@ class Learner:
         """
         train_start_time = datetime.now()
         if self.use_cuda:
-            tools.to_gpu(self.model)
+            self.learner_core.to_gpu()
 
         if not callbacks:
             callbacks = []
         callbacks.append(train_callbacks.TQDM())
 
         callback_list = train_callbacks.TrainCallbackList(callbacks)
-        callback_list.set_model(self.model)
         callback_list.on_train_begin({'total_epochs': epochs,
                                       'epoch_count': self.epoch_counter,
                                       'train_loader': train_loader,
@@ -132,7 +161,7 @@ class Learner:
 
         for _ in range(epochs):
             epoch_start_time = datetime.now()
-            self._run_epoch(train_loader, valid_loader, optimizer, loss, metrics, callback_list)
+            self._run_epoch(train_loader, valid_loader, metrics, callback_list)
             print('Epoch time (hh:mm:ss.ms) {}'.format(datetime.now() - epoch_start_time))
             self.epoch_counter += 1
         callback_list.on_train_end()
@@ -151,17 +180,16 @@ class Learner:
         """
         test_start_time = datetime.now()
         # Switch to evaluation mode
-        self.model.eval()
+        self.learner_core.on_eval_mode()
 
         if self.use_cuda:
-            tools.to_gpu(self.model)
+            self.learner_core.to_gpu()
 
         if not callbacks:
             callbacks = []
         callbacks.append(test_callbacks.TQDM())
 
         callback_list = test_callbacks.TestCallbackList(callbacks)
-        callback_list.set_model(self.model)
         callback_list.on_test_begin({'loader': test_loader})
 
         ret_logits = None
@@ -173,13 +201,24 @@ class Learner:
 
             inputs = [Variable(i, volatile=True) for i in inputs]
 
-            # forward
-            logits = self.model(*inputs).data
-            if ret_logits is None:
-                ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
-            ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
-            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
+
 
         callback_list.on_test_end({'loader': test_loader})
         print('Total prediction time (hh:mm:ss.ms) {}'.format(datetime.now() - test_start_time))
         return ret_logits.squeeze()
+
+    def on_forward_batch(self, step, inputs, targets):
+        # forward
+        logits = self.model.forward(*inputs)
+        logs = metrics_list(targets, logits)
+        loss = self.crit(logits, targets)
+        logs.update({"loss": loss.data[0]})
+        losses.update(loss.data[0])
+
+        # backward + optimize
+        if step == "training":
+            self.optim.zero_grad()
+            loss.backward()
+            self.optim.step()
+
+        self.logs.update(logs)

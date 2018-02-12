@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from torchlight.nn.learner import Learner
+from torchlight.nn.dnn_learner import DnnLearner
 from torchlight.nn.metrics import CategoricalAccuracy
 import os
 
@@ -44,7 +44,7 @@ def main():
     test_loader = DataLoader(mnist_test_data, batch_size, shuffle=False, num_workers=os.cpu_count())
 
     net = Net()
-    learner = Learner(net)
+    learner = DnnLearner(net)
 
     optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
     loss = F.nll_loss

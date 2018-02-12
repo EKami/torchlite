@@ -17,7 +17,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchlight.data.fetcher as fetcher
 from torchlight.shortcuts import ImageClassifierShortcut
-from torchlight.nn.learner import Learner
+from torchlight.nn.dnn_learner import DnnLearner
 from torchlight.nn.metrics import CategoricalAccuracy
 from torchlight.nn.test_callbacks import ActivationMapVisualizerCallback
 import matplotlib.pyplot as plt
@@ -58,7 +58,7 @@ def main():
                                                   transforms=transformations,
                                                   batch_size=batch_size)
     net = shortcut.get_resnet_model()
-    learner = Learner(net)
+    learner = DnnLearner(net)
 
     # Don't optimize the frozen layers parameters of resnet
     optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3)

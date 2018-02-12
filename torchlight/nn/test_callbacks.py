@@ -11,12 +11,6 @@ class TestCallback:
         self.params = None
         self.model = None
 
-    def set_params(self, params):
-        self.params = params
-
-    def set_model(self, model):
-        self.model = model
-
     def on_test_begin(self, logs=None):
         pass
 
@@ -46,14 +40,6 @@ class TestCallbackList(object):
     def append(self, callback):
         assert isinstance(callback, TestCallback), f"Your callback is not an instance of TestCallback: {callback}"
         self.callbacks.append(callback)
-
-    def set_params(self, params):
-        for callback in self.callbacks:
-            callback.set_params(params)
-
-    def set_model(self, model):
-        for callback in self.callbacks:
-            callback.set_model(model)
 
     def on_test_begin(self, logs=None):
         """Called at the beginning of testing.

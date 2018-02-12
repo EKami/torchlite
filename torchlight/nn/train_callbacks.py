@@ -8,17 +8,6 @@ from collections import OrderedDict
 
 
 class TrainCallback:
-    def __init__(self):
-        self.validation_data = None
-        self.params = None
-        self.model = None
-
-    def set_params(self, params):
-        self.params = params
-
-    def set_model(self, model):
-        self.model = model
-
     def on_epoch_begin(self, epoch, logs=None):
         pass
 
@@ -54,14 +43,6 @@ class TrainCallbackList(object):
     def append(self, callback):
         assert isinstance(callback, TrainCallback), f"Your callback is not an instance of TrainCallback: {callback}"
         self.callbacks.append(callback)
-
-    def set_params(self, params):
-        for callback in self.callbacks:
-            callback.set_params(params)
-
-    def set_model(self, model):
-        for callback in self.callbacks:
-            callback.set_model(model)
 
     def on_epoch_begin(self, epoch, logs=None):
         """Called at the start of an epoch.
@@ -293,7 +274,7 @@ class CycleLenCallback(TrainCallback):
             E.g if cycle_len = 3, then the lr is varied between a maximum
             and minimum value over 3 epochs.
         """
-        # TODO implement (learner.py in fast.ai)
+        # TODO implement (dnn_learner.py in fast.ai)
         super().__init__()
 
 
