@@ -17,9 +17,9 @@ from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator, SRGAN
-from torchlight.nn import dnn_learner, gan_learner
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset
+from nn.learners.learner import Learner
 from torchlight.nn.losses.srgan import GeneratorLoss
 import torch.nn as nn
 
@@ -72,7 +72,7 @@ def main(args):
     train_loader.dataset.set_mode(0)
     callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
     loss = nn.MSELoss()
-    learner = dnn_learner.DnnLearner(netG)
+    learner = Learner(netG)
     learner.train(optimizer_g, loss, None, args.gen_epochs, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRGAN) training -----------------")

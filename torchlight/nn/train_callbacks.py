@@ -274,7 +274,7 @@ class CycleLenCallback(TrainCallback):
             E.g if cycle_len = 3, then the lr is varied between a maximum
             and minimum value over 3 epochs.
         """
-        # TODO implement (dnn_learner.py in fast.ai)
+        # TODO implement (learner.py in fast.ai)
         super().__init__()
 
 

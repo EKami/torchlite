@@ -1,6 +1,5 @@
 from datetime import datetime
 import torch
-import torch.nn as nn
 import torchlight.nn.train_callbacks as train_callbacks
 import torchlight.nn.test_callbacks as test_callbacks
 from torch.autograd import Variable
@@ -8,73 +7,17 @@ from torch.utils.data import DataLoader
 
 from torchlight.nn import tools
 from torchlight.nn.metrics import MetricsList
-
-
-class BaseCore:
-    pass
-
-
-class ClassifierCore(BaseCore):
-    def __init__(self, model, optim, crit):
-        """
-
-        Args:
-            model (nn.Module): The pytorch model
-            optim (Optimizer): The optimizer function
-            crit (callable): The objective criterion.
-        """
-        self.crit = crit
-        self.optim = optim
-        self.model = model
-        self.logs = {}
-        self.avg_meter = tools.AverageMeter()
-
-    @property
-    def get_logs(self):
-        return self.logs
-
-    def on_train_mode(self):
-        self.model.train()
-
-    def on_eval_mode(self):
-        self.model.eval()
-
-    def to_gpu(self):
-        tools.to_gpu(self.model)
-
-    def on_forward_batch(self, step, inputs, targets):
-        # forward
-        logits = self.model.forward(*inputs)
-        loss = self.crit(logits, targets)
-
-        self.avg_meter.update(loss.data[0])
-        self.logs.update({"loss": loss.data[0]})
-        self.logs.update({"total_loss": self.avg_meter.debias_loss})
-
-        # backward + optimize
-        if step == "training":
-            self.optim.zero_grad()
-            loss.backward()
-            self.optim.step()
-        elif step == "predict":
-            # forward
-            logits = logits.data
-            if ret_logits is None:
-                ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
-            ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
-            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
-
-        # TODO return the losses as logs
+from torchlight.nn.learners.cores import BaseCore
 
 
 class Learner:
-    def __init__(self, learner_core, use_cuda=True):
+    def __init__(self, learner_core: BaseCore, use_cuda=True):
         """
         The learner class used to train deep neural network
         Args:
+            learner_core (BaseCore): The learner core
             use_cuda (bool): If True moves the model onto the GPU
         """
-        # TODO contains the model/models, the optimizer and the losses
         self.learner_core = learner_core
         self.epoch_counter = 0
         self.use_cuda = False
@@ -88,9 +31,9 @@ class Learner:
         # Total training files count / batch_size
         batch_size = loader.batch_size
         # We can have multiple inputs
+        logs = {"step": step, "batch_size": batch_size}
         for ind, (*inputs, targets) in enumerate(loader):
-            callback_list.on_batch_begin(ind, logs={"step": step,
-                                                    "batch_size": batch_size})
+            callback_list.on_batch_begin(ind, logs=logs)
             if self.use_cuda:
                 inputs = [tools.to_gpu(i) for i in inputs]
                 targets = tools.to_gpu(targets)
@@ -99,10 +42,10 @@ class Learner:
             logits = self.learner_core.on_forward_batch(step, inputs, targets)
             metrics_logs = metrics_list(targets, logits)
 
-            callback_list.on_batch_end(ind, logs={"step": step,
-                                                  "batch_logs": self.learner_core.get_logs,
-                                                  "metrics_logs": metrics_logs})
-        return metrics_list
+            logs.update(self.learner_core.get_logs)
+            logs.update(metrics_logs)
+            callback_list.on_batch_end(ind, logs=logs)
+        return logs
 
     def _run_epoch(self, train_loader, valid_loader, metrics, callback_list):
 
@@ -111,27 +54,23 @@ class Learner:
 
         # Run a train pass on the current epoch
         step = "training"
-        callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
-        train_metrics = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
+        logs = {"step": step, 'epoch_count': self.epoch_counter}
+        callback_list.on_epoch_begin(self.epoch_counter, logs)
+        train_logs = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
 
-        callback_list.on_epoch_end(self.epoch_counter, {"step": step,
-                                                        'train_loss': train_loss,
-                                                        'train_metrics': train_metrics})
+        callback_list.on_epoch_end(self.epoch_counter, train_logs.update(logs))
         # switch to evaluate mode
         self.learner_core.on_eval_mode()
 
         # Run the validation pass
         step = "validation"
-        callback_list.on_epoch_begin(self.epoch_counter, {"step": step, 'epoch_count': self.epoch_counter})
-        val_loss, val_metrics = None, None
+        logs = {"step": step, 'epoch_count': self.epoch_counter}
+        callback_list.on_epoch_begin(self.epoch_counter, logs)
+        val_logs = {}
         if valid_loader:
-            val_metrics = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
+            val_logs = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
 
-        callback_list.on_epoch_end(self.epoch_counter, {'step': step,
-                                                        'train_loss': train_loss,
-                                                        'train_metrics': train_metrics,
-                                                        'val_loss': val_loss,
-                                                        'val_metrics': val_metrics})
+        callback_list.on_epoch_end(self.epoch_counter, val_logs.update(logs))
 
     def train(self, metrics, epochs, train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
         """
@@ -143,7 +82,7 @@ class Learner:
             epochs (int): number of epochs
             train_loader (DataLoader): The Dataloader for training
             valid_loader (DataLoader, optional): The Dataloader for validation
-            callbacks (list, None): List of callbacks functions
+            callbacks (list, None): List of train callbacks functions
         """
         train_start_time = datetime.now()
         if self.use_cuda:
@@ -176,7 +115,7 @@ class Learner:
                 This loader is expected to returns items with the same shape
                 as the train_loader passed in train() with the difference that
                 the targets will be ignored.
-            callbacks (list, None): List of callbacks functions
+            callbacks (list, None): List of test callbacks functions
         """
         test_start_time = datetime.now()
         # Switch to evaluation mode
@@ -201,24 +140,12 @@ class Learner:
 
             inputs = [Variable(i, volatile=True) for i in inputs]
 
-
+            logits = self.learner_core.on_forward_batch("prediction", inputs).data
+            if ret_logits is None:
+                ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
+            ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
+            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         callback_list.on_test_end({'loader': test_loader})
         print('Total prediction time (hh:mm:ss.ms) {}'.format(datetime.now() - test_start_time))
         return ret_logits.squeeze()
-
-    def on_forward_batch(self, step, inputs, targets):
-        # forward
-        logits = self.model.forward(*inputs)
-        logs = metrics_list(targets, logits)
-        loss = self.crit(logits, targets)
-        logs.update({"loss": loss.data[0]})
-        losses.update(loss.data[0])
-
-        # backward + optimize
-        if step == "training":
-            self.optim.zero_grad()
-            loss.backward()
-            self.optim.step()
-
-        self.logs.update(logs)

@@ -18,7 +18,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 import data.files
-from torchlight.nn.dnn_learner import DnnLearner
+from nn.learners.learner import Learner
 import torchlight.nn.metrics as metrics
 from torchlight.data.fetcher import WebFetcher
 import torchlight.shortcuts as shortcuts
@@ -259,7 +259,7 @@ def main():
     model = shortcut.get_stationary_model(card_cat_features, len(train_df.columns) - len(cat_vars),
                                           output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                           hidden_dropouts=[0.001, 0.01], y_range=y_range)
-    learner = DnnLearner(model)
+    learner = Learner(model)
     learner.train(optim.Adam(model.parameters()), F.mse_loss,
                   [metrics.RMSPE(to_exp=True)], epochs,
                   shortcut.get_train_loader, shortcut.get_val_loader)
