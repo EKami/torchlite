@@ -18,7 +18,6 @@ class TrainDataset(Dataset):
             lr_image_filenames (list, None): The LR images. If None then the HR images will be bicubic resized
                 according to crop_size and upscale_factor
         """
-        self.mode = 0
         self.lr_image_filenames = lr_image_filenames
         self.hr_image_filenames = hr_image_filenames
         if not self.lr_image_filenames:
@@ -47,29 +46,10 @@ class TrainDataset(Dataset):
             hr_image = self.hr_transform(Image.open(self.hr_image_filenames[index]))
             lr_image = self.lr_transform(Image.open(self.lr_image_filenames[index]))
 
-        if self.mode == 0:
-            return lr_image, hr_image
-        else:
-            hr_original_image = Image.open(self.hr_image_filenames[index])
-            hr_transform = transforms.Compose([
-                transforms.CenterCrop(self.crop_size),
-                transforms.ToTensor()
-            ])
-            hr_original_image = hr_transform(hr_original_image)
-            return lr_image, hr_image, hr_original_image
+        return lr_image, hr_image
 
     def __len__(self):
         return len(self.hr_image_filenames)
-
-    def set_mode(self, mode):
-        """
-            Mode, either 0 or 1.
-            Mode 0: the __getitem__ returns (lr_image, hr_image)
-            Mode 1: the __getitem__ returns (lr_image, hr_image, hr_original_image)
-        Args:
-            mode (int): Mode value
-        """
-        self.mode = mode
 
 
 class ValDataset(Dataset):
@@ -84,7 +64,6 @@ class ValDataset(Dataset):
         crop_size = calculate_valid_crop_size(min(w, h), self.upscale_factor)
 
         lr_transform = transforms.Compose([
-            transforms.ToPILImage(),
             transforms.Resize(crop_size // self.upscale_factor, interpolation=Image.BICUBIC),
             transforms.ToTensor()
         ])

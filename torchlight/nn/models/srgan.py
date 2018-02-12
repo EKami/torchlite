@@ -1,7 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from torchlight.nn.losses.srgan import GeneratorLoss
 
 
 class Generator(nn.Module):
@@ -120,44 +119,3 @@ class Discriminator(nn.Module):
     def forward(self, x):
         batch_size = x.size(0)
         return F.sigmoid(self.net(x).view(batch_size))
-
-
-class SRGAN(nn.Module):
-    def __init__(self, generator: nn.Module, discriminator: nn.Module, g_optim, d_optim):
-        """
-        The SRGAN module which takes as input a generator and a discriminator
-        Args:
-            g_optim (Optimizer): Generator optimizer
-            d_optim (Optimizer): Discriminator optimizer
-            generator (nn.Module): Model definition of the generator
-            discriminator (nn.Module): Model definition of the discriminator
-        """
-        super().__init__()
-        self.netG_optim = g_optim
-        self.netD_optim = d_optim
-        self.netD = discriminator
-        self.netG = generator
-        self.generator_loss = GeneratorLoss()  # TODO try with VGG54 as in the paper
-
-    def _optimize(self, model, optim, loss, retain_graph=False):
-        model.zero_grad()
-        loss.backward(retain_graph=retain_graph)
-        optim.step()
-
-    def forward(self, data, target):
-        ############################
-        # (1) Update D network: maximize D(x)-1-D(G(z))
-        ###########################
-        gen_img = self.netG(data)
-        d_real_out = self.netD(target).mean()
-        d_fake_out = self.netD(gen_img).mean()
-        d_loss = 1 - d_real_out + d_fake_out
-        # TODO don't optimize in val/test pass
-        self._optimize(self.netD, self.netD_optim, d_loss, retain_graph=True)
-
-        ############################
-        # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
-        ###########################
-        g_loss = self.generator_loss(d_fake_out, gen_img, target)
-        self._optimize(self.netG, self.netG_optim, g_loss)
-        return gen_img, d_real_out, d_fake_out

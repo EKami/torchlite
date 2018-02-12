@@ -39,18 +39,3 @@ class GeneratorLoss:
         tv_loss = self.tv_loss(gen_images)
         return image_loss + 0.001 * adversarial_loss + 0.006 * perception_loss + 2e-8 * tv_loss
 
-
-class AdvLoss:
-    def __init__(self):
-        self.g_loss = None
-
-    def __call__(self, outputs, target_images):
-        # https://github.com/leftthomas/SRGAN/blob/master/train.py#L88
-        gen_imgs = outputs[0]  # Generated images from the Generator
-        d_real_out = outputs[1]  # Real outputs from the discriminator
-        d_fake_out = outputs[2]  # Fake outputs from the discriminator
-
-        self.g_loss = GeneratorLoss()(d_fake_out, gen_imgs, target_images)
-        self.d_loss = 1 - d_real_out + d_fake_out
-        return {"g_loss": self.g_loss.data[0], "d_loss": self.d_loss.data[0]}
-

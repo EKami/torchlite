@@ -132,16 +132,16 @@ class TQDM(TrainCallback):
 
         if step == 'training':
             self.train_pbar.close()
-            train_loss = logs['total_loss']
+            train_logs = logs['epoch_logs']
             train_metrics = logs['metrics_logs']
-            print("Train_loss = {:03f}".format(train_loss), end=' ')
+            print(*["{}={:03f}".format(k, v) for k, v in train_logs.items()], end=' ')
 
             print("| Train metrics:", end=' ')
             print(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
         elif step == 'validation':
             self.val_pbar.close()
-            val_loss = logs['total_loss']
-            print("Val_loss = {:03f}".format(val_loss), end=' ')
+            val_logs = logs['epoch_logs']
+            print(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
 
             val_metrics = logs['metrics_logs']
             print("| Val metrics:", end=' ')
@@ -218,7 +218,7 @@ class ReduceLROnPlateau(TrainCallback):
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]
-        if step == 'validation':
+        if step == 'training':
             for k, v in logs.items():
                 if self.loss_step == "valid":
                     if k == 'val_loss':

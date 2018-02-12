@@ -12,16 +12,17 @@ To implement:
 import os
 import argparse
 from pathlib import Path
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
-from torchlight.nn.models.srgan import Generator, Discriminator, SRGAN
+from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset
-from nn.learners.learner import Learner
+from torchlight.nn.learners.learner import Learner
+from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import GeneratorLoss
-import torch.nn as nn
 
 
 def enhance_img(img):
@@ -69,25 +70,18 @@ def main(args):
     optimizer_d = optim.Adam(netD.parameters())
 
     print("---------------------- Generator training ----------------------")
-    train_loader.dataset.set_mode(0)
     callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
     loss = nn.MSELoss()
-    learner = Learner(netG)
-    learner.train(optimizer_g, loss, None, args.gen_epochs, train_loader, None, callbacks)
+    learner = Learner(ClassifierCore(netG, optimizer_g, loss))
+    learner.train(args.gen_epochs, None, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRGAN) training -----------------")
-    train_loader.dataset.set_mode(1)
-
-    #loss = AdvLoss()
-    netAdv = SRGAN(netG, netD, optimizer_g, optimizer_d)
-
     callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
                  ReduceLROnPlateau(optimizer_g, loss_step="valid")]
 
     g_loss = GeneratorLoss()
-    learner = gan_learner.GanLearner(netG, netD)
-    # No optimizer given as the SRGAN model will optimize its models internally
-    learner.train(optimizer_g, optimizer_d, g_loss, None, args.gen_epochs, train_loader, valid_loader, callbacks)
+    learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
+    learner.train(args.gen_epochs, None, train_loader, valid_loader, callbacks)
 
 
 if __name__ == "__main__":
