@@ -17,7 +17,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchlight.data.fetcher as fetcher
 from torchlight.shortcuts import ImageClassifierShortcut
-from nn.learners.learner import Learner
+from torchlight.nn.learners.learner import Learner
+from torchlight.nn.learners.cores import ClassifierCore
 from torchlight.nn.metrics import CategoricalAccuracy
 from torchlight.nn.test_callbacks import ActivationMapVisualizerCallback
 import matplotlib.pyplot as plt
@@ -35,7 +36,7 @@ def show_test_image(test_image_name, shortcut, y_mapping, y_pred):
 
 def main():
     batch_size = 512
-    epochs = 1
+    epochs = 3
     root_dir = "/tmp"
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip",
                                         root_dir, True)
@@ -57,16 +58,16 @@ def main():
                                                   test_folder=test_folder.absolute(),
                                                   transforms=transformations,
                                                   batch_size=batch_size)
-    net = shortcut.get_resnet_model()
-    learner = Learner(net)
 
+    net = shortcut.get_resnet_model()
     # Don't optimize the frozen layers parameters of resnet
     optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3)
     loss = F.nll_loss
     metrics = [CategoricalAccuracy()]
     grad_cam_callback = ActivationMapVisualizerCallback(test_image_name)  # TODO finish grad_cam++ here
 
-    learner.train(optimizer, loss, metrics, epochs, shortcut.get_train_loader, None)
+    learner = Learner(ClassifierCore(net, optimizer, loss))
+    learner.train(epochs, metrics, shortcut.get_train_loader, None)
 
     y_mapping = shortcut.get_y_mapping
     y_pred = learner.predict(shortcut.get_test_loader, callbacks=[grad_cam_callback])
