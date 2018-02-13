@@ -56,6 +56,7 @@ class Learner:
         # Run a train pass on the current epoch
         step = "training"
         logs = {"step": step}
+        self.learner_core.on_new_epoch()
         callback_list.on_epoch_begin(self.epoch_id, logs)
         train_logs = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
         train_logs.update(logs)
@@ -69,6 +70,7 @@ class Learner:
         if valid_loader:
             step = "validation"
             logs = {"step": step}
+            self.learner_core.on_new_epoch()
             callback_list.on_epoch_begin(self.epoch_id, logs)
             val_logs = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
             val_logs.update(logs)
@@ -103,10 +105,10 @@ class Learner:
         for _ in range(epochs):
             epoch_start_time = datetime.now()
             self._run_epoch(train_loader, valid_loader, metrics, callback_list)
-            print('Epoch time (hh:mm:ss.ms) {}'.format(datetime.now() - epoch_start_time))
+            print('Epoch time (hh:mm:ss.ms) {}\n'.format(datetime.now() - epoch_start_time))
             self.epoch_id += 1
         callback_list.on_train_end()
-        print('Total train time (hh:mm:ss.ms) {}'.format(datetime.now() - train_start_time))
+        print('Total train time (hh:mm:ss.ms) {}\n'.format(datetime.now() - train_start_time))
 
     def predict(self, test_loader: DataLoader, callbacks=None):
         """
@@ -149,5 +151,5 @@ class Learner:
             callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         callback_list.on_test_end({'loader': test_loader})
-        print('Total prediction time (hh:mm:ss.ms) {}'.format(datetime.now() - test_start_time))
+        print('Total prediction time (hh:mm:ss.ms) {}\n'.format(datetime.now() - test_start_time))
         return ret_logits.squeeze()

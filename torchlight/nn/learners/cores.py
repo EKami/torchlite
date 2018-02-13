@@ -11,6 +11,13 @@ class BaseCore:
     def on_eval_mode(self):
         raise NotImplementedError()
 
+    def on_new_epoch(self):
+        """
+        A callback called when a new epoch starts.
+        You typically want to reset your logs here.
+        """
+        raise NotImplementedError()
+
     def to_gpu(self):
         """
         Move the model onto the GPU
@@ -76,6 +83,10 @@ class ClassifierCore(BaseCore):
     def get_logs(self):
         return self.logs
 
+    def on_new_epoch(self):
+        self.logs = {}
+        self.avg_meter = tensor_tools.AverageMeter()
+
     def on_train_mode(self):
         self.model.train()
 
@@ -86,7 +97,6 @@ class ClassifierCore(BaseCore):
         tensor_tools.to_gpu(self.model)
 
     def on_forward_batch(self, step, inputs, targets=None):
-        self.logs = {}
         # forward
         logits = self.model.forward(*inputs)
 
@@ -125,11 +135,12 @@ class SRGanCore(BaseCore):
         self.g_optim = g_optimizer
         self.netD = discriminator
         self.netG = generator
+
         self.logs = {}
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
-
-        self.val_mse = 0
+        self.mse_meter = tensor_tools.AverageMeter()
+        self.ssim_meter = tensor_tools.AverageMeter()
 
     def on_train_mode(self):
         self.netG.train()
@@ -152,6 +163,13 @@ class SRGanCore(BaseCore):
     def get_logs(self):
         return self.logs
 
+    def on_new_epoch(self):
+        self.logs = {}
+        self.g_avg_meter = tensor_tools.AverageMeter()
+        self.d_avg_meter = tensor_tools.AverageMeter()
+        self.mse_meter = tensor_tools.AverageMeter()
+        self.ssim_meter = tensor_tools.AverageMeter()
+
     def _optimize(self, model, optim, loss, retain_graph=False):
         model.zero_grad()
         loss.backward(retain_graph=retain_graph)
@@ -164,19 +182,16 @@ class SRGanCore(BaseCore):
 
     def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
         # https://github.com/leftthomas/SRGAN/blob/master/train.py#L111
-        batch_logs = {}
-        epoch_logs = {}
-        batch_size = lr_images.size(0)
         sr_images = self.netG(lr_images)
 
         batch_mse = ((sr_images - lr_upscaled_images) ** 2).data.mean()
-        self.val_mse += batch_mse * batch_size
-        batch_ssim = ssim.ssim(sr_images, hr_original_images).data[0]
-        epoch_logs['ssims'] += batch_ssim * batch_size
+        self.mse_meter.update(batch_mse)
+        self.ssim_meter.update(ssim.ssim(sr_images, hr_original_images).data[0])
         #epoch_logs['psnr'] = 10 * log10(1 / (valing_results['mse'] / valing_results['batch_sizes']))
         # valing_results['ssim'] = valing_results['ssims'] / valing_results['batch_sizes']
 
-        self.logs.update({"epoch_logs": epoch_logs})
+        self.logs.update({"epoch_logs": {"ssim": self.ssim_meter.debias_loss,
+                                         "mse": self.mse_meter.debias_loss}})
 
     def _on_training(self, lr_images, hr_images):
         ############################

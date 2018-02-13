@@ -90,7 +90,7 @@ def train(args):
     callbacks = [ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5),
                  ReduceLROnPlateau(optimizer_g, loss_step="valid")]
 
-    g_loss = GeneratorLoss()
+    g_loss = GeneratorLoss()  # TODO maybe try add ssim loss?
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
     learner.train(args.adv_epochs, None, train_loader, valid_loader, callbacks)
 
