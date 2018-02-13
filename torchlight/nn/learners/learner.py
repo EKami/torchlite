@@ -93,7 +93,7 @@ class Learner:
 
         if not callbacks:
             callbacks = []
-        callbacks.append(train_callbacks.TQDM())
+        callbacks.insert(0, train_callbacks.TQDM())
 
         callback_list = train_callbacks.TrainCallbackList(callbacks)
         callback_list.on_train_begin({'total_epochs': epochs,
@@ -128,7 +128,7 @@ class Learner:
 
         if not callbacks:
             callbacks = []
-        callbacks.append(test_callbacks.TQDM())
+        callbacks.insert(0, test_callbacks.TQDM())
 
         callback_list = test_callbacks.TestCallbackList(callbacks)
         callback_list.on_test_begin({'loader': test_loader})

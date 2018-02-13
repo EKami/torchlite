@@ -139,12 +139,14 @@ class TQDM(TrainCallback):
             print(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
         elif step == 'validation':
             self.val_pbar.close()
-            val_logs = logs['epoch_logs']
-            print(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
+            val_logs = logs.get('epoch_logs')
+            if val_logs:
+                print(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
 
-            val_metrics = logs['metrics_logs']
-            print("| Val metrics:", end=' ')
-            print(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
+            val_metrics = logs.get('metrics_logs')
+            if val_metrics:
+                print("| Val metrics:", end=' ')
+                print(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
 
     def on_batch_begin(self, batch, logs=None):
         pass
@@ -255,21 +257,21 @@ class ModelSaverCallback(TrainCallback):
         """
         i = 0
         for model in models:
-            file = os.path.join(from_dir, model.__class__.__name__, ".pth")
+            file = os.path.join(from_dir, model.__class__.__name__ + ".pth")
             if os.path.isfile(file):
                 model.load_state_dict(torch.load(from_dir))
                 i += 1
 
         assert i+1 == len(models), "Not all models were restored. Please check that your passed models and files match"
-        print("Successfully restored models")
+        print(f"\n--- Model(s) restored from {from_dir} ---", end='\n\n')
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]
         if step == 'training':
             if epoch % self.every_n_epoch == 0 or epoch == self.epochs:
                 for k, m in logs['models'].items():
-                    torch.save(m.state_dict(), os.path.join(self.to_dir, k, ".pth"))
-                print(f"Model(s) saved in {self.to_dir}")
+                    torch.save(m.state_dict(), os.path.join(self.to_dir, k + ".pth"))
+                print(f"\n--- Model(s) saved in {self.to_dir} ---", end='\n\n')
 
 
 class CosineAnnealingCallback(TrainCallback):

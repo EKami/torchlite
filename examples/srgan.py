@@ -62,8 +62,12 @@ def get_loaders(args, num_workers=os.cpu_count()):
 
 def main(args):
     train_loader, valid_loader = get_loaders(args)
-    #saved_model_name = "srgan_model_upfac-" + str(args.upscale_factor) + "_crop-" + str(args.crop_size) + ".pth"
-    saved_model_dir = tfiles.create_dir_if_not_exists(args.models_dir)
+
+    if args.models_dir == "@default":
+        saved_model_dir = tfiles.create_dir_if_not_exists(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "checkpoints"))
+    else:
+        saved_model_dir = args.models_dir
 
     netG = Generator(args.upscale_factor)
     netD = Discriminator()
@@ -96,7 +100,8 @@ if __name__ == "__main__":
     parser.add_argument('--crop_size', default=84, type=int, help='training images crop size')  # 384
     parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                         help='super resolution upscale factor')
-    parser.add_argument('--models_dir', default="checkpoint", type=str,
-                        help='The path to the saved model. This allow for the training to continue where it stopped')
+    parser.add_argument('--models_dir', default="@default", type=str,
+                        help='The path to the saved model. This allow for the training to continue where it stopped.'
+                             'The models will be saved in a checkpoints directory by default')
 
     main(parser.parse_args())
