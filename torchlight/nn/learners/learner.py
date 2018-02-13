@@ -19,7 +19,7 @@ class Learner:
             use_cuda (bool): If True moves the model onto the GPU
         """
         self.learner_core = learner_core
-        self.epoch_counter = 0
+        self.epoch_id = 1
         self.use_cuda = False
         if use_cuda:
             if torch.cuda.is_available():
@@ -44,6 +44,7 @@ class Learner:
 
             logs.update(self.learner_core.get_logs)
             logs.update({"metrics_logs": metrics_logs})
+            logs.update({"models": self.learner_core.get_models})
             callback_list.on_batch_end(ind, logs=logs)
         return logs
 
@@ -54,11 +55,12 @@ class Learner:
 
         # Run a train pass on the current epoch
         step = "training"
-        logs = {"step": step, 'epoch_count': self.epoch_counter}
-        callback_list.on_epoch_begin(self.epoch_counter, logs)
+        logs = {"step": step}
+        callback_list.on_epoch_begin(self.epoch_id, logs)
         train_logs = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
         train_logs.update(logs)
-        callback_list.on_epoch_end(self.epoch_counter, train_logs)
+        train_logs.update({"models": self.learner_core.get_models})
+        callback_list.on_epoch_end(self.epoch_id, train_logs)
 
         # switch to evaluate mode
         self.learner_core.on_eval_mode()
@@ -66,11 +68,12 @@ class Learner:
         # Run the validation pass
         if valid_loader:
             step = "validation"
-            logs = {"step": step, 'epoch_count': self.epoch_counter}
-            callback_list.on_epoch_begin(self.epoch_counter, logs)
+            logs = {"step": step}
+            callback_list.on_epoch_begin(self.epoch_id, logs)
             val_logs = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
             val_logs.update(logs)
-            callback_list.on_epoch_end(self.epoch_counter, val_logs)
+            val_logs.update({"models": self.learner_core.get_models})
+            callback_list.on_epoch_end(self.epoch_id, val_logs)
 
     def train(self, epochs, metrics, train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
         """
@@ -94,7 +97,6 @@ class Learner:
 
         callback_list = train_callbacks.TrainCallbackList(callbacks)
         callback_list.on_train_begin({'total_epochs': epochs,
-                                      'epoch_count': self.epoch_counter,
                                       'train_loader': train_loader,
                                       'val_loader': valid_loader})
 
@@ -102,7 +104,7 @@ class Learner:
             epoch_start_time = datetime.now()
             self._run_epoch(train_loader, valid_loader, metrics, callback_list)
             print('Epoch time (hh:mm:ss.ms) {}'.format(datetime.now() - epoch_start_time))
-            self.epoch_counter += 1
+            self.epoch_id += 1
         callback_list.on_train_end()
         print('Total train time (hh:mm:ss.ms) {}'.format(datetime.now() - train_start_time))
 

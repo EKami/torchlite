@@ -1,6 +1,7 @@
 """
 This module contains callbacks used during training/validation phases.
 """
+import os
 import torch
 import torch.optim.lr_scheduler as lr_scheduler
 from tqdm import tqdm
@@ -47,7 +48,7 @@ class TrainCallbackList(object):
     def on_epoch_begin(self, epoch, logs=None):
         """Called at the start of an epoch.
         Args:
-            epoch: integer, index of epoch.
+            epoch: integer, index of epoch (starts at 1).
             logs: dictionary of logs.
         """
         logs = logs or {}
@@ -111,17 +112,15 @@ class TQDM(TrainCallback):
         super().__init__()
         self.train_pbar = None
         self.val_pbar = None
-        self.epochs_count = 0
         self.total_epochs = 0
         self.train_loader_len = 0
         self.val_loader_len = 0
 
     def on_epoch_begin(self, epoch, logs=None):
         step = logs["step"]
-        self.epochs_count = logs["epoch_count"]
         if step == 'training':
             self.train_pbar = tqdm(total=self.train_loader_len,
-                                   desc="Epochs {}/{}".format(self.epochs_count + 1, self.total_epochs),
+                                   desc="Epochs {}/{}".format(epoch, self.total_epochs),
                                    bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{remaining}{postfix}]'
                                    )
         elif step == 'validation':
@@ -231,31 +230,46 @@ class ReduceLROnPlateau(TrainCallback):
 
 
 class ModelSaverCallback(TrainCallback):
-    def __init__(self, to_file, every_n_epoch=1):
+    def __init__(self, to_dir, epochs, every_n_epoch=1):
         """
             Saves the model every n epochs in to_dir
         Args:
-            to_file (str): The path where to save the model
+            to_dir (str): The path where to save the model
+            epochs (int): Total number of epochs on which you'll train your model(s)
             every_n_epoch (int): Save the model every n epochs
         """
-        # TODO finish
         super().__init__()
+        self.epochs = epochs
         self.every_n_epoch = every_n_epoch
-        self.to_file = to_file
+        self.to_dir = to_dir
 
-    def restore_model(self, model_path):
+    @staticmethod
+    def restore_model(models, from_dir):
         """
-            Restore a model parameters from the one given in argument
+            Restore model(s) from the given dir.
+            If models are multiples they will be automatically matched to
+            their the right files with a match between: class name -> file name
         Args:
-            model_path (str): The path to the model to restore
+            models (list): A list of models (Pytorch modules)
+            from_dir (str): The directory where the model is stored
         """
-        self.model.load_state_dict(torch.load(model_path))
+        i = 0
+        for model in models:
+            file = os.path.join(from_dir, model.__class__.__name__, ".pth")
+            if os.path.isfile(file):
+                model.load_state_dict(torch.load(from_dir))
+                i += 1
+
+        assert i+1 == len(models), "Not all models were restored. Please check that your passed models and files match"
+        print("Successfully restored models")
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]
         if step == 'training':
-            torch.save(self.model.state_dict(), self.to_file)
-            print(f"Model saved in {self.to_file}")
+            if epoch % self.every_n_epoch == 0 or epoch == self.epochs:
+                for k, m in logs['models'].items():
+                    torch.save(m.state_dict(), os.path.join(self.to_dir, k, ".pth"))
+                print(f"Model(s) saved in {self.to_dir}")
 
 
 class CosineAnnealingCallback(TrainCallback):

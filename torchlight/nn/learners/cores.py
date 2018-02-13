@@ -1,5 +1,6 @@
 import torch.nn as nn
 from torchlight.nn import tools
+from torchlight.nn.models.srgan import Generator, Discriminator
 
 
 class BaseCore:
@@ -12,6 +13,15 @@ class BaseCore:
     def to_gpu(self):
         """
         Move the model onto the GPU
+        """
+        raise NotImplementedError()
+
+    @property
+    def get_models(self):
+        """
+        Returns the core model(s) as dictionary
+        Returns:
+            dict: A dictionary of models in the form {"model_name": nn.Module}
         """
         raise NotImplementedError()
 
@@ -58,6 +68,10 @@ class ClassifierCore(BaseCore):
         self.avg_meter = tools.AverageMeter()
 
     @property
+    def get_models(self):
+        return {self.model.__class__.__name__: self.model}
+
+    @property
     def get_logs(self):
         return self.logs
 
@@ -71,6 +85,7 @@ class ClassifierCore(BaseCore):
         tools.to_gpu(self.model)
 
     def on_forward_batch(self, step, inputs, targets=None):
+        self.logs = {}
         # forward
         logits = self.model.forward(*inputs)
 
@@ -93,13 +108,13 @@ class ClassifierCore(BaseCore):
 
 
 class SRGanCore(BaseCore):
-    def __init__(self, generator: nn.Module, discriminator: nn.Module,
+    def __init__(self, generator: Generator, discriminator: Discriminator,
                  g_optimizer, d_optimizer, g_criterion):
         """
         A GAN core classifier which takes as input a generator and a discriminator
         Args:
-            generator (nn.Module): Model definition of the generator
-            discriminator (nn.Module): Model definition of the discriminator
+            generator (Generator): Model definition of the generator
+            discriminator (Discriminator): Model definition of the discriminator
             g_optimizer (Optimizer): Generator optimizer
             d_optimizer (Optimizer): Discriminator optimizer
             g_criterion (callable): The Generator criterion
@@ -126,6 +141,11 @@ class SRGanCore(BaseCore):
     def to_gpu(self):
         tools.to_gpu(self.netG)
         tools.to_gpu(self.netD)
+
+    @property
+    def get_models(self):
+        return {self.netD.__class__.__name__: self.netD,
+                self.netG.__class__.__name__: self.netG}
 
     @property
     def get_logs(self):
@@ -186,6 +206,7 @@ class SRGanCore(BaseCore):
         return sr_img, d_real_out, d_fake_out
 
     def on_forward_batch(self, step, inputs, targets=None):
+        self.logs = {}
         if step == "training":
             return self._on_training(*inputs, targets)
         elif step == "validation":

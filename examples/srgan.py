@@ -62,8 +62,8 @@ def get_loaders(args, num_workers=os.cpu_count()):
 
 def main(args):
     train_loader, valid_loader = get_loaders(args)
-    saved_model_name = "srgan_model_upfac-" + str(args.upscale_factor) + "_crop-" + str(args.crop_size) + ".pth"
-    saved_model_path = tfiles.create_dir_if_not_exists(args.models_dir) / saved_model_name
+    #saved_model_name = "srgan_model_upfac-" + str(args.upscale_factor) + "_crop-" + str(args.crop_size) + ".pth"
+    saved_model_dir = tfiles.create_dir_if_not_exists(args.models_dir)
 
     netG = Generator(args.upscale_factor)
     netD = Discriminator()
@@ -77,12 +77,12 @@ def main(args):
     learner.train(args.gen_epochs, None, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRGAN) training -----------------")
-    callbacks = [ModelSaverCallback(saved_model_path.absolute(), every_n_epoch=5),
+    callbacks = [ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5),
                  ReduceLROnPlateau(optimizer_g, loss_step="valid")]
 
     g_loss = GeneratorLoss()
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
-    learner.train(args.gen_epochs, None, train_loader, valid_loader, callbacks)
+    learner.train(args.adv_epochs, None, train_loader, valid_loader, callbacks)
 
 
 if __name__ == "__main__":
