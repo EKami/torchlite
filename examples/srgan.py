@@ -25,13 +25,6 @@ from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import GeneratorLoss
 
 
-def enhance_img(img):
-    """
-    Method used for inference only
-    """
-    pass
-
-
 def get_loaders(args, num_workers=os.cpu_count()):
     num_workers = 0  # TODO remove for debug only
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
@@ -39,10 +32,10 @@ def get_loaders(args, num_workers=os.cpu_count()):
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K_sample.zip",
                                         ds_path.absolute(), True)
     ds_path = ds_path / "DIV2K"
-    if args.train_hr == "@default" and args.train_lr == "@default":
+    if args.hr_dir == "@default" and args.lr_dir == "@default":
         train_hr_path = ds_path / "DIV2K_train_HR"
     else:
-        train_hr_path = Path(args.train_hr)
+        train_hr_path = Path(args.hr_dir)
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
     # TODO normalize the images
@@ -60,7 +53,20 @@ def get_loaders(args, num_workers=os.cpu_count()):
     return train_dl, val_dl
 
 
-def main(args):
+def evaluate(args):
+    """
+    Method used for inference only
+    """
+    imgs_path = args.images_dir
+    to_dir = args.to_dir
+    netG = Generator(args.upscale_factor)
+    learner = Learner(ClassifierCore(netG, None, None))
+    ModelSaverCallback.restore_model([netG], args.models_dir)
+
+    learner.predict(None)
+
+
+def train(args):
     train_loader, valid_loader = get_loaders(args)
 
     if args.models_dir == "@default":
@@ -90,18 +96,35 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train Super Resolution Models')
-    parser.add_argument('--train_hr', default="@default", type=str, help='The path to the HR files for training')
-    parser.add_argument('--train_lr', default="@default", type=str, help='The path to the LR files for training')
-    parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
-    parser.add_argument('--adv_epochs', default=500, type=int, help='Number of epochs for the adversarial training')
-    parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
-    # Models with different upscale factors and crop sizes are not compatible together
-    parser.add_argument('--crop_size', default=84, type=int, help='training images crop size')  # 384
-    parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
-                        help='super resolution upscale factor')
-    parser.add_argument('--models_dir', default="@default", type=str,
-                        help='The path to the saved model. This allow for the training to continue where it stopped.'
-                             'The models will be saved in a checkpoints directory by default')
+    parser = argparse.ArgumentParser(description='Train/Evaluate Super Resolution Models')
+    subs = parser.add_subparsers(dest='mode')
+    train_parser = subs.add_parser('train', help='Use this script in train mode')
+    eval_parser = subs.add_parser('eval', help='Use this script in evaluation mode')
 
-    main(parser.parse_args())
+    train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
+    train_parser.add_argument('--lr_dir', default="@default", type=str,
+                              help='The path to the LR files for training (not used for now)')
+    train_parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--adv_epochs', default=500, type=int,
+                              help='Number of epochs for the adversarial training')
+    train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
+    # Models with different upscale factors and crop sizes are not compatible together
+    train_parser.add_argument('--crop_size', default=84, type=int, help='training images crop size')  # 384
+    train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
+                              help='super resolution upscale factor')
+    train_parser.add_argument('--models_dir', default="@default",
+                              type=str, help='The path to the saved model. '
+                                             'This allow for the training to continue where it stopped.'
+                                             'The models will be saved in a checkpoints directory by default')
+
+    eval_parser.add_argument('--models_dir', default="@default", type=str, help='The path to the pretrained models')
+    eval_parser.add_argument('--images_dir', default="@default", type=str, help='The path to the files for SR')
+    eval_parser.add_argument('--to_dir', default="@default", type=str,
+                             help='The directory where the SR files will be stored')
+    args = parser.parse_args()
+    if args.mode == "train":
+        train(args)
+    elif args.mode == "eval":
+        evaluate(args)
+    else:
+        parser.print_usage()

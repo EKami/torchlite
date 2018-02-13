@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchlight.nn.tools as tools
+from torchlight.nn.tools import tensor_tools
 
 
 class FinetunedConvModel(nn.Module):
@@ -86,7 +86,7 @@ class StructuredModel:
 
     def get_layer_groups(self):
         m = self.model
-        return [m.embs, tools.children(m.lins) + tools.children(m.bns), m.outp]
+        return [m.embs, tensor_tools.children(m.lins) + tensor_tools.children(m.bns), m.outp]
 
 
 class Flatten(nn.Module):
@@ -100,7 +100,7 @@ class Flatten(nn.Module):
 class FinetunedModelTools:
     @staticmethod
     def _get_layer_groups(layers):
-        return tools.children(layers)
+        return tensor_tools.children(layers)
 
     @staticmethod
     def _set_trainable_attr(m, b):
@@ -110,7 +110,7 @@ class FinetunedModelTools:
 
     @staticmethod
     def _apply_leaf(layer, func):
-        c = tools.children(layer)
+        c = tensor_tools.children(layer)
         if isinstance(layer, nn.Module):
             func(layer)
         if len(c) > 0:

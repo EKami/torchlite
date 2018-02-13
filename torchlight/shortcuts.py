@@ -11,7 +11,7 @@ import data.files
 from torchlight.data.datasets.datasets import ColumnarDataset, ImageClassificationDataset
 from torchlight.nn.models.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
-import torchlight.nn.tools as tools
+from torchlight.nn.tools import tensor_tools
 import numpy as np
 import torch.nn as nn
 
@@ -138,6 +138,6 @@ class ImageClassifierShortcut(BaseLoader):
     def get_resnet_model(self):
         resnet = torchvision.models.resnet34(pretrained=True)
         # Take the head of resnet up until AdaptiveAvgPool2d
-        resnet_head = tools.children(resnet)[:-2]
+        resnet_head = tensor_tools.children(resnet)[:-2]
         net = FinetunedConvModel(resnet_head, nn.LogSoftmax(dim=1))
         return net

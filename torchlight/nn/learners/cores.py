@@ -1,6 +1,7 @@
 import torch.nn as nn
-from torchlight.nn import tools
+from torchlight.nn.tools import tensor_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
+import torchlight.nn.tools.ssim as ssim
 
 
 class BaseCore:
@@ -65,7 +66,7 @@ class ClassifierCore(BaseCore):
         self.optim = optimizer
         self.model = model
         self.logs = {}
-        self.avg_meter = tools.AverageMeter()
+        self.avg_meter = tensor_tools.AverageMeter()
 
     @property
     def get_models(self):
@@ -82,7 +83,7 @@ class ClassifierCore(BaseCore):
         self.model.eval()
 
     def to_gpu(self):
-        tools.to_gpu(self.model)
+        tensor_tools.to_gpu(self.model)
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}
@@ -125,8 +126,8 @@ class SRGanCore(BaseCore):
         self.netD = discriminator
         self.netG = generator
         self.logs = {}
-        self.g_avg_meter = tools.AverageMeter()
-        self.d_avg_meter = tools.AverageMeter()
+        self.g_avg_meter = tensor_tools.AverageMeter()
+        self.d_avg_meter = tensor_tools.AverageMeter()
 
         self.val_mse = 0
 
@@ -139,8 +140,8 @@ class SRGanCore(BaseCore):
         self.netD.eval()
 
     def to_gpu(self):
-        tools.to_gpu(self.netG)
-        tools.to_gpu(self.netD)
+        tensor_tools.to_gpu(self.netG)
+        tensor_tools.to_gpu(self.netD)
 
     @property
     def get_models(self):
@@ -163,22 +164,19 @@ class SRGanCore(BaseCore):
 
     def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
         # https://github.com/leftthomas/SRGAN/blob/master/train.py#L111
+        batch_logs = {}
+        epoch_logs = {}
         batch_size = lr_images.size(0)
         sr_images = self.netG(lr_images)
 
         batch_mse = ((sr_images - lr_upscaled_images) ** 2).data.mean()
         self.val_mse += batch_mse * batch_size
-        # batch_ssim = pytorch_ssim.ssim(sr, hr).data[0]
-        # valing_results['ssims'] += batch_ssim * batch_size
-        # valing_results['psnr'] = 10 * log10(1 / (valing_results['mse'] / valing_results['batch_sizes']))
+        batch_ssim = ssim.ssim(sr_images, hr_original_images).data[0]
+        epoch_logs['ssims'] += batch_ssim * batch_size
+        #epoch_logs['psnr'] = 10 * log10(1 / (valing_results['mse'] / valing_results['batch_sizes']))
         # valing_results['ssim'] = valing_results['ssims'] / valing_results['batch_sizes']
-        # val_bar.set_description(
-        #     desc='[converting LR images to SR images] PSNR: %.4f dB SSIM: %.4f' % (
-        #         valing_results['psnr'], valing_results['ssim']))
-        #
-        # val_images.extend(
-        #     [display_transform()(val_hr_restore.squeeze(0)), display_transform()(hr.data.cpu().squeeze(0)),
-        #      display_transform()(sr.data.cpu().squeeze(0))])
+
+        self.logs.update({"epoch_logs": epoch_logs})
 
     def _on_training(self, lr_images, hr_images):
         ############################

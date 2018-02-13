@@ -5,7 +5,7 @@ import torchlight.nn.test_callbacks as test_callbacks
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from torchlight.nn import tools
+from torchlight.nn.tools import tensor_tools
 from torchlight.nn.metrics import MetricsList
 from torchlight.nn.learners.cores import BaseCore
 
@@ -35,8 +35,8 @@ class Learner:
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs=logs)
             if self.use_cuda:
-                inputs = [tools.to_gpu(i) for i in inputs]
-                targets = tools.to_gpu(targets)
+                inputs = [tensor_tools.to_gpu(i) for i in inputs]
+                targets = tensor_tools.to_gpu(targets)
             inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
             logits = self.learner_core.on_forward_batch(step, inputs, targets)
@@ -138,7 +138,7 @@ class Learner:
         for ind, (*inputs, _) in enumerate(test_loader):
             callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
             if self.use_cuda:
-                inputs = [tools.to_gpu(i) for i in inputs]
+                inputs = [tensor_tools.to_gpu(i) for i in inputs]
 
             inputs = [Variable(i, volatile=True) for i in inputs]
 
