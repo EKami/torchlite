@@ -136,15 +136,17 @@ class SRGanCore(BaseCore):
         loss.backward(retain_graph=retain_graph)
         optim.step()
 
-    def _on_eval(self, lr_images, hr_images, hr_original_images):
-        pass
+    def _on_eval(self, images):
+        sr_images = self.netG(images)  # Super resolution images
 
-    def _on_validation(self, lr_images, hr_images, hr_original_images):
+        return sr_images
+
+    def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
         # https://github.com/leftthomas/SRGAN/blob/master/train.py#L111
         batch_size = lr_images.size(0)
         sr_images = self.netG(lr_images)
 
-        batch_mse = ((sr_images - hr_images) ** 2).data.mean()
+        batch_mse = ((sr_images - lr_upscaled_images) ** 2).data.mean()
         self.val_mse += batch_mse * batch_size
         # batch_ssim = pytorch_ssim.ssim(sr, hr).data[0]
         # valing_results['ssims'] += batch_ssim * batch_size
@@ -189,5 +191,5 @@ class SRGanCore(BaseCore):
         elif step == "validation":
             return self._on_validation(*inputs, targets)
         elif step == "eval":
-            return self._on_eval(*inputs, targets)
+            return self._on_eval(*inputs)
 

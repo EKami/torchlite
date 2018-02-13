@@ -33,6 +33,7 @@ def enhance_img(img):
 
 
 def get_loaders(args, num_workers=os.cpu_count()):
+    num_workers = 0  # TODO remove for debug only
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K_sample.zip",
@@ -51,7 +52,7 @@ def get_loaders(args, num_workers=os.cpu_count()):
 
     # Use the DIV2K dataset for validation as default
     val_ds = ValDataset(tfiles.get_files(val_hr_path.absolute()),
-                        args.upscale_factor)
+                        crop_size=args.crop_size, upscale_factor=args.upscale_factor)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)

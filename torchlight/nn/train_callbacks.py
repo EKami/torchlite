@@ -253,7 +253,7 @@ class ModelSaverCallback(TrainCallback):
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]
-        if step == 'validation':
+        if step == 'training':
             torch.save(self.model.state_dict(), self.to_file)
             print(f"Model saved in {self.to_file}")
 
