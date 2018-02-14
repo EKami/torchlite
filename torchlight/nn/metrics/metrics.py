@@ -13,6 +13,7 @@ class Metric:
     def __call__(self, step, logits, target):
         raise NotImplementedError()
 
+    @property
     def get_name(self):
         raise NotImplementedError()
 
@@ -33,13 +34,15 @@ class MetricsList:
     def __call__(self, step, logits, target):
         logs = {}
         for metric in self.metrics:
-            logs[metric.get_name()] = metric(step, logits, target)
+            result = metric(step, logits, target)
+            if result:
+                logs[metric.get_name] = result
         return logs
 
     def avg(self):
         logs = {}
         for metric in self.metrics:
-            logs[metric.get_name()] = metric.avg()
+            logs[metric.get_name] = metric.avg()
         return logs
 
     def reset(self):
@@ -78,6 +81,7 @@ class CategoricalAccuracy(Metric):
     def avg(self):
         return 100. * self.correct_count / self.count
 
+    @property
     def get_name(self):
         return "accuracy"
 
@@ -118,6 +122,7 @@ class RMSPE(Metric):
         self.sum += res
         return res
 
+    @property
     def get_name(self):
         return "rmspe"
 

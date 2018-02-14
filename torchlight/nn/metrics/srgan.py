@@ -3,38 +3,48 @@ import torchlight.nn.tools.ssim as ssim
 
 
 class SSIM(Metric):
+    def __init__(self):
+        self.count = 0
+        self.sum = 0
+
+    @property
     def get_name(self):
-        pass
+        return "ssim"
 
     def avg(self):
-        pass
+        return self.sum / self.count
 
     def reset(self):
-        pass
+        self.count = 0
+        self.sum = 0
 
     def __call__(self, step, logits, target):
-        if step == "validation:":
+        if step == "validation":
             lr_images, lr_upscaled_images, hr_original_images, sr_images = logits
-            batch_mse = ((sr_images - lr_upscaled_images) ** 2).data.mean()
 
-            # self.mse_meter.update(batch_mse)
-            # self.ssim_meter.update(ssim.ssim(sr_images, hr_original_images).data[0])
-            # self.psnr_meter.update(10 * np.log10(1 / self.mse_meter.avg))
-            #
-            # self.logs.update({"epoch_logs": {"ssim": self.ssim_meter.avg,
-            #                                  "psnr": self.psnr_meter.avg,
-            #                                  "mse": self.mse_meter.avg}})
+            res = ssim.ssim(sr_images, hr_original_images).data[0]
+            self.count += lr_images.size()[0]  # Batch size
+            self.sum += res
+            return res
 
 
 class PSNR(Metric):
+    def __init__(self):
+        self.count = 0
+        self.sum = 0
+
     def get_name(self):
-        pass
+        return "psnr"
 
     def avg(self):
-        pass
+        return self.sum / self.count
 
     def reset(self):
-        pass
+        self.count = 0
+        self.sum = 0
 
-    def __call__(self, *logits):
+    def __call__(self, step, logits, target):
+        if step == "validation":
+            lr_images, lr_upscaled_images, hr_original_images, sr_images = logits
+            # TODO finish
         pass

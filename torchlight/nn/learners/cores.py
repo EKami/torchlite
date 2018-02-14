@@ -142,9 +142,6 @@ class SRGanCore(BaseCore):
         self.logs = {}
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
-        self.mse_meter = tensor_tools.AverageMeter()
-        self.ssim_meter = tensor_tools.AverageMeter()
-        self.psnr_meter = tensor_tools.AverageMeter()
 
     def on_train_mode(self):
         self.netG.train()
@@ -171,14 +168,19 @@ class SRGanCore(BaseCore):
         self.logs = {}
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
-        self.mse_meter = tensor_tools.AverageMeter()
-        self.ssim_meter = tensor_tools.AverageMeter()
-        self.psnr_meter = tensor_tools.AverageMeter()
 
     def _optimize(self, model, optim, loss, retain_graph=False):
         model.zero_grad()
         loss.backward(retain_graph=retain_graph)
         optim.step()
+
+    def _update_loss_logs(self, g_loss, d_loss):
+        # Update logs
+        self.g_avg_meter.update(g_loss)
+        self.d_avg_meter.update(d_loss)
+        self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
+        self.logs.update({"epoch_logs": {"generator loss": self.g_avg_meter.debias_loss,
+                                         "discriminator loss": self.d_avg_meter.debias_loss}})
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
@@ -186,6 +188,14 @@ class SRGanCore(BaseCore):
 
     def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
         sr_images = self.netG(lr_images)
+        d_real_out = self.netD(hr_original_images).mean()
+        d_fake_out = self.netD(sr_images).mean()
+
+        d_loss = 1 - d_real_out + d_fake_out
+        g_loss = self.g_criterion(d_fake_out, sr_images, hr_original_images)
+
+        self._update_loss_logs(g_loss.data[0], d_loss.data[0])
+
         return lr_images, lr_upscaled_images, hr_original_images, sr_images
 
     def _on_training(self, lr_images, hr_images):
@@ -204,12 +214,7 @@ class SRGanCore(BaseCore):
         g_loss = self.g_criterion(d_fake_out, sr_img, hr_images)
         self._optimize(self.netG, self.g_optim, g_loss)
 
-        # Update logs
-        self.g_avg_meter.update(g_loss.data[0])
-        self.d_avg_meter.update(d_loss.data[0])
-        self.logs.update({"batch_logs": {"g_loss": g_loss.data[0], "d_loss": d_loss.data[0]}})
-        self.logs.update({"epoch_logs": {"generator loss": self.g_avg_meter.debias_loss,
-                                         "discriminator loss": self.d_avg_meter.debias_loss}})
+        self._update_loss_logs(g_loss.data[0], d_loss.data[0])
 
         return sr_img, d_real_out, d_fake_out
 
