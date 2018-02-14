@@ -24,5 +24,5 @@ setup(
 
     keywords='development',
     packages=find_packages(exclude=['tests']),
-    install_requires=['tqdm', 'numpy', 'scipy'],
+    install_requires=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
 )
