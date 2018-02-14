@@ -72,11 +72,15 @@ def train(args):
     cur_path = os.path.dirname(os.path.abspath(__file__))
     tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
     saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
+    model_saver = ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5)
 
     netG = Generator(args.upscale_factor)
     netD = Discriminator()
     optimizer_g = optim.Adam(netG.parameters())
     optimizer_d = optim.Adam(netD.parameters())
+
+    # Restore models if they exists
+    model_saver.restore_model([netG, netD], saved_model_dir.absolute())
 
     print("---------------------- Generator training ----------------------")
     callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
@@ -85,8 +89,7 @@ def train(args):
     learner.train(args.gen_epochs, None, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRGAN) training -----------------")
-    callbacks = [ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5),
-                 ReduceLROnPlateau(optimizer_g, loss_step="valid"),
+    callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
                  TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
     g_loss = GeneratorLoss()
@@ -98,7 +101,10 @@ def main():
     parser = argparse.ArgumentParser(description='Train/Evaluate Super Resolution Models. While training 2 new '
                                                  'directories will be created at the same level of this file: '
                                                  '("checkpoints") containing the saved models and '
-                                                 '("tensorboard") containing the tensorboard logs')
+                                                 '("tensorboard") containing the tensorboard logs. '
+                                                 'If the "checkpoints" folder already exists and contains existing '
+                                                 'models then they will be loaded and the training will continue '
+                                                 'on these models.')
     subs = parser.add_subparsers(dest='mode')
     train_parser = subs.add_parser('train', help='Use this script in train mode')
     eval_parser = subs.add_parser('eval', help='Use this script in evaluation mode')
