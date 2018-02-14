@@ -64,6 +64,7 @@ def create_dir_if_not_exists(path):
 def del_dir_if_exists(path):
     """
     If the given path does exist, the folder and its contents are deleted
+    and recreated anew
     Args:
         path (str): The path to the directory
 

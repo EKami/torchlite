@@ -99,3 +99,19 @@ class ValDataset(Dataset):
 
     def __len__(self):
         return len(self.hr_image_filenames)
+
+
+class EvalDataset(Dataset):
+    def __init__(self, images_filenames):
+        self.images_filenames = images_filenames
+
+    def __getitem__(self, index):
+        image = Image.open(self.images_filenames[index])
+        tfs = transforms.Compose([
+            transforms.ToTensor()
+        ])
+        image = tfs(image)
+        return image, image
+
+    def __len__(self):
+        return len(self.images_filenames)

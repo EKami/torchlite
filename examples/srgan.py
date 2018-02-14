@@ -19,11 +19,15 @@ import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlight.data.datasets.srgan import TrainDataset, ValDataset
+from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import GeneratorLoss
 from torchlight.nn.metrics.srgan import SSIM, PSNR
+
+cur_path = os.path.dirname(os.path.abspath(__file__))
+tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
+saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
 
 
 def get_loaders(args, num_workers=os.cpu_count()):
@@ -53,25 +57,32 @@ def get_loaders(args, num_workers=os.cpu_count()):
     return train_dl, val_dl
 
 
-def evaluate(args):
+def evaluate(args, num_workers=os.cpu_count()):
     """
     Method used for inference only
     """
-    imgs_path = args.images_dir
-    to_dir = args.to_dir
+    if args.images_dir == "@default":
+        imgs_path = os.path.join(cur_path, "eval")
+    else:
+        imgs_path = args.images_dir
+    if args.to_dir == "@default":
+        to_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "results"))
+    else:
+        to_dir = args.to_dir
     netG = Generator(args.upscale_factor)
+    # TODO Run inference on the CPU as images can be in very big sizes
     learner = Learner(ClassifierCore(netG, None, None))
-    ModelSaverCallback.restore_model([netG], args.models_dir)
+    ModelSaverCallback.restore_model([netG], saved_model_dir.absolute())
+    eval_ds = EvalDataset(tfiles.get_files(imgs_path))
+    # One batch at a time as the pictures may differ in size
+    eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
 
-    learner.predict(None)
+    predictions = learner.predict(eval_dl)
 
 
 def train(args):
     train_loader, valid_loader = get_loaders(args)
 
-    cur_path = os.path.dirname(os.path.abspath(__file__))
-    tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
-    saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
     model_saver = ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5)
 
     netG = Generator(args.upscale_factor)
@@ -120,12 +131,14 @@ def main():
     # Models with different upscale factors and crop sizes are not compatible together
     train_parser.add_argument('--crop_size', default=224, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
-                              help='super resolution upscale factor')
+                              help="Super Resolution upscale factor. "
+                                   "/!\ Models trained on different scale factors won't be compatible with each other")
 
-    eval_parser.add_argument('--models_dir', default="@default", type=str, help='The path to the pretrained models')
     eval_parser.add_argument('--images_dir', default="@default", type=str, help='The path to the files for SR')
     eval_parser.add_argument('--to_dir', default="@default", type=str,
                              help='The directory where the SR files will be stored')
+    eval_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
+                             help='Super Resolution upscale factor')
     args = parser.parse_args()
     if args.mode == "train":
         train(args)

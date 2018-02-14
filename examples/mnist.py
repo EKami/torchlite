@@ -1,3 +1,4 @@
+import torch
 from torchvision import datasets, transforms
 import torch.nn as nn
 import torch.optim as optim
@@ -30,7 +31,7 @@ class Net(nn.Module):
 
 def main():
     batch_size = 128
-    epochs = 20
+    epochs = 2
     mnist_train_data = datasets.MNIST('/tmp/data', train=True, download=True,
                                       transform=transforms.Compose([
                                           transforms.ToTensor(),
@@ -53,10 +54,10 @@ def main():
 
     learner.train(epochs, metrics, train_loader, test_loader, callbacks=None)
 
-    y_pred = learner.predict(test_loader)
-    y_true = test_loader.dataset.test_labels
-
-    print(f"Test accuracy: {CategoricalAccuracy()('test', y_pred, y_true)}%")
+    # y_pred = learner.predict(test_loader)
+    # y_true = test_loader.dataset.test_labels
+    #
+    # print(f"Test accuracy: {CategoricalAccuracy()('test', y_pred, y_true)}%")
 
 
 if __name__ == "__main__":

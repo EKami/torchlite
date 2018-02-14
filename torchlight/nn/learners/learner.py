@@ -138,7 +138,7 @@ class Learner:
         callback_list = test_callbacks.TestCallbackList(callbacks)
         callback_list.on_test_begin({'loader': test_loader})
 
-        ret_logits = None
+        ret_logits = []
         batch_size = test_loader.batch_size
         for ind, (*inputs, _) in enumerate(test_loader):
             callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
@@ -148,11 +148,9 @@ class Learner:
             inputs = [Variable(i, volatile=True) for i in inputs]
 
             logits = self.learner_core.on_forward_batch("prediction", inputs).data
-            if ret_logits is None:
-                ret_logits = torch.zeros(len(test_loader.dataset), logits.shape[1])
-            ret_logits[batch_size * ind:batch_size * ind + batch_size] = logits
+            ret_logits.append(logits)
             callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         callback_list.on_test_end({'loader': test_loader})
         print('Total prediction time (hh:mm:ss.ms) {}\n'.format(datetime.now() - test_start_time))
-        return ret_logits.squeeze()
+        return ret_logits
