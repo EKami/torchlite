@@ -29,7 +29,7 @@ from torchlight.nn.metrics.srgan import SSIM, PSNR
 def get_loaders(args, num_workers=os.cpu_count()):
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K_sample.zip",
+    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K.zip",
                                         ds_path.absolute(), True)
     ds_path = ds_path / "DIV2K"
     if args.hr_dir == "@default" and args.lr_dir == "@default":
@@ -38,7 +38,7 @@ def get_loaders(args, num_workers=os.cpu_count()):
         train_hr_path = Path(args.hr_dir)
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
-    # TODO normalize the images
+    # TODO normalize the images or done by Batchnorm?
     train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
                             lr_image_filenames=None,  # Use LR images from dir?
                             crop_size=args.crop_size, upscale_factor=args.upscale_factor)
@@ -80,7 +80,8 @@ def train(args):
     optimizer_d = optim.Adam(netD.parameters())
 
     # Restore models if they exists
-    model_saver.restore_model([netG, netD], saved_model_dir.absolute())
+    if len(os.listdir(saved_model_dir.absolute())) > 0:
+        model_saver.restore_model([netG, netD], saved_model_dir.absolute())
 
     print("---------------------- Generator training ----------------------")
     callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
@@ -112,12 +113,12 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=100, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=2000, type=int,
+    train_parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--adv_epochs', default=5, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     # Models with different upscale factors and crop sizes are not compatible together
-    train_parser.add_argument('--crop_size', default=192, type=int, help='training images crop size')
+    train_parser.add_argument('--crop_size', default=224, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                               help='super resolution upscale factor')
 

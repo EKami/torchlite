@@ -266,10 +266,10 @@ class ModelSaverCallback(TrainCallback):
         for model in models:
             file = os.path.join(from_dir, model.__class__.__name__ + ".pth")
             if os.path.isfile(file):
-                model.load_state_dict(torch.load(from_dir))
+                model.load_state_dict(torch.load(file))
                 i += 1
 
-        assert i+1 == len(models), "Not all models were restored. Please check that your passed models and files match"
+        assert i == len(models), "Not all models were restored. Please check that your passed models and files match"
         print(f"\n--- Model(s) restored from {from_dir} ---", end='\n\n')
 
     def on_epoch_end(self, epoch, logs=None):
