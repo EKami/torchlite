@@ -14,3 +14,11 @@ it works by looking at the examples in the `examples` folder. This library is st
 pre-alpha and many things may break for now. The only things which will evolve at the same
 pace as the library are the examples, they are meant to always be up to date with
 the library.
+
+Few examples will generates folders/files such as saved models or tensorboard logs.
+To visualize the tensorboard logs download Tensorflow's tensorboard as well as 
+[Pytorch's tensorboard](https://github.com/lanpa/tensorboard-pytorch). Then execute on the
+log folder:
+```
+tensorboard --logdir=./tensorboard
+```

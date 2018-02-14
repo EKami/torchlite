@@ -6,6 +6,7 @@ import torch
 import torch.optim.lr_scheduler as lr_scheduler
 from tqdm import tqdm
 from collections import OrderedDict
+from tensorboardX import SummaryWriter
 
 
 class TrainCallback:
@@ -308,20 +309,28 @@ class GradientClippingCallback(TrainCallback):
 
 
 class TensorboardVisualizerCallback(TrainCallback):
-    def __init__(self, path_to_files):
+    def __init__(self, to_dir):
         """
             Callback intended to be executed at each epoch
             of the training which goal is to display the result
             of the last validation batch in Tensorboard
         Args:
-            path_to_files (str): The path where to store the log files
+            to_dir (str): The path where to store the log files
         """
-        # TODO finish https://github.com/EKami/carvana-challenge/blob/master/src/nn/train_callbacks.py#L13
         super().__init__()
-        self.path_to_files = path_to_files
-
-    def on_epoch_begin(self, epoch, logs=None):
-        pass
+        self.to_dir = to_dir
+        self.writer = SummaryWriter(to_dir)
 
     def on_epoch_end(self, epoch, logs=None):
-        pass
+        step = logs['step']
+        epoch_id = logs['epoch_id']
+
+        for k, v in logs['epoch_logs'].items():
+            self.writer.add_scalar('loss/' + step + '/' + k, v, epoch_id)
+
+        for k, v in logs['metrics_logs'].items():
+            self.writer.add_scalar('metric/' + step + '/' + k, v, epoch_id)
+
+    def on_train_end(self, logs=None):
+        self.writer.close()
+        print(f"\n--- Tensorboard logs saved in {self.to_dir} ---", end='\n\n')

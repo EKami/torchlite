@@ -58,7 +58,7 @@ class Learner:
 
         # Run a train pass on the current epoch
         step = "training"
-        logs = {"step": step}
+        logs = {"step": step, "epoch_id": self.epoch_id}
         self.learner_core.on_new_epoch()
         callback_list.on_epoch_begin(self.epoch_id, logs)
         train_logs = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
@@ -72,7 +72,7 @@ class Learner:
         # Run the validation pass
         if valid_loader:
             step = "validation"
-            logs = {"step": step}
+            logs = {"step": step, "epoch_id": self.epoch_id}
             self.learner_core.on_new_epoch()
             callback_list.on_epoch_begin(self.epoch_id, logs)
             val_logs = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)

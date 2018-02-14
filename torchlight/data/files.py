@@ -3,6 +3,7 @@
  E.g: Images turned to bcolz files
 """
 from pathlib import Path
+import shutil
 import bcolz
 import numpy as np
 import pandas as pd
@@ -51,12 +52,27 @@ def create_dir_if_not_exists(path):
     """
     If the given path does not exists create them recursively
     Args:
-        path (str):
+        path (str): The path to the directory
 
     Returns:
         Path: The path to the folder
     """
     os.makedirs(path, exist_ok=True)
+    return Path(path)
+
+
+def del_dir_if_exists(path):
+    """
+    If the given path does exist, the folder and its contents are deleted
+    Args:
+        path (str): The path to the directory
+
+    Returns:
+        Path: The path to the folder
+    """
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=False)
     return Path(path)
 
 

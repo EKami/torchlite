@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
 from torchlight.nn.models.srgan import Generator, Discriminator
-from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
+from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
@@ -69,11 +69,9 @@ def evaluate(args):
 def train(args):
     train_loader, valid_loader = get_loaders(args)
 
-    if args.models_dir == "@default":
-        saved_model_dir = tfiles.create_dir_if_not_exists(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "checkpoints"))
-    else:
-        saved_model_dir = args.models_dir
+    cur_path = os.path.dirname(os.path.abspath(__file__))
+    tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
+    saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
 
     netG = Generator(args.upscale_factor)
     netD = Discriminator()
@@ -88,7 +86,8 @@ def train(args):
 
     print("----------------- Adversarial (SRGAN) training -----------------")
     callbacks = [ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5),
-                 ReduceLROnPlateau(optimizer_g, loss_step="valid")]
+                 ReduceLROnPlateau(optimizer_g, loss_step="valid"),
+                 TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
     g_loss = GeneratorLoss()
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
@@ -96,8 +95,10 @@ def train(args):
 
 
 def main():
-    # TODO tensorboard
-    parser = argparse.ArgumentParser(description='Train/Evaluate Super Resolution Models')
+    parser = argparse.ArgumentParser(description='Train/Evaluate Super Resolution Models. While training 2 new '
+                                                 'directories will be created at the same level of this file: '
+                                                 '("checkpoints") containing the saved models and '
+                                                 '("tensorboard") containing the tensorboard logs')
     subs = parser.add_subparsers(dest='mode')
     train_parser = subs.add_parser('train', help='Use this script in train mode')
     eval_parser = subs.add_parser('eval', help='Use this script in evaluation mode')
@@ -105,18 +106,14 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=2, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=2, type=int,
+    train_parser.add_argument('--gen_epochs', default=100, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     # Models with different upscale factors and crop sizes are not compatible together
-    train_parser.add_argument('--crop_size', default=84, type=int, help='training images crop size')  # 384
+    train_parser.add_argument('--crop_size', default=192, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                               help='super resolution upscale factor')
-    train_parser.add_argument('--models_dir', default="@default",
-                              type=str, help='The path to the saved model. '
-                                             'This allow for the training to continue where it stopped.'
-                                             'The models will be saved in a checkpoints directory by default')
 
     eval_parser.add_argument('--models_dir', default="@default", type=str, help='The path to the pretrained models')
     eval_parser.add_argument('--images_dir', default="@default", type=str, help='The path to the files for SR')
