@@ -1,3 +1,4 @@
+import numpy as np
 import torch.nn as nn
 from torchlight.nn.tools import tensor_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
@@ -141,6 +142,7 @@ class SRGanCore(BaseCore):
         self.d_avg_meter = tensor_tools.AverageMeter()
         self.mse_meter = tensor_tools.AverageMeter()
         self.ssim_meter = tensor_tools.AverageMeter()
+        self.psnr_meter = tensor_tools.AverageMeter()
 
     def on_train_mode(self):
         self.netG.train()
@@ -169,6 +171,7 @@ class SRGanCore(BaseCore):
         self.d_avg_meter = tensor_tools.AverageMeter()
         self.mse_meter = tensor_tools.AverageMeter()
         self.ssim_meter = tensor_tools.AverageMeter()
+        self.psnr_meter = tensor_tools.AverageMeter()
 
     def _optimize(self, model, optim, loss, retain_graph=False):
         model.zero_grad()
@@ -181,17 +184,16 @@ class SRGanCore(BaseCore):
         return sr_images
 
     def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
-        # https://github.com/leftthomas/SRGAN/blob/master/train.py#L111
         sr_images = self.netG(lr_images)
 
         batch_mse = ((sr_images - lr_upscaled_images) ** 2).data.mean()
         self.mse_meter.update(batch_mse)
         self.ssim_meter.update(ssim.ssim(sr_images, hr_original_images).data[0])
-        #epoch_logs['psnr'] = 10 * log10(1 / (valing_results['mse'] / valing_results['batch_sizes']))
-        # valing_results['ssim'] = valing_results['ssims'] / valing_results['batch_sizes']
+        self.psnr_meter.update(10 * np.log10(1 / self.mse_meter.avg))
 
-        self.logs.update({"epoch_logs": {"ssim": self.ssim_meter.debias_loss,
-                                         "mse": self.mse_meter.debias_loss}})
+        self.logs.update({"epoch_logs": {"ssim": self.ssim_meter.avg,
+                                         "psnr": self.psnr_meter.avg,
+                                         "mse": self.mse_meter.avg}})
 
     def _on_training(self, lr_images, hr_images):
         ############################
