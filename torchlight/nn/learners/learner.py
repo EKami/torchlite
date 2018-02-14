@@ -1,3 +1,6 @@
+"""
+This class contains a generalized learner which works across all kind of models
+"""
 from datetime import datetime
 import torch
 import torchlight.nn.train_callbacks as train_callbacks
@@ -6,7 +9,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from torchlight.nn.tools import tensor_tools
-from torchlight.nn.metrics import MetricsList
+from torchlight.nn.metrics.metrics import MetricsList
 from torchlight.nn.learners.cores import BaseCore
 
 
@@ -40,7 +43,7 @@ class Learner:
             inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
             logits = self.learner_core.on_forward_batch(step, inputs, targets)
-            metrics_logs = metrics_list(targets, logits)
+            metrics_logs = metrics_list(step, logits, targets)
 
             logs.update(self.learner_core.get_logs)
             logs.update({"metrics_logs": metrics_logs})

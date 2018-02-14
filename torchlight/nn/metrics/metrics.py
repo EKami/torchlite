@@ -1,3 +1,6 @@
+"""
+This class contains generalized metrics which works across different models
+"""
 import torch
 import copy
 import numpy as np
@@ -7,7 +10,7 @@ from torch.autograd.variable import Variable
 
 
 class Metric:
-    def __call__(self, y_true, y_pred):
+    def __call__(self, step, logits, target):
         raise NotImplementedError()
 
     def get_name(self):
@@ -27,10 +30,10 @@ class MetricsList:
         else:
             self.metrics = []
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, step, logits, target):
         logs = {}
         for metric in self.metrics:
-            logs[metric.get_name()] = metric(y_true, y_pred)
+            logs[metric.get_name()] = metric(step, logits, target)
         return logs
 
     def avg(self):
@@ -51,12 +54,12 @@ class CategoricalAccuracy(Metric):
         self.correct_count = 0
         self.count = 0
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, step, y_pred, y_true):
         """
         Return the accuracy of the predictions across the whole dataset
          Args:
-            y_true (Tensor): Tensor of shape (batch_size, 1)
             y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
+            y_true (Tensor): Tensor of shape (batch_size, 1)
 
         Returns:
             float: Average accuracy
@@ -95,12 +98,12 @@ class RMSPE(Metric):
         self.count = 0
         self.sum = 0
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, step, y_pred, y_true):
         """
         Root-mean-squared percent error
         Args:
-            y_true (Tensor): Tensor of shape (batch_size, 1)
             y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
+            y_true (Tensor): Tensor of shape (batch_size, 1)
 
         Returns:
             The Root-mean-squared percent error

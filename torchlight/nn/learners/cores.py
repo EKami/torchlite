@@ -1,8 +1,10 @@
-import numpy as np
+"""
+This class contains different cores to pass to the learner class.
+Most of the time you'll make use of ClassifierCore.
+"""
 import torch.nn as nn
 from torchlight.nn.tools import tensor_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
-import torchlight.nn.tools.ssim as ssim
 
 
 class BaseCore:
@@ -180,20 +182,11 @@ class SRGanCore(BaseCore):
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
-
         return sr_images
 
     def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
         sr_images = self.netG(lr_images)
-
-        batch_mse = ((sr_images - lr_upscaled_images) ** 2).data.mean()
-        self.mse_meter.update(batch_mse)
-        self.ssim_meter.update(ssim.ssim(sr_images, hr_original_images).data[0])
-        self.psnr_meter.update(10 * np.log10(1 / self.mse_meter.avg))
-
-        self.logs.update({"epoch_logs": {"ssim": self.ssim_meter.avg,
-                                         "psnr": self.psnr_meter.avg,
-                                         "mse": self.mse_meter.avg}})
+        return lr_images, lr_upscaled_images, hr_original_images, sr_images
 
     def _on_training(self, lr_images, hr_images):
         ############################

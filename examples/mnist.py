@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore
-from torchlight.nn.metrics import CategoricalAccuracy
+from torchlight.nn.metrics.metrics import CategoricalAccuracy
 import os
 
 
@@ -56,7 +56,7 @@ def main():
     y_pred = learner.predict(test_loader)
     y_true = test_loader.dataset.test_labels
 
-    print(f"Test accuracy: {CategoricalAccuracy()(y_true, y_pred)}%")
+    print(f"Test accuracy: {CategoricalAccuracy()('test', y_pred, y_true)}%")
 
 
 if __name__ == "__main__":

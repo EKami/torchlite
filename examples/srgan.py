@@ -23,10 +23,10 @@ from torchlight.data.datasets.srgan import TrainDataset, ValDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import GeneratorLoss
+from torchlight.nn.metrics.srgan import SSIM, PSNR
 
 
 def get_loaders(args, num_workers=os.cpu_count()):
-    num_workers = 0  # TODO remove for debug only
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K_sample.zip",
@@ -67,8 +67,6 @@ def evaluate(args):
 
 
 def train(args):
-    # TODO add psnr to cores.py val
-    # TODO add tensorboard callback
     train_loader, valid_loader = get_loaders(args)
 
     if args.models_dir == "@default":
@@ -94,10 +92,11 @@ def train(args):
 
     g_loss = GeneratorLoss()
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
-    learner.train(args.adv_epochs, None, train_loader, valid_loader, callbacks)
+    learner.train(args.adv_epochs, [SSIM(), PSNR()], train_loader, valid_loader, callbacks)
 
 
 def main():
+    # TODO tensorboard
     parser = argparse.ArgumentParser(description='Train/Evaluate Super Resolution Models')
     subs = parser.add_subparsers(dest='mode')
     train_parser = subs.add_parser('train', help='Use this script in train mode')
@@ -106,8 +105,8 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=500, type=int,
+    train_parser.add_argument('--gen_epochs', default=2, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--adv_epochs', default=2, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     # Models with different upscale factors and crop sizes are not compatible together

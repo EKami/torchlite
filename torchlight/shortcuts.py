@@ -7,7 +7,7 @@ from typing import Union
 import torchvision
 from torch.utils.data import Dataset
 
-import data.files
+import torchlight.data.files as tfiles
 from torchlight.data.datasets.datasets import ColumnarDataset, ImageClassificationDataset
 from torchlight.nn.models.models import MixedInputModel, FinetunedConvModel
 from torchlight.data.loaders import BaseLoader
@@ -37,7 +37,7 @@ class ColumnarShortcut(BaseLoader):
 
     @classmethod
     def from_data_frame(cls, df, val_idxs, y, cat_fields, batch_size, test_df=None):
-        ((val_df, train_df), (val_y, train_y)) = data.files.split_by_idx(val_idxs, df, y)
+        ((val_df, train_df), (val_y, train_y)) = tfiles.split_by_idx(val_idxs, df, y)
         return cls.from_data_frames(train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=test_df)
 
     def get_stationary_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
@@ -108,17 +108,17 @@ class ImageClassifierShortcut(BaseLoader):
         """
         datasets = []
 
-        files, y_mapping = data.files.get_labels_from_folders(train_folder)
+        files, y_mapping = tfiles.get_labels_from_folders(train_folder)
         datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
-            files, _ = data.files.get_labels_from_folders(val_folder, y_mapping)
+            files, _ = tfiles.get_labels_from_folders(val_folder, y_mapping)
             datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
-            files = data.files.get_files(test_folder)
+            files = tfiles.get_files(test_folder)
             datasets.append(ImageClassificationDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)

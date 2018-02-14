@@ -281,6 +281,7 @@ class ModelSaverCallback(TrainCallback):
 
 
 class CosineAnnealingCallback(TrainCallback):
+    # TODO implemented in pytorch http://pytorch.org/docs/0.3.1/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR
     def __init__(self):
         # TODO https://youtu.be/EKzSiuqiHNg?t=1h18m9s
         super().__init__()

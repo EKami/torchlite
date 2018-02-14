@@ -1,3 +1,6 @@
+"""
+This class contains generalized losses which works across different models
+"""
 import torch
 import torch.nn as nn
 import numpy as np

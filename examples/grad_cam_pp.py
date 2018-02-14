@@ -19,7 +19,7 @@ import torchlight.data.fetcher as fetcher
 from torchlight.shortcuts import ImageClassifierShortcut
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore
-from torchlight.nn.metrics import CategoricalAccuracy
+from torchlight.nn.metrics.metrics import CategoricalAccuracy
 from torchlight.nn.test_callbacks import ActivationMapVisualizerCallback
 from torchlight.nn.tools import tensor_tools
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ def show_test_image(test_image_name, shortcut, y_mapping, y_pred):
 
 def main():
     batch_size = 512
-    epochs = 3
+    epochs = 2
     root_dir = "/tmp"
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip",
                                         root_dir, True)
@@ -67,7 +67,7 @@ def main():
     grad_cam_callback = ActivationMapVisualizerCallback(test_image_name)  # TODO finish grad_cam++ here
 
     learner = Learner(ClassifierCore(net, optimizer, loss))
-    learner.train(epochs, metrics, shortcut.get_train_loader, None)
+    learner.train(epochs, metrics, shortcut.get_train_loader, shortcut.get_val_loader)
 
     y_mapping = shortcut.get_y_mapping
     y_pred = learner.predict(shortcut.get_test_loader, callbacks=[grad_cam_callback])
