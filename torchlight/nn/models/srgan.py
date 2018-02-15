@@ -37,6 +37,8 @@ class Generator(nn.Module):
         res_blocks = self.res_blocks(block1)
         block_x1 = self.block_x1(res_blocks)
         block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
+
+        # TODO causes a memory leak on CPU
         block_x3 = self.block_x3(block_x2)
 
         return (F.tanh(block_x3) + 1) / 2
@@ -118,4 +120,6 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         batch_size = x.size(0)
-        return F.sigmoid(self.net(x).view(batch_size))
+        x = self.net(x).view(batch_size)
+        x = F.sigmoid(x)
+        return x

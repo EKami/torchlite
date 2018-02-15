@@ -1,3 +1,4 @@
+import os
 from typing import Union
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
@@ -24,7 +25,7 @@ class TrainDataset(Dataset):
             self.crop_size = calculate_valid_crop_size(crop_size, upscale_factor)
             self.hr_transform = transforms.Compose([
                 transforms.RandomCrop(self.crop_size),
-                transforms.ToTensor(),
+                transforms.ToTensor()  # Is normalized in the range [0, 1]
             ])
             self.lr_transform = transforms.Compose([
                 transforms.ToPILImage(),
@@ -112,6 +113,10 @@ class EvalDataset(Dataset):
         ])
         image = tfs(image)
         return image, image
+
+    def get_file_from_index(self, index):
+        path, file = os.path.split(self.images_filenames[index])
+        return file
 
     def __len__(self):
         return len(self.images_filenames)

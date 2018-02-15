@@ -17,6 +17,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
+import torchlight.nn.tools.image_tools as image_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
@@ -42,7 +43,6 @@ def get_loaders(args, num_workers=os.cpu_count()):
         train_hr_path = Path(args.hr_dir)
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
-    # TODO normalize the images or done by Batchnorm?
     train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
                             lr_image_filenames=None,  # Use LR images from dir?
                             crop_size=args.crop_size, upscale_factor=args.upscale_factor)
@@ -61,6 +61,7 @@ def evaluate(args, num_workers=os.cpu_count()):
     """
     Method used for inference only
     """
+    num_workers = 0
     if args.images_dir == "@default":
         imgs_path = os.path.join(cur_path, "eval")
     else:
@@ -68,16 +69,19 @@ def evaluate(args, num_workers=os.cpu_count()):
     if args.to_dir == "@default":
         to_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "results"))
     else:
-        to_dir = args.to_dir
+        to_dir = Path(args.to_dir)
     netG = Generator(args.upscale_factor)
-    # TODO Run inference on the CPU as images can be in very big sizes
-    learner = Learner(ClassifierCore(netG, None, None))
+    learner = Learner(ClassifierCore(netG, None, None), use_cuda=False)
     ModelSaverCallback.restore_model([netG], saved_model_dir.absolute())
     eval_ds = EvalDataset(tfiles.get_files(imgs_path))
     # One batch at a time as the pictures may differ in size
     eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
 
     predictions = learner.predict(eval_dl)
+    for i, pred in enumerate(predictions):
+        pred = pred.view(pred.size()[1:])  # Remove batch size == 1
+        file_name = eval_ds.get_file_from_index(i)
+        image_tools.save_tensor_as_png(pred, (to_dir / file_name).absolute())
 
 
 def train(args):
@@ -91,7 +95,7 @@ def train(args):
     optimizer_d = optim.Adam(netD.parameters())
 
     # Restore models if they exists
-    if len(os.listdir(saved_model_dir.absolute())) > 0:
+    if args.restore_models == 1:
         model_saver.restore_model([netG, netD], saved_model_dir.absolute())
 
     print("---------------------- Generator training ----------------------")
@@ -113,10 +117,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train/Evaluate Super Resolution Models. While training 2 new '
                                                  'directories will be created at the same level of this file: '
                                                  '("checkpoints") containing the saved models and '
-                                                 '("tensorboard") containing the tensorboard logs. '
-                                                 'If the "checkpoints" folder already exists and contains existing '
-                                                 'models then they will be loaded and the training will continue '
-                                                 'on these models.')
+                                                 '("tensorboard") containing the tensorboard logs. ')
     subs = parser.add_subparsers(dest='mode')
     train_parser = subs.add_parser('train', help='Use this script in train mode')
     eval_parser = subs.add_parser('eval', help='Use this script in evaluation mode')
@@ -128,6 +129,9 @@ def main():
     train_parser.add_argument('--adv_epochs', default=5, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
+    train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
+                              help="0: Don't restore the models and erase the existing ones. "
+                                   "1: Restore the models from the 'checkpoint' folder")
     # Models with different upscale factors and crop sizes are not compatible together
     train_parser.add_argument('--crop_size', default=224, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],

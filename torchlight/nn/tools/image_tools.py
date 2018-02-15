@@ -1,3 +1,5 @@
+import torchvision.transforms as transforms
+from PIL import Image
 import numpy as np
 import torch
 
@@ -36,3 +38,17 @@ def image_to_tensor(image, mean=0, std=1.):
     image = image.transpose((2, 0, 1))
     tensor = torch.from_numpy(image)
     return tensor
+
+
+def save_tensor_as_png(image, to_file):
+    """
+    Takes a Pytorch tensor and save it as the file given in
+    parameter
+    Args:
+        image (Tensor): A Pytorch tensor
+        to_file (str): The path to the output file
+    Returns:
+
+    """
+    image = transforms.ToPILImage()(image.cpu())
+    image.save(to_file, "PNG")
