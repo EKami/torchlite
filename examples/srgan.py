@@ -33,6 +33,7 @@ saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkp
 
 def get_loaders(args, num_workers=os.cpu_count()):
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
+    num_workers = 0  # TODO used for debug only
     ds_path = Path("/tmp")
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K.zip",
                                         ds_path.absolute(), True)
@@ -61,7 +62,6 @@ def evaluate(args, num_workers=os.cpu_count()):
     """
     Method used for inference only
     """
-    num_workers = 0
     if args.images_dir == "@default":
         imgs_path = os.path.join(cur_path, "eval")
     else:
@@ -71,7 +71,7 @@ def evaluate(args, num_workers=os.cpu_count()):
     else:
         to_dir = Path(args.to_dir)
     netG = Generator(args.upscale_factor)
-    learner = Learner(ClassifierCore(netG, None, None), use_cuda=False)
+    learner = Learner(ClassifierCore(netG, None, None), use_cuda=args.use_cuda)
     ModelSaverCallback.restore_model([netG], saved_model_dir.absolute())
     eval_ds = EvalDataset(tfiles.get_files(imgs_path))
     # One batch at a time as the pictures may differ in size
@@ -98,11 +98,12 @@ def train(args):
     if args.restore_models == 1:
         model_saver.restore_model([netG, netD], saved_model_dir.absolute())
 
-    print("---------------------- Generator training ----------------------")
-    callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
-    loss = nn.MSELoss()
-    learner = Learner(ClassifierCore(netG, optimizer_g, loss))
-    learner.train(args.gen_epochs, None, train_loader, None, callbacks)
+    if args.gen_epochs > 0:
+        print("---------------------- Generator training ----------------------")
+        callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
+        loss = nn.MSELoss()
+        learner = Learner(ClassifierCore(netG, optimizer_g, loss))
+        learner.train(args.gen_epochs, None, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRGAN) training -----------------")
     callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
@@ -125,8 +126,8 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=5, type=int,
+    train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
@@ -141,6 +142,7 @@ def main():
     eval_parser.add_argument('--images_dir', default="@default", type=str, help='The path to the files for SR')
     eval_parser.add_argument('--to_dir', default="@default", type=str,
                              help='The directory where the SR files will be stored')
+    eval_parser.add_argument('--use_cuda', default=True, type=bool, help='Whether or not to use the GPU')
     eval_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                              help='Super Resolution upscale factor')
     args = parser.parse_args()

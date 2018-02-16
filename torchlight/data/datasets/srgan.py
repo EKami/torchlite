@@ -21,6 +21,8 @@ class TrainDataset(Dataset):
         """
         self.lr_image_filenames = lr_image_filenames
         self.hr_image_filenames = hr_image_filenames
+        # TODO add Gaussian filter to LR images followed by the downsampling (paper page 4)
+        # http://pillow.readthedocs.io/en/latest/reference/ImageFilter.html
         if not self.lr_image_filenames:
             self.crop_size = calculate_valid_crop_size(crop_size, upscale_factor)
             self.hr_transform = transforms.Compose([

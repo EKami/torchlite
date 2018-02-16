@@ -324,12 +324,14 @@ class TensorboardVisualizerCallback(TrainCallback):
     def on_epoch_end(self, epoch, logs=None):
         step = logs['step']
         epoch_id = logs['epoch_id']
-
-        for k, v in logs['epoch_logs'].items():
-            self.writer.add_scalar('loss/' + step + '/' + k, v, epoch_id)
-
-        for k, v in logs['metrics_logs'].items():
-            self.writer.add_scalar('metric/' + step + '/' + k, v, epoch_id)
+        epoch_logs = logs.get('epoch_logs')
+        metrics_logs = logs.get('metrics_logs')
+        if epoch_logs:
+            for k, v in epoch_logs.items():
+                self.writer.add_scalar('loss/' + step + '/' + k, v, epoch_id)
+        if metrics_logs:
+            for k, v in metrics_logs.items():
+                self.writer.add_scalar('metric/' + step + '/' + k, v, epoch_id)
 
     def on_train_end(self, logs=None):
         self.writer.close()
