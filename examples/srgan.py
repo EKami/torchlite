@@ -23,7 +23,7 @@ from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau,
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
-from torchlight.nn.losses.srgan import GeneratorLoss
+from torchlight.nn.losses.srgan import PerceptualLoss
 from torchlight.nn.metrics.srgan import SSIM, PSNR
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
@@ -109,7 +109,7 @@ def train(args):
     callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
                  TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
-    g_loss = GeneratorLoss()
+    g_loss = PerceptualLoss()
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
     learner.train(args.adv_epochs, [SSIM(), PSNR()], train_loader, valid_loader, callbacks)
 

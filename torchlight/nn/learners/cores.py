@@ -2,6 +2,7 @@
 This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
+import torch
 import torch.nn as nn
 from torchlight.nn.tools import tensor_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
@@ -195,22 +196,21 @@ class SRGanCore(BaseCore):
         ############################
         # (1) Update D network: maximize D(x)-1-D(G(z))
         ###########################
-        sr_img = self.netG(lr_images)
-        # TODO use mean really or sigmoid cross-entropy https://github.com/tensorlayer/srgan/blob/master/main.py#L91?
-        d_real_out = self.netD(hr_images).mean()
-        d_fake_out = self.netD(sr_img).mean()
-        d_loss = 1 - d_real_out + d_fake_out
+        sr_images = self.netG(lr_images)
+        d_hr_out = self.netD(hr_images).mean()
+        d_sr_out = self.netD(sr_images).mean()
+        d_loss = 1 - d_hr_out + d_sr_out
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
 
         ############################
         # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
         ###########################
-        g_loss = self.g_criterion(d_fake_out, sr_img, hr_images)
+        g_loss = self.g_criterion(d_sr_out, sr_images, hr_images)  # PerceptualLoss
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0])
 
-        return sr_img, d_real_out, d_fake_out
+        return sr_images, d_hr_out, d_sr_out
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}
