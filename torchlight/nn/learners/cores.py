@@ -199,7 +199,7 @@ class SRGanCore(BaseCore):
         sr_images = self.netG(lr_images)
         d_hr_out = self.netD(hr_images).mean()
         d_sr_out = self.netD(sr_images).mean()
-        d_loss = 1 - d_hr_out + d_sr_out
+        d_loss = d_hr_out + d_sr_out
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
 
         ############################

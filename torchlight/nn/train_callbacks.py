@@ -253,7 +253,7 @@ class ModelSaverCallback(TrainCallback):
         self.to_dir = to_dir
 
     @staticmethod
-    def restore_model(models, from_dir):
+    def restore_model(models, from_dir, load_with_cpu=False):
         """
             Restore model(s) from the given dir.
             If models are multiples they will be automatically matched to
@@ -266,7 +266,11 @@ class ModelSaverCallback(TrainCallback):
         for model in models:
             file = os.path.join(from_dir, model.__class__.__name__ + ".pth")
             if os.path.isfile(file):
-                model.load_state_dict(torch.load(file))
+                if load_with_cpu:
+                    state_dict = torch.load(file, map_location='cpu')
+                else:
+                    state_dict = torch.load(file)
+                model.load_state_dict(state_dict)
                 i += 1
 
         assert i == len(models), "Not all models were restored. Please check that your passed models and files match"

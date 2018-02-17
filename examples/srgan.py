@@ -72,7 +72,7 @@ def evaluate(args, num_workers=os.cpu_count()):
         to_dir = Path(args.to_dir)
     netG = Generator(args.upscale_factor)
     learner = Learner(ClassifierCore(netG, None, None), use_cuda=args.cuda)
-    ModelSaverCallback.restore_model([netG], saved_model_dir.absolute())
+    ModelSaverCallback.restore_model([netG], saved_model_dir.absolute(), load_with_cpu=not args.cuda)
     eval_ds = EvalDataset(tfiles.get_files(imgs_path))
     # One batch at a time as the pictures may differ in size
     eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
