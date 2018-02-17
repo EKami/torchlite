@@ -71,7 +71,7 @@ def evaluate(args, num_workers=os.cpu_count()):
     else:
         to_dir = Path(args.to_dir)
     netG = Generator(args.upscale_factor)
-    learner = Learner(ClassifierCore(netG, None, None), use_cuda=args.use_cuda)
+    learner = Learner(ClassifierCore(netG, None, None), use_cuda=args.cuda)
     ModelSaverCallback.restore_model([netG], saved_model_dir.absolute())
     eval_ds = EvalDataset(tfiles.get_files(imgs_path))
     # One batch at a time as the pictures may differ in size
@@ -142,9 +142,11 @@ def main():
     eval_parser.add_argument('--images_dir', default="@default", type=str, help='The path to the files for SR')
     eval_parser.add_argument('--to_dir', default="@default", type=str,
                              help='The directory where the SR files will be stored')
-    eval_parser.add_argument('--use_cuda', default=True, type=bool, help='Whether or not to use the GPU')
     eval_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                              help='Super Resolution upscale factor')
+    eval_parser.add_argument('--on_cpu', dest="cuda", action="store_false",
+                             help='Run eval on the CPU (defaults to on the GPU)')
+    parser.set_defaults(cuda=True)
     args = parser.parse_args()
     if args.mode == "train":
         train(args)
