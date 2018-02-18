@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchlight.nn.losses.losses import TVLoss
 from torchvision.models.vgg import vgg16
 from torchlight.nn.models.models import FinetunedModelTools
@@ -28,14 +29,13 @@ class PerceptualLoss:
         self.mse_loss = nn.MSELoss()
         self.tv_loss = TVLoss()  # Total variation loss (not included in the original paper)
 
-    def __call__(self, out_labels, gen_images, target_images):
+    def __call__(self, d_sr_out_logits, sr_images, target_images):
         # Adversarial Loss
-        adversarial_loss = torch.mean(-torch.log(out_labels))
-        # Perception Loss
-        vgg_loss = self.mse_loss(self.vgg_network(gen_images), self.vgg_network(target_images))
+        adversarial_loss = 1e-3 * F.multilabel_soft_margin_loss(d_sr_out_logits, torch.ones_like(d_sr_out_logits))
         # Image Loss
-        image_loss = self.mse_loss(gen_images, target_images)
-        # TV Loss
-        tv_loss = self.tv_loss(gen_images)
-        return image_loss + 0.001 * adversarial_loss + 0.006 * vgg_loss + 2e-8 * tv_loss
+        mse_loss = self.mse_loss(sr_images, target_images)
+        # Perception Loss
+        vgg_loss = 2e-6 * self.mse_loss(self.vgg_network(sr_images), self.vgg_network(target_images))
+
+        return mse_loss + adversarial_loss + vgg_loss
 

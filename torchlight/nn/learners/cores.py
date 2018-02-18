@@ -4,6 +4,7 @@ Most of the time you'll make use of ClassifierCore.
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchlight.nn.tools import tensor_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
 
@@ -59,7 +60,7 @@ class BaseCore:
             targets (Tensor): The expected outputs
 
         Returns:
-            Tensor: The logits
+            Tensor: The logits (used only for the metrics)
         """
         raise NotImplementedError()
 
@@ -193,25 +194,29 @@ class SRGanCore(BaseCore):
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
-        # TODO change to https://github.com/brade31919/SRGAN-tensorflow/blob/master/main.py#L223
         ############################
         # (1) Update D network: maximize D(x)-1-D(G(z))
         ###########################
         sr_images = self.netG(lr_images)
-        d_hr_out = self.netD(hr_images).mean()
-        d_sr_out = self.netD(sr_images).mean()
-        d_loss = d_hr_out + d_sr_out
+        _, d_hr_out_logits = self.netD(hr_images)
+        _, d_sr_out_logits = self.netD(sr_images)
+
+        d_hr_loss = F.multilabel_soft_margin_loss(d_hr_out_logits, torch.ones_like(d_hr_out_logits))
+        d_sr_loss = F.multilabel_soft_margin_loss(d_sr_out_logits, torch.zeros_like(d_sr_out_logits))
+        d_loss = d_hr_loss + d_sr_loss
+
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
 
         ############################
         # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
         ###########################
-        g_loss = self.g_criterion(d_sr_out, sr_images, hr_images)  # PerceptualLoss
+        # Gives feedback to the generator with d_sr_out
+        g_loss = self.g_criterion(d_sr_out_logits, sr_images, hr_images)  # PerceptualLoss
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0])
 
-        return sr_images, d_hr_out, d_sr_out
+        return sr_images, d_hr_out_logits, d_sr_out_logits
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}

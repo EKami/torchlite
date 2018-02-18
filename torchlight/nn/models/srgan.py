@@ -121,5 +121,6 @@ class Discriminator(nn.Module):
     def forward(self, x):
         batch_size = x.size(0)
         x = self.net(x).view(batch_size)
+        logits = x
         x = F.sigmoid(x)
-        return x
+        return x, logits
