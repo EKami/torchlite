@@ -33,7 +33,6 @@ saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkp
 
 def get_loaders(args, num_workers=os.cpu_count()):
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
-    num_workers = 0  # TODO used for debug only
     ds_path = Path("/tmp")
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K.zip",
                                         ds_path.absolute(), True)
@@ -126,7 +125,7 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--gen_epochs', default=50, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
