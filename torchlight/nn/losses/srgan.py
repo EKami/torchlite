@@ -29,9 +29,9 @@ class PerceptualLoss:
         self.mse_loss = nn.MSELoss()
         self.tv_loss = TVLoss()  # Total variation loss (not included in the original paper)
 
-    def __call__(self, d_sr_out_logits, sr_images, target_images):
+    def __call__(self, d_sr_out, sr_images, target_images):
         # Adversarial Loss
-        adversarial_loss = 1e-3 * F.multilabel_soft_margin_loss(d_sr_out_logits, torch.ones_like(d_sr_out_logits))
+        adversarial_loss = 1e-3 * F.binary_cross_entropy(d_sr_out, torch.ones_like(d_sr_out))
         # Image Loss
         mse_loss = self.mse_loss(sr_images, target_images)
         # Perception Loss

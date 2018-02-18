@@ -1,3 +1,4 @@
+from torchlight.nn.models.models import Flatten
 import torch.nn as nn
 import torch.nn.functional as F
 import math
@@ -119,8 +120,6 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, x):
-        batch_size = x.size(0)
-        x = self.net(x).view(batch_size)
-        logits = x
+        x = Flatten()(self.net(x))
         x = F.sigmoid(x)
-        return x, logits
+        return x

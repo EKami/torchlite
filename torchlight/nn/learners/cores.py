@@ -198,11 +198,11 @@ class SRGanCore(BaseCore):
         # (1) Update D network: maximize D(x)-1-D(G(z))
         ###########################
         sr_images = self.netG(lr_images)
-        _, d_hr_out_logits = self.netD(hr_images)
-        _, d_sr_out_logits = self.netD(sr_images)
+        d_hr_out = self.netD(hr_images)  # Sigmoid output
+        d_sr_out = self.netD(sr_images)  # Sigmoid output
 
-        d_hr_loss = F.multilabel_soft_margin_loss(d_hr_out_logits, torch.ones_like(d_hr_out_logits))
-        d_sr_loss = F.multilabel_soft_margin_loss(d_sr_out_logits, torch.zeros_like(d_sr_out_logits))
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.ones_like(d_hr_out))
+        d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
         d_loss = d_hr_loss + d_sr_loss
 
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
@@ -211,12 +211,12 @@ class SRGanCore(BaseCore):
         # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
         ###########################
         # Gives feedback to the generator with d_sr_out
-        g_loss = self.g_criterion(d_sr_out_logits, sr_images, hr_images)  # PerceptualLoss
+        g_loss = self.g_criterion(d_sr_out, sr_images, hr_images)  # PerceptualLoss
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0])
 
-        return sr_images, d_hr_out_logits, d_sr_out_logits
+        return sr_images, d_hr_out, d_sr_out
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}
