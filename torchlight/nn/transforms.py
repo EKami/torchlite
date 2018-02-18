@@ -10,6 +10,8 @@ from typing import Union
 import cv2
 import torch
 import numpy as np
+import random
+from PIL import Image, ImageFilter
 import torch.nn.functional as F
 
 
@@ -35,25 +37,26 @@ class FactorNormalize:
         return tensor
 
 
-class CenterCrop:
-    def __init__(self, new_size):
+class RandomSmooth:
+    def __init__(self, active_range: float=0.3):
         """
-            /!\ Center cropping already exists as a torchvision transform
-            Resize with center cropping
-        Args:
-            new_size (tuple): The size as tuple (h, w)
-        """
-        self.new_size = new_size
+        Add random smooth filters
 
-    def __call__(self, tensor):
-        """
-            Resize an image and keep its aspect ratio
         Args:
-            tensor (ndarray): The tensor image to resize
-        Returns:
-            tensor: The resized/cropped tensor
+            active_range (float): A number between 0 and 1 which is used to know how
+            often the filter is activated. E.g with active_range=0.3
         """
-        largest = max(img.width, img.height)
-        new_h = np.round(np.multiply(new_size[0] / largest, img.size[0])).astype(int)
-        new_w = np.round(np.multiply(new_size[1] / largest, img.size[1])).astype(int)
-        return img.resize((new_h, new_w), Image.ANTIALIAS)
+        self.active_range = active_range
+
+    def __call__(self, image: Image):
+        """
+        Add random smooth filters
+        Args:
+            image (Image): A Pillow image
+        Returns:
+            Image: The pillow transformed image (or not)
+        """
+        rnd = random.random()
+        if rnd <= self.active_range:
+            image = image.filter(ImageFilter.SMOOTH)
+        return image
