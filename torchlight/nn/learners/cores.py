@@ -193,6 +193,7 @@ class SRGanCore(BaseCore):
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
+        # TODO change to https://github.com/brade31919/SRGAN-tensorflow/blob/master/main.py#L223
         ############################
         # (1) Update D network: maximize D(x)-1-D(G(z))
         ###########################
