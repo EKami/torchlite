@@ -1,3 +1,4 @@
+import torch
 from torchlight.nn.models.models import Flatten
 import torch.nn as nn
 import torch.nn.functional as F
@@ -79,7 +80,7 @@ class UpsampleBLock(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, input_shape):
         super(Discriminator, self).__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=(4, 4), stride=2, padding=1),
@@ -125,16 +126,23 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(512),
         )
 
+        in_size = self.infer_lin_size(input_shape)
+
         self.out_block = nn.Sequential(
             Flatten(),
-            nn.Linear(25088, 1),
+            nn.Linear(in_size, 1),
             nn.Sigmoid(),
         )
+
+    def infer_lin_size(self, shape):
+        bs = 1
+        input = torch.autograd.Variable(torch.rand(bs, *shape))
+        size = self.block1(input).data.view(bs, -1).size(1)
+        return size
 
     def forward(self, x):
         block1 = self.block1(x)
         block2 = self.block2(block1)
-
-        block3 = nn.LeakyReLU(0.2)(block1 + block2)
-        block4 = self.out_block(block3)
-        return block4
+        block3 = F.leaky_relu(block1 + block2, 0.2)
+        out = self.out_block(block3)
+        return out
