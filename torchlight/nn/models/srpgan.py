@@ -7,7 +7,7 @@ import math
 class Generator(nn.Module):
     def __init__(self, scale_factor, res_blocks_count=16):
         """
-        Generator for SRGAN
+        Generator for SRPGAN
         Args:
             scale_factor (int): The new scale for the resulting image (x2, x4...)
             res_blocks_count (int): Number of residual blocks, the less there is,
@@ -18,8 +18,8 @@ class Generator(nn.Module):
 
         super(Generator, self).__init__()
         self.block1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=9, padding=4),
-            nn.PReLU()
+            nn.Conv2d(3, 64, kernel_size=(3, 3), stride=2, padding=4),
+            nn.LeakyReLU()
         )
         self.res_blocks = []
         for i in range(res_blocks_count):
@@ -27,8 +27,8 @@ class Generator(nn.Module):
 
         self.res_blocks = nn.Sequential(*self.res_blocks)
         self.block_x1 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64)
+            nn.Conv2d(64, 64, kernel_size=(3, 3), padding=1),
+            nn.InstanceNorm2d(64)
         )
         self.block_x2 = nn.Sequential(*[UpsampleBLock(64, 2) for _ in range(upsample_block_num)])
         self.block_x3 = nn.Conv2d(64, 3, kernel_size=9, padding=4)
@@ -37,9 +37,9 @@ class Generator(nn.Module):
         block1 = self.block1(x)
         res_blocks = self.res_blocks(block1)
         block_x1 = self.block_x1(res_blocks)
-        block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
 
-        # TODO causes a memory leak on CPU
+        # Upsample
+        block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
         block_x3 = self.block_x3(block_x2)
 
         return (F.tanh(block_x3) + 1) / 2
@@ -48,18 +48,18 @@ class Generator(nn.Module):
 class ResidualBlock(nn.Module):
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
-        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(channels)
-        self.prelu = nn.PReLU()
-        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(channels)
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=(3, 3), padding=1)
+        self.in1 = nn.InstanceNorm2d(channels)
+        self.lrelu = nn.LeakyReLU()
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=(3, 3), padding=1)
+        self.in2 = nn.InstanceNorm2d(channels)
 
     def forward(self, x):
         residual = self.conv1(x)
-        residual = self.bn1(residual)
-        residual = self.prelu(residual)
+        residual = self.in1(residual)
+        residual = self.lrelu(residual)
         residual = self.conv2(residual)
-        residual = self.bn2(residual)
+        residual = self.in2(residual)
 
         return x + residual  # ElementWise sum
 
@@ -69,12 +69,12 @@ class UpsampleBLock(nn.Module):
         super(UpsampleBLock, self).__init__()
         self.conv = nn.Conv2d(in_channels, in_channels * up_scale ** 2, kernel_size=3, padding=1)
         self.pixel_shuffle = nn.PixelShuffle(up_scale)
-        self.prelu = nn.PReLU()
+        self.lrelu = nn.LeakyReLU()
 
     def forward(self, x):
         x = self.conv(x)
         x = self.pixel_shuffle(x)
-        x = self.prelu(x)
+        x = self.lrelu(x)
         return x
 
 
@@ -86,40 +86,31 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2),
 
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(512, 1024, kernel_size=1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(1024, 1, kernel_size=1)
+            Flatten(),
         )
 
     def forward(self, x):
-        x = Flatten()(self.net(x))
+        x = self.net(x)
+        x = nn.Linear(x.size(), -1)()
         x = F.sigmoid(x)
         return x

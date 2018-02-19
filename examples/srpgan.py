@@ -1,13 +1,6 @@
 """
-This script implements a neural network to enhance images:
- - https://arxiv.org/abs/1712.05927
-
-Private dropbox roadmap: https://paper.dropbox.com/doc/Resources-qhkHHNEfwWgF28qMFU8tR
-
-To implement:
- - https://github.com/aitorzip/PyTorch-SRGAN
- - https://github.com/leftthomas/SRGAN (PyTorch)
- - https://github.com/tensorlayer/srgan (Tensorflow)
+This script implements SRPGAN, a neural network to enhance images:
+ - http://arxiv.org/abs/1712.05927
 """
 import os
 import argparse
@@ -18,12 +11,12 @@ from torch.utils.data import DataLoader
 import torchlight.data.fetcher as fetcher
 import torchlight.data.files as tfiles
 import torchlight.nn.tools.image_tools as image_tools
-from torchlight.nn.models.srgan import Generator, Discriminator
+from torchlight.nn.models.srpgan import Generator, Discriminator
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
 from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
-from torchlight.nn.losses.srgan import PerceptualLoss
+from torchlight.nn.learners.cores import ClassifierCore, SRPGanCore
+from torchlight.nn.losses.srpgan import PerceptualLoss
 from torchlight.nn.metrics.metrics import SSIM, PSNR
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
@@ -109,7 +102,7 @@ def train(args):
                  TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
     g_loss = PerceptualLoss()
-    learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
+    learner = Learner(SRPGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
     learner.train(args.adv_epochs, [SSIM("validation"), PSNR("validation")], train_loader, valid_loader, callbacks)
 
 
