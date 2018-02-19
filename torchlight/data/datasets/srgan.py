@@ -32,7 +32,7 @@ class TrainDataset(Dataset):
             self.lr_transform = transforms.Compose([
                 transforms.ToPILImage(),
                 transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
-                ttransforms.RandomSmooth(),  # TODO maybe remove this?
+                #ttransforms.RandomSmooth(),  # TODO maybe remove this?
                 transforms.ToTensor()
             ])
         else:
@@ -73,13 +73,13 @@ class ValDataset(Dataset):
         Returns:
             tuple: (lr_image, lr_upscaled_image, hr_original_image)
         """
-        hr_original_image = Image.open(self.hr_image_filenames[index])
-        w, h = hr_original_image.size
+        hr_image = Image.open(self.hr_image_filenames[index])
+        w, h = hr_image.size
         assert min(w, h) >= self.crop_size, \
             "Your crop size is too low for validation, an image with lower dimensions has been detected. " \
             "Either change/remove your validation set or lower the crop size."
 
-        hr_original_transform = transforms.Compose([
+        hr_transform = transforms.Compose([
             transforms.CenterCrop(self.crop_size),
             transforms.ToTensor()
         ])
@@ -90,16 +90,9 @@ class ValDataset(Dataset):
             transforms.ToTensor()
         ])
 
-        lr_upscale_transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(self.crop_size, interpolation=Image.BICUBIC),
-            transforms.ToTensor()
-        ])
-
-        hr_original_image = hr_original_transform(hr_original_image)
-        lr_image = lr_transform(hr_original_image)
-        lr_upscaled_image = lr_upscale_transform(lr_image)
-        return lr_image, lr_upscaled_image, hr_original_image
+        hr_image = hr_transform(hr_image)
+        lr_image = lr_transform(hr_image)
+        return lr_image, hr_image
 
     def __len__(self):
         return len(self.hr_image_filenames)

@@ -183,10 +183,10 @@ class SRGanCore(BaseCore):
         sr_images = self.netG(images)  # Super resolution images
         return sr_images
 
-    def _on_validation(self, lr_images, lr_upscaled_images, hr_original_images):
+    def _on_validation(self, lr_images, hr_images):
         sr_images = self.netG(lr_images)
 
-        return lr_images, lr_upscaled_images, hr_original_images, sr_images
+        return sr_images
 
     def _optimize(self, model, optim, loss, retain_graph=False):
         model.zero_grad()
@@ -216,7 +216,7 @@ class SRGanCore(BaseCore):
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0])
 
-        return sr_images, d_hr_out, d_sr_out
+        return sr_images
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}

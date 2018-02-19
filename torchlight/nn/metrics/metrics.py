@@ -6,7 +6,9 @@ import copy
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 from torch.autograd.variable import Variable
+import torchlight.nn.tools.ssim as ssim
 
 
 class Metric:
@@ -132,3 +134,65 @@ class RMSPE(Metric):
     def reset(self):
         self.count = 0
         self.sum = 0
+
+
+class SSIM(Metric):
+    def __init__(self, step=None):
+        """
+        Calculates SSIM
+        Args:
+            step (str, None): Either "training", "validation" or None to run this metric on all steps
+        """
+        self.step = step
+        self.count = 0
+        self.sum = 0
+
+    @property
+    def get_name(self):
+        return "ssim"
+
+    def avg(self):
+        return self.sum / self.count
+
+    def reset(self):
+        self.count = 0
+        self.sum = 0
+
+    def __call__(self, step, logits, target):
+        if not self.step or self.step == step:
+            res = ssim.ssim(logits, target).data[0]
+            self.count += logits.size()[0]  # Batch size
+            self.sum += res
+            return res
+
+
+class PSNR(Metric):
+    def __init__(self, step=None):
+        """
+        Calculates PSNR
+        Args:
+            step (str, None): Either "training", "validation" or None to run this metric on all steps
+        """
+        self.step = step
+        self.count = 0
+        self.sum = 0
+
+    @property
+    def get_name(self):
+        return "psnr"
+
+    def avg(self):
+        return self.sum / self.count
+
+    def reset(self):
+        self.count = 0
+        self.sum = 0
+
+    def __call__(self, step, logits, target):
+        if not self.step or self.step == step:
+            batch_mse = ((target - logits) ** 2).data.mean()
+            psnr = 10 * np.log10((255 ** 2) / batch_mse)
+
+            self.count += logits.size(0)
+            self.sum += psnr
+            return psnr

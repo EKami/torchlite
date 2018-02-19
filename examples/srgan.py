@@ -24,7 +24,7 @@ from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import PerceptualLoss
-from torchlight.nn.metrics.srgan import SSIM, PSNR
+from torchlight.nn.metrics.metrics import SSIM, PSNR
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
 tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
@@ -110,7 +110,7 @@ def train(args):
 
     g_loss = PerceptualLoss()
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
-    learner.train(args.adv_epochs, [SSIM(), PSNR()], train_loader, valid_loader, callbacks)
+    learner.train(args.adv_epochs, [SSIM("validation"), PSNR("validation")], train_loader, valid_loader, callbacks)
 
 
 def main():
@@ -125,7 +125,7 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=50, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
