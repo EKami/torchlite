@@ -18,7 +18,7 @@ class Generator(nn.Module):
 
         super(Generator, self).__init__()
         self.block1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=(3, 3), stride=2, padding=4),
+            nn.Conv2d(3, 64, kernel_size=(3, 3), stride=1, padding=1),
             nn.LeakyReLU()
         )
         self.res_blocks = []
@@ -31,7 +31,7 @@ class Generator(nn.Module):
             nn.InstanceNorm2d(64)
         )
         self.block_x2 = nn.Sequential(*[UpsampleBLock(64, 2) for _ in range(upsample_block_num)])
-        self.block_x3 = nn.Conv2d(64, 3, kernel_size=3, padding=4)
+        self.block_x3 = nn.Conv2d(64, 3, kernel_size=3, padding=1)
 
     def forward(self, x):
         block1 = self.block1(x)
