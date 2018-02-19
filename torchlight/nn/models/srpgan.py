@@ -31,7 +31,7 @@ class Generator(nn.Module):
             nn.InstanceNorm2d(64)
         )
         self.block_x2 = nn.Sequential(*[UpsampleBLock(64, 2) for _ in range(upsample_block_num)])
-        self.block_x3 = nn.Conv2d(64, 3, kernel_size=9, padding=4)
+        self.block_x3 = nn.Conv2d(64, 3, kernel_size=3, padding=4)
 
     def forward(self, x):
         block1 = self.block1(x)
@@ -42,7 +42,7 @@ class Generator(nn.Module):
         block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
         block_x3 = self.block_x3(block_x2)
 
-        return (F.tanh(block_x3) + 1) / 2
+        return block_x3
 
 
 class ResidualBlock(nn.Module):
