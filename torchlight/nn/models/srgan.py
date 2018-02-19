@@ -19,7 +19,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=9, padding=4),
-            nn.PReLU()
+            nn.ReLU()
         )
         self.res_blocks = []
         for i in range(res_blocks_count):
@@ -31,7 +31,7 @@ class Generator(nn.Module):
             nn.BatchNorm2d(64)
         )
         self.block_x2 = nn.Sequential(*[UpsampleBLock(64, 2) for _ in range(upsample_block_num)])
-        self.block_x3 = nn.Conv2d(64, 3, kernel_size=9, padding=4)
+        self.block_x3 = nn.Conv2d(64, 3, kernel_size=1, padding=0)
 
     def forward(self, x):
         block1 = self.block1(x)
@@ -42,7 +42,7 @@ class Generator(nn.Module):
         # TODO causes a memory leak on CPU
         block_x3 = self.block_x3(block_x2)
 
-        return (F.tanh(block_x3) + 1) / 2
+        return F.tanh(block_x3)
 
 
 class ResidualBlock(nn.Module):
@@ -50,14 +50,14 @@ class ResidualBlock(nn.Module):
         super(ResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(channels)
-        self.prelu = nn.PReLU()
+        self.relu = nn.ReLU()
         self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x):
         residual = self.conv1(x)
         residual = self.bn1(residual)
-        residual = self.prelu(residual)
+        residual = self.relu(residual)
         residual = self.conv2(residual)
         residual = self.bn2(residual)
 
@@ -81,45 +81,60 @@ class UpsampleBLock(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+        self.block1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.Conv2d(64, 128, kernel_size=(4, 4), stride=2, padding=1),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(128, 256, kernel_size=(4, 4), stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(256, 512, kernel_size=(4, 4), stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(512, 1024, kernel_size=(4, 4), stride=2, padding=1),
+            nn.BatchNorm2d(1024),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(1024, 2048, kernel_size=(4, 4), stride=2, padding=1),
+            nn.BatchNorm2d(2048),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(2048, 1024, kernel_size=(1, 1), stride=1, padding=1),
+            nn.BatchNorm2d(1024),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(1024, 512, kernel_size=(1, 1), stride=1, padding=1),
+            nn.BatchNorm2d(512),
+        )
+        self.block2 = nn.Sequential(
+            nn.Conv2d(512, 128, kernel_size=(1, 1), stride=1, padding=1),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(128, 128, kernel_size=(3, 3), stride=1, padding=0),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.Conv2d(128, 512, kernel_size=(3, 3), stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
+        )
 
-            nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(512, 1024, kernel_size=1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(1024, 1, kernel_size=1)
+        self.out_block = nn.Sequential(
+            Flatten(),
+            nn.Linear(25088, 1),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
-        x = Flatten()(self.net(x))
-        x = F.sigmoid(x)
-        return x
+        block1 = self.block1(x)
+        block2 = self.block2(block1)
+
+        block3 = nn.LeakyReLU(0.2)(block1 + block2)
+        block4 = self.out_block(block3)
+        return block4
