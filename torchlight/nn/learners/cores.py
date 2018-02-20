@@ -171,13 +171,17 @@ class SRPGanCore(BaseCore):
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
 
-    def _update_loss_logs(self, g_loss, d_loss):
+    def _update_loss_logs(self, g_loss, d_loss, mse_loss,
+                          adversarial_loss, vgg_loss):
         # Update logs
         self.g_avg_meter.update(g_loss)
         self.d_avg_meter.update(d_loss)
         self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
-        self.logs.update({"epoch_logs": {"generator loss": self.g_avg_meter.debias_loss,
-                                         "discriminator loss": self.d_avg_meter.debias_loss}})
+        self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.debias_loss,
+                                         "discriminator": self.d_avg_meter.debias_loss,
+                                         "mse": mse_loss,
+                                         "adversarial": adversarial_loss,
+                                         "vgg": vgg_loss}})
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
@@ -194,7 +198,29 @@ class SRPGanCore(BaseCore):
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
+        ############################
+        # (1) Update D network: maximize D(x)-1-D(G(z))
+        ###########################
+        sr_images = self.netG(lr_images)
+        d_hr_out = self.netD(hr_images)  # Sigmoid output
+        d_sr_out = self.netD(sr_images)  # Sigmoid output
 
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.ones_like(d_hr_out))
+        d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
+        d_loss = d_hr_loss + d_sr_loss
+
+        self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
+
+        ############################
+        # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
+        ###########################
+        # Gives feedback to the generator with d_sr_out
+        mse_loss, adversarial_loss, vgg_loss = self.g_criterion(d_sr_out, sr_images, hr_images)  # PerceptualLoss
+        g_loss = mse_loss + adversarial_loss + vgg_loss
+        self._optimize(self.netG, self.g_optim, g_loss)
+
+        self._update_loss_logs(g_loss.data[0], d_loss.data[0], mse_loss.data[0],
+                               adversarial_loss.data[0], vgg_loss.data[0])
 
         return sr_images
 
@@ -206,4 +232,3 @@ class SRPGanCore(BaseCore):
             return self._on_validation(*inputs, targets)
         elif step == "eval":
             return self._on_eval(*inputs)
-

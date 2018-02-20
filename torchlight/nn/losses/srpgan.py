@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchlight.nn.losses.losses import TVLoss
-from torchvision.models.vgg import vgg16
+from torchvision.models.vgg import vgg19
 from torchlight.nn.models.models import FinetunedModelTools
+import torchlight.nn.tools.tensor_tools as ttools
 
 
 class PerceptualLoss:
@@ -21,8 +22,8 @@ class PerceptualLoss:
                 self.use_cuda = True
             else:
                 print("/!\ Warning: Cuda set but not available, using CPU...")
-        vgg = vgg16(pretrained=True)
-        vgg_network = nn.Sequential(*FinetunedModelTools.freeze(vgg.features)).eval()
+        vgg = vgg19(pretrained=True)
+        vgg_network = nn.Sequential(*FinetunedModelTools.freeze(ttools.children(vgg.features))).eval()
         if use_cuda:
             vgg_network.cuda()
 

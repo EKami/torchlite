@@ -1,9 +1,10 @@
 from PIL import Image
 import torch
-from torch.autograd import Variable
 import numpy as np
 import torch.nn as nn
 import PIL
+from torch.autograd.variable import Variable
+import torchvision.transforms.functional as t_vision
 
 
 class AverageMeter(object):
@@ -88,3 +89,22 @@ def to_onehot_tensor(y: np.ndarray):
     labels_tensors = torch.unsqueeze(torch.from_numpy(y.astype(np.long)), 1)
     y_onehot.scatter_(1, labels_tensors, 1)
     return y_onehot
+
+
+def normalize_batch(tensor, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+    """
+    Normalize a batch tensor of size () given the mean and standard deviation
+    Args:
+        tensor (Tensor, Variable): A pytorch tensor
+        mean (list): The mean of each channels (defaults to all torchvision pretrained models).
+        std (list): The standard deviation of each channels (defaults to all torchvision pretrained models).
+
+    Returns:
+        Tensor: A pytorch tensor normalized
+    """
+    tensor = tensor.clone()
+    for i, img in enumerate(tensor):
+        if isinstance(img, Variable):
+            img = img.data
+        tensor[i, :] = t_vision.normalize(img, mean, std)
+    return tensor
