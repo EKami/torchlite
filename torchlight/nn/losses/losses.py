@@ -49,26 +49,16 @@ class TVLoss(nn.Module):
         return t.size()[1] * t.size()[2] * t.size()[3]
 
 
-class L1CharbonnierLoss(nn.Module):
+class CharbonnierLoss(nn.Module):
     def __init__(self):
         """
         L1 Charbonnierloss.
         """
-        super(L1CharbonnierLoss, self).__init__()
-        self.eps = 1e-6
+        super(CharbonnierLoss, self).__init__()
 
-    def forward(self, x, y):
+    def forward(self, x, y, eps=1e-6):
         diff = y - x
-        error = torch.sqrt(diff * diff + self.eps)
+        error = torch.sqrt(diff * diff + eps)
         loss = torch.sum(error)
         return loss
-
-
-class CharbonnierLoss(L1CharbonnierLoss):
-    def __init__(self):
-        """
-        Charbonnier loss
-        """
-        super().__init__()
-        # TODO finish
 

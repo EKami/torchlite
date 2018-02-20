@@ -1,5 +1,5 @@
 import torch
-from torchlight.nn.losses.losses import CharbonnierLoss, L1CharbonnierLoss
+from torchlight.nn.losses.losses import CharbonnierLoss
 
 
 class GeneratorLoss:
@@ -9,16 +9,18 @@ class GeneratorLoss:
         """
         super(GeneratorLoss, self).__init__()
         self.charbonnier = CharbonnierLoss()
-        self.l1_charbonnier = L1CharbonnierLoss()
 
     def __call__(self, d_hr_out, d_sr_out, d_hr_feat_maps, d_sr_feat_maps, sr_images, target_images):
         # Adversarial loss (takes discriminator outputs)
-        adversarial_loss = torch.log(d_hr_out) + torch.log(1 - d_sr_out)
+        adversarial_loss = torch.mean(torch.log(d_hr_out) + torch.log(1 - d_sr_out))
 
         # Content loss (charbonnier between target and super resolution images)
-        content_loss = self.charbonnier(sr_images, target_images)
+        content_loss = self.charbonnier(sr_images, target_images, eps=1e-8)
 
         # Perceptual loss
-        perceptual_loss = None
+        perceptual_loss = 0
+        for hr_feat_map, sr_feat_map in zip(d_hr_feat_maps, d_sr_feat_maps):
+            perceptual_loss += self.charbonnier(sr_feat_map, hr_feat_map, eps=1e-8)
+
         return adversarial_loss, content_loss, perceptual_loss
 
