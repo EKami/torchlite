@@ -47,3 +47,28 @@ class TVLoss(nn.Module):
     @staticmethod
     def tensor_size(t):
         return t.size()[1] * t.size()[2] * t.size()[3]
+
+
+class L1CharbonnierLoss(nn.Module):
+    def __init__(self):
+        """
+        L1 Charbonnierloss.
+        """
+        super(L1CharbonnierLoss, self).__init__()
+        self.eps = 1e-6
+
+    def forward(self, x, y):
+        diff = y - x
+        error = torch.sqrt(diff * diff + self.eps)
+        loss = torch.sum(error)
+        return loss
+
+
+class CharbonnierLoss(L1CharbonnierLoss):
+    def __init__(self):
+        """
+        Charbonnier loss
+        """
+        super().__init__()
+        # TODO finish
+

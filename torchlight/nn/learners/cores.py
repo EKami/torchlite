@@ -171,17 +171,17 @@ class SRPGanCore(BaseCore):
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
 
-    def _update_loss_logs(self, g_loss, d_loss, mse_loss,
-                          adversarial_loss, vgg_loss):
+    def _update_loss_logs(self, g_loss, d_loss, adversarial_loss,
+                          content_loss, perceptual_loss):
         # Update logs
         self.g_avg_meter.update(g_loss)
         self.d_avg_meter.update(d_loss)
         self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
-        self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.debias_loss,
-                                         "discriminator": self.d_avg_meter.debias_loss,
-                                         "mse": mse_loss,
-                                         "adversarial": adversarial_loss,
-                                         "vgg": vgg_loss}})
+        self.logs.update({"epoch_logs": {"generator_loss": self.g_avg_meter.debias_loss,
+                                         "discriminator_loss": self.d_avg_meter.debias_loss,
+                                         "adversarial_loss": adversarial_loss,
+                                         "content_loss": content_loss,
+                                         "perceptual_loss": perceptual_loss}})
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
@@ -199,7 +199,7 @@ class SRPGanCore(BaseCore):
 
     def _on_training(self, lr_images, hr_images):
         ############################
-        # (1) Update D network: maximize D(x)-1-D(G(z))
+        # (1) Update D network
         ###########################
         sr_images = self.netG(lr_images)
         d_hr_out = self.netD(hr_images)  # Sigmoid output
@@ -212,15 +212,15 @@ class SRPGanCore(BaseCore):
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
 
         ############################
-        # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
+        # (2) Update G network
         ###########################
-        # Gives feedback to the generator with d_sr_out
-        mse_loss, adversarial_loss, vgg_loss = self.g_criterion(d_sr_out, sr_images, hr_images)  # PerceptualLoss
-        g_loss = mse_loss + adversarial_loss + vgg_loss
+        # torchlight.nn.losses.srpgan.GeneratorLoss
+        adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out, sr_images, hr_images)
+        g_loss = adversarial_loss + content_loss + perceptual_loss
         self._optimize(self.netG, self.g_optim, g_loss)
 
-        self._update_loss_logs(g_loss.data[0], d_loss.data[0], mse_loss.data[0],
-                               adversarial_loss.data[0], vgg_loss.data[0])
+        self._update_loss_logs(g_loss.data[0], d_loss.data[0], adversarial_loss.data[0],
+                               content_loss.data[0], perceptual_loss.data[0])
 
         return sr_images
 
