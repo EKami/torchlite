@@ -198,16 +198,10 @@ class SRPGanCore(BaseCore):
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
-        ############################
-        # (1) Update D network
-        ###########################
         sr_images = self.netG(lr_images)
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
         d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
 
-        ############################
-        # (2) Update G network
-        ###########################
         # torchlight.nn.losses.srpgan.GeneratorLoss
         adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
                                                                            d_hr_feat_maps, d_sr_feat_maps,

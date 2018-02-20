@@ -13,7 +13,7 @@ import torchlight.data.files as tfiles
 import torchlight.nn.tools.image_tools as image_tools
 from torchlight.nn.models.srpgan import Generator, Discriminator
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
+from torchlight.data.datasets.srpgan import TrainDataset, EvalDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRPGanCore
 from torchlight.nn.losses.srpgan import GeneratorLoss
@@ -37,12 +37,11 @@ def get_loaders(args, num_workers=os.cpu_count()):
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
     train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
-                            lr_image_filenames=None,  # Use LR images from dir?
                             crop_size=args.crop_size, upscale_factor=args.upscale_factor)
 
     # Use the DIV2K dataset for validation as default
-    val_ds = ValDataset(tfiles.get_files(val_hr_path.absolute()),
-                        crop_size=args.crop_size, upscale_factor=args.upscale_factor)
+    val_ds = TrainDataset(tfiles.get_files(val_hr_path.absolute()),
+                          crop_size=args.crop_size, upscale_factor=args.upscale_factor)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)
@@ -121,12 +120,12 @@ def main():
     train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
-    train_parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
+    train_parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
                                    "1: Restore the models from the 'checkpoint' folder")
     # Models with different upscale factors and crop sizes are not compatible together
-    train_parser.add_argument('--crop_size', default=384, type=int, help='training images crop size')
+    train_parser.add_argument('--crop_size', default=128, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                               help="Super Resolution upscale factor. "
                                    "/!\ Models trained on different scale factors won't be compatible with each other")
