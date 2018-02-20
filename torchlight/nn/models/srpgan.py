@@ -1,4 +1,5 @@
 import torch
+import torchlight.nn.tools.tensor_tools as ttools
 from torchlight.nn.models.models import Flatten
 import torch.nn as nn
 import torch.nn.functional as F
@@ -82,39 +83,55 @@ class UpsampleBLock(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, input_shape):
         super(Discriminator, self).__init__()
+
         self.block1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
+        )
 
+        self.block2 = nn.Sequential(
             nn.Conv2d(64, 128, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
+        )
 
+        self.block3 = nn.Sequential(
             nn.Conv2d(128, 256, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
+        )
 
+        self.block4 = nn.Sequential(
             nn.Conv2d(256, 512, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
+        )
 
+        self.block5 = nn.Sequential(
             nn.Conv2d(512, 1024, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
+        )
 
+        self.block6 = nn.Sequential(
             nn.Conv2d(1024, 2048, kernel_size=(4, 4), stride=2, padding=1),
             nn.LeakyReLU(0.2),
+        )
 
+        self.block7 = nn.Sequential(
             nn.Conv2d(2048, 1024, kernel_size=(1, 1), stride=1, padding=1),
             nn.LeakyReLU(0.2),
-
-            nn.Conv2d(1024, 512, kernel_size=(1, 1), stride=1, padding=1),
         )
-        self.block2 = nn.Sequential(
+
+        self.block8 = nn.Conv2d(1024, 512, kernel_size=(1, 1), stride=1, padding=1)
+
+        self.block9 = nn.Sequential(
             nn.Conv2d(512, 128, kernel_size=(1, 1), stride=1, padding=1),
             nn.LeakyReLU(0.2),
-
-            nn.Conv2d(128, 128, kernel_size=(3, 3), stride=1, padding=0),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(128, 512, kernel_size=(3, 3), stride=1, padding=1),
         )
+
+        self.block10 = nn.Sequential(
+            nn.Conv2d(128, 128, kernel_size=(3, 3), stride=1, padding=0),
+            nn.LeakyReLU(0.2)
+        )
+
+        self.block11 = nn.Conv2d(128, 512, kernel_size=(3, 3), stride=1, padding=1)
 
         in_size = self.infer_lin_size(input_shape)
 
@@ -127,12 +144,60 @@ class Discriminator(nn.Module):
     def infer_lin_size(self, shape):
         bs = 1
         input = torch.autograd.Variable(torch.rand(bs, *shape))
-        size = self.block1(input).data.view(bs, -1).size(1)
+        model = nn.Sequential(
+            self.block1,
+            self.block2,
+            self.block3,
+            self.block4,
+            self.block5,
+            self.block6,
+            self.block7,
+            self.block8,
+            self.block9,
+            self.block10,
+            self.block11,
+        )
+        size = model(input).data.view(bs, -1).size(1)
         return size
 
     def forward(self, x):
-        block1 = self.block1(x)
-        block2 = self.block2(block1)
-        block3 = F.leaky_relu(block1 + block2, 0.2)
-        out = self.out_block(block3)
-        return out
+        feature_maps = []
+
+        x = self.block1(x)
+        feature_maps.append(x)
+
+        x = self.block2(x)
+        feature_maps.append(x)
+
+        x = self.block3(x)
+        feature_maps.append(x)
+
+        x = self.block4(x)
+        feature_maps.append(x)
+
+        x = self.block5(x)
+        feature_maps.append(x)
+
+        x = self.block6(x)
+        feature_maps.append(x)
+
+        x = self.block7(x)
+        feature_maps.append(x)
+
+        block8 = self.block8(x)
+        # feature_maps.append(block8)
+
+        x = self.block9(block8)
+        feature_maps.append(x)
+
+        x = self.block10(x)
+        feature_maps.append(x)
+
+        block11 = self.block11(x)
+        # feature_maps.append(block11)
+
+        final_block = F.leaky_relu(block8 + block11, 0.2)
+        feature_maps.append(final_block)
+
+        out = self.out_block(final_block)
+        return out, feature_maps

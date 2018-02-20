@@ -202,8 +202,8 @@ class SRPGanCore(BaseCore):
         # (1) Update D network
         ###########################
         sr_images = self.netG(lr_images)
-        d_hr_out = self.netD(hr_images)  # Sigmoid output
-        d_sr_out = self.netD(sr_images)  # Sigmoid output
+        d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
+        d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
 
         d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.ones_like(d_hr_out))
         d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
@@ -215,7 +215,9 @@ class SRPGanCore(BaseCore):
         # (2) Update G network
         ###########################
         # torchlight.nn.losses.srpgan.GeneratorLoss
-        adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out, sr_images, hr_images)
+        adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
+                                                                           d_hr_feat_maps, d_sr_feat_maps,
+                                                                           sr_images, hr_images)
         g_loss = adversarial_loss + content_loss + perceptual_loss
         self._optimize(self.netG, self.g_optim, g_loss)
 

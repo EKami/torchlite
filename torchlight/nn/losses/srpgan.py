@@ -11,7 +11,7 @@ class GeneratorLoss:
         self.charbonnier = CharbonnierLoss()
         self.l1_charbonnier = L1CharbonnierLoss()
 
-    def __call__(self, d_hr_out, d_sr_out, sr_images, target_images):
+    def __call__(self, d_hr_out, d_sr_out, d_hr_feat_maps, d_sr_feat_maps, sr_images, target_images):
         # Adversarial loss (takes discriminator outputs)
         adversarial_loss = torch.log(d_hr_out) + torch.log(1 - d_sr_out)
 
