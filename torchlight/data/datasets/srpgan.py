@@ -23,14 +23,15 @@ class TrainDataset(Dataset):
         self.hr_transform = transforms.Compose([
             transforms.RandomCrop(self.crop_size),
             transforms.ToTensor(),
-            ttransforms.FactorNormalize(),
         ])
         self.lr_transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
-            # ttransforms.RandomSmooth(),  # TODO maybe remove this?
+            # TODO augment the training data in the following ways:
+            # (1) Random Rotation: Randomly rotate the images by 90 or 180 degrees.
+            # (2) Brightness adjusting: Randomly adjust the brightness of the images.
+            # (3) Saturation adjusting: Randomly adjust the saturation of the images
             transforms.ToTensor(),
-            ttransforms.FactorNormalize(),
         ])
 
     def __getitem__(self, index):
@@ -51,7 +52,6 @@ class EvalDataset(Dataset):
         image = Image.open(self.images_filenames[index])
         tfs = transforms.Compose([
             transforms.ToTensor(),
-            ttransforms.FactorNormalize(),
         ])
         image = tfs(image)
         return image, image
