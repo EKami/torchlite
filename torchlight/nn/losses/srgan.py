@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchlight.nn.losses.losses import TVLoss
-from torchvision.models.vgg import vgg16
+from torchvision.models.vgg import vgg19
 from torchlight.nn.models.models import FinetunedModelTools
+import torchlight.nn.tools.tensor_tools as ttools
 
 
 class PerceptualLoss:
@@ -21,8 +22,8 @@ class PerceptualLoss:
                 self.use_cuda = True
             else:
                 print("/!\ Warning: Cuda set but not available, using CPU...")
-        vgg = vgg16(pretrained=True)
-        vgg_network = nn.Sequential(*FinetunedModelTools.freeze(vgg.features)).eval()
+        vgg = vgg19(pretrained=True)
+        vgg_network = nn.Sequential(*FinetunedModelTools.freeze(ttools.children(vgg.features))).eval()
         if use_cuda:
             vgg_network.cuda()
         self.vgg_network = vgg_network
@@ -34,8 +35,11 @@ class PerceptualLoss:
         adversarial_loss = 1e-3 * F.binary_cross_entropy(d_sr_out, torch.ones_like(d_sr_out))
         # Image Loss
         mse_loss = self.mse_loss(sr_images, target_images)
+
+        # sr_images = ttools.normalize_batch(sr_images)
+        # target_images = ttools.normalize_batch(target_images)
+
         # Perception Loss
         vgg_loss = 2e-6 * self.mse_loss(self.vgg_network(sr_images), self.vgg_network(target_images))
 
-        return mse_loss + adversarial_loss + vgg_loss
-
+        return mse_loss, adversarial_loss, vgg_loss
