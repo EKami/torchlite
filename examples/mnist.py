@@ -1,12 +1,11 @@
-import torch
 from torchvision import datasets, transforms
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore
-from torchlight.nn.metrics.metrics import CategoricalAccuracy
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore
+from torchlite.nn.metrics.metrics import CategoricalAccuracy
 import os
 
 

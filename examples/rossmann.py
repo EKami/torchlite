@@ -18,13 +18,13 @@ import torch.optim as optim
 from tqdm import tqdm
 
 import data.files
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore
-import torchlight.nn.metrics as metrics
-from torchlight.data.fetcher import WebFetcher
-import torchlight.shortcuts as shortcuts
-import torchlight.structured.pandas.date as date
-import torchlight.structured.pandas.encoder as encoder
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore
+import torchlite.nn.metrics as metrics
+from torchlite.data.fetcher import WebFetcher
+import torchlite.shortcuts as shortcuts
+import torchlite.structured.pandas.date as date
+import torchlite.structured.pandas.encoder as encoder
 
 
 def join_df(left, right, left_on, right_on=None, suffix='_y'):

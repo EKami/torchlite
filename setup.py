@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='torch_light',
+    name='torchlite',
     version='0.1.2',
 
     description='A high level library for Pytorch',
-    long_description="https://github.com/EKami/Torchlight/master/README.md",
-    url='https://github.com/EKami/Torchlight',
+    long_description="https://github.com/EKami/Torchlite/master/README.md",
+    url='https://github.com/EKami/Torchlite',
     author='GODARD Tuatini',
     author_email='tuatinigodard@gmail.com',
     license='MIT',

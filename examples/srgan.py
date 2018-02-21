@@ -15,17 +15,17 @@ from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import torchlight.data.fetcher as fetcher
-import torchlight.data.files as tfiles
-import torchlight.nn.tools.image_tools as image_tools
-from torchlight.nn.models.srgan import Generator, Discriminator
-from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlight.data.datasets.srgan import TrainDataset, EvalDataset
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
-from torchlight.nn.losses.srgan import PerceptualLoss
-from torchlight.nn.metrics.metrics import SSIM, PSNR
-from torchlight.eval import eval
+import torchlite.data.fetcher as fetcher
+import torchlite.data.files as tfiles
+import torchlite.nn.tools.image_tools as image_tools
+from torchlite.nn.models.srgan import Generator, Discriminator
+from torchlite.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
+from torchlite.data.datasets.srgan import TrainDataset, EvalDataset
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore, SRGanCore
+from torchlite.nn.losses.srgan import PerceptualLoss
+from torchlite.nn.metrics.metrics import SSIM, PSNR
+from torchlite.eval import eval
 from PIL import Image
 
 cur_path = os.path.dirname(os.path.abspath(__file__))

@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from torch.autograd.variable import Variable
-import torchlight.nn.tools.ssim as ssim
+import torchlite.nn.tools.ssim as ssim
 
 
 class Metric:

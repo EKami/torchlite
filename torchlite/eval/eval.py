@@ -1,8 +1,8 @@
-from torchlight.nn.models.srgan import Generator
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore
-from torchlight.nn.train_callbacks import ModelSaverCallback
-from torchlight.data.datasets.srgan import EvalDataset
+from torchlite.nn.models.srgan import Generator
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore
+from torchlite.nn.train_callbacks import ModelSaverCallback
+from torchlite.data.datasets.srgan import EvalDataset
 import os
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader

@@ -1,5 +1,5 @@
 import torch
-from torchlight.nn.models.models import Flatten
+from torchlite.nn.models.models import Flatten
 import torch.nn as nn
 import torch.nn.functional as F
 import math

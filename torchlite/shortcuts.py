@@ -7,11 +7,11 @@ from typing import Union
 import torchvision
 from torch.utils.data import Dataset
 
-import torchlight.data.files as tfiles
-from torchlight.data.datasets.datasets import ColumnarDataset, ImageClassificationDataset
-from torchlight.nn.models.models import MixedInputModel, FinetunedConvModel
-from torchlight.data.loaders import BaseLoader
-from torchlight.nn.tools import tensor_tools
+import torchlite.data.files as tfiles
+from torchlite.data.datasets.datasets import ColumnarDataset, ImageClassificationDataset
+from torchlite.nn.models.models import MixedInputModel, FinetunedConvModel
+from torchlite.data.loaders import BaseLoader
+from torchlite.nn.tools import tensor_tools
 import numpy as np
 import torch.nn as nn
 

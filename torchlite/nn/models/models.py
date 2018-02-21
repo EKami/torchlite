@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlight.nn.tools import tensor_tools
+from torchlite.nn.tools import tensor_tools
 
 
 class FinetunedConvModel(nn.Module):

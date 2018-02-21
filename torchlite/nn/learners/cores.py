@@ -5,8 +5,8 @@ Most of the time you'll make use of ClassifierCore.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlight.nn.tools import tensor_tools
-from torchlight.nn.models.srgan import Generator, Discriminator
+from torchlite.nn.tools import tensor_tools
+from torchlite.nn.models.srgan import Generator, Discriminator
 
 
 class BaseCore:

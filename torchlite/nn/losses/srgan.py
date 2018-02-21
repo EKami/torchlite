@@ -2,12 +2,12 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlight.nn.losses.losses import TVLoss
+from torchlite.nn.losses.losses import TVLoss
 from torchvision.models.vgg import vgg19
-from torchlight.nn.models.models import FinetunedModelTools
-from torchlight.data.datasets.srgan import VggTransformDataset
+from torchlite.nn.models.models import FinetunedModelTools
+from torchlite.data.datasets.srgan import VggTransformDataset
 from torch.utils.data import DataLoader
-import torchlight.nn.tools.tensor_tools as ttools
+import torchlite.nn.tools.tensor_tools as ttools
 from torch.autograd import Variable
 
 
