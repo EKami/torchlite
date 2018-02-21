@@ -13,6 +13,14 @@ use Pytorch [Dataset](http://pytorch.org/docs/master/data.html#torch.utils.data.
 pip install torchlite
 ```
 
+or if you want to run this lib directly to have access to the examples clone this repository and run:
+
+```
+pip install -r requirements.txt
+```
+
+to install the required dependencies.
+
 ## Documentation
 
 For now the library has no complete documentation but you can quickly get to know how
