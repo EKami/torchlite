@@ -91,6 +91,26 @@ def get_files(path):
     return ret_files
 
 
+def get_file_names(file_paths, with_extension=True):
+    """
+    Given a path to multiple files return their name only in the same order
+    Args:
+        with_extension (bool): True to keep the file extension
+        file_paths (list): A list of file paths
+
+    Returns:
+        list: A list of file names
+    """
+    ret = []
+    for file in file_paths:
+        if with_extension:
+            name = Path(file).resolve().name
+        else:
+            name = Path(file).resolve().stem
+        ret.append(name)
+    return ret
+
+
 def split_by_idx(idxs, *a):
     mask = np.zeros(len(a[0]), dtype=bool)
     mask[np.array(idxs)] = True

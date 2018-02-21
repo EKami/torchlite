@@ -49,3 +49,8 @@ Then upload the packages with:
 ```
 twine upload dist/*
 ```
+
+Or just:
+```
+pypi_deploy.sh
+```

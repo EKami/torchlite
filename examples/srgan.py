@@ -25,6 +25,8 @@ from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import PerceptualLoss
 from torchlight.nn.metrics.metrics import SSIM, PSNR
+from torchlight.eval import eval
+from PIL import Image
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
 tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
@@ -68,18 +70,15 @@ def evaluate(args, num_workers=os.cpu_count()):
         to_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "results"))
     else:
         to_dir = Path(args.to_dir)
-    netG = Generator(args.upscale_factor)
-    learner = Learner(ClassifierCore(netG, None, None), use_cuda=args.cuda)
-    ModelSaverCallback.restore_model([netG], saved_model_dir.absolute(), load_with_cpu=not args.cuda)
-    eval_ds = EvalDataset(tfiles.get_files(imgs_path))
-    # One batch at a time as the pictures may differ in size
-    eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
 
-    predictions = learner.predict(eval_dl)
-    for i, pred in enumerate(predictions):
-        pred = pred.view(pred.size()[1:])  # Remove batch size == 1
-        file_name = eval_ds.get_file_from_index(i)
-        image_tools.save_tensor_as_png(pred, (to_dir / file_name).absolute())
+    file_paths = tfiles.get_files(imgs_path)
+    file_names = [name for name in tfiles.get_file_names(file_paths)]
+    pil_images = [Image.open(image) for image in file_paths]
+    pred_images = eval.srgan_eval(pil_images, saved_model_dir.absolute(),
+                                  args.upscale_factor, args.cuda, num_workers)
+
+    for i, pred in enumerate(pred_images):
+        image_tools.save_tensor_as_png(pred, (to_dir / file_names[i]).absolute())
 
 
 def train(args):

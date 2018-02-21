@@ -42,13 +42,14 @@ def image_to_tensor(image, mean=0, std=1.):
 
 def save_tensor_as_png(image, to_file):
     """
-    Takes a Pytorch tensor and save it as the file given in
+    Takes a Pytorch tensor or a Pillow Image and save it as the file given in
     parameter
     Args:
-        image (Tensor): A Pytorch tensor
+        image (Tensor, Image): A Pytorch tensor or a Pillow Image
         to_file (str): The path to the output file
     Returns:
 
     """
-    image = transforms.ToPILImage()(image.cpu())
+    if not isinstance(image, Image.Image):
+        image = transforms.ToPILImage()(image.cpu())
     image.save(to_file, "PNG")

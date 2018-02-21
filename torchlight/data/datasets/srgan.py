@@ -44,23 +44,23 @@ class TrainDataset(Dataset):
 
 
 class EvalDataset(Dataset):
-    def __init__(self, images_filenames):
-        self.images_filenames = images_filenames
+    def __init__(self, images):
+        """
+        The evaluation dataset
+        Args:
+            images (list): A list of Pillow images
+        """
+        self.images = images
         self.tfs = transforms.Compose([
             transforms.ToTensor()
         ])
 
     def __getitem__(self, index):
-        image = Image.open(self.images_filenames[index])
-        image = self.tfs(image)
+        image = self.tfs(self.images[index])
         return image, image
 
-    def get_file_from_index(self, index):
-        path, file = os.path.split(self.images_filenames[index])
-        return file
-
     def __len__(self):
-        return len(self.images_filenames)
+        return len(self.images)
 
 
 class VggTransformDataset(Dataset):
