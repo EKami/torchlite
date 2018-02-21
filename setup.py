@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='torchlight',
+    name='torch_light',
     version='0.1',
 
     description='A high level library for Pytorch',

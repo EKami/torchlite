@@ -7,6 +7,12 @@ For instance if you used Keras train/validation generators, in Torchlight you wo
 use Pytorch [Dataset](http://pytorch.org/docs/master/data.html#torch.utils.data.Dataset) and
 [DataLoader](http://pytorch.org/docs/master/data.html#torch.utils.data.DataLoader).
 
+## Installation
+
+```
+pip install torch_light
+```
+
 ## Documentation
 
 For now the library has no complete documentation but you can quickly get to know how
