@@ -40,6 +40,7 @@ class Generator(nn.Module):
         res_blocks = self.res_blocks(block1)
         block_x1 = self.block_x1(res_blocks)
 
+        # TODO paper page 7, section 4.6: Replace the transpose convolution with resize convolution
         # Upsample
         block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
         block_x3 = self.block_x3(block_x2)
