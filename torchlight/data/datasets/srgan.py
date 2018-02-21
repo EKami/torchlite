@@ -46,13 +46,13 @@ class TrainDataset(Dataset):
 class EvalDataset(Dataset):
     def __init__(self, images_filenames):
         self.images_filenames = images_filenames
+        self.tfs = transforms.Compose([
+            transforms.ToTensor()
+        ])
 
     def __getitem__(self, index):
         image = Image.open(self.images_filenames[index])
-        tfs = transforms.Compose([
-            transforms.ToTensor()
-        ])
-        image = tfs(image)
+        image = self.tfs(image)
         return image, image
 
     def get_file_from_index(self, index):
@@ -61,3 +61,27 @@ class EvalDataset(Dataset):
 
     def __len__(self):
         return len(self.images_filenames)
+
+
+class VggTransformDataset(Dataset):
+    def __init__(self, images_batch):
+        """
+        This dataset receive a batch of images and apply a transformation on them
+        Args:
+            images_batch (Tensor, Variable): A pytorch tensor of size (batch_size, C, H, W)
+        """
+        self.images_batch = images_batch.clone()
+        self.vgg_transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+
+    def __getitem__(self, index):
+        res = self.vgg_transforms(self.images_batch[index])
+        return res
+
+    def __len__(self):
+        return len(self.images_batch)

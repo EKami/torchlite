@@ -140,10 +140,7 @@ class SRGanCore(BaseCore):
         self.g_optim = g_optimizer
         self.netD = discriminator
         self.netG = generator
-
-        self.logs = {}
-        self.g_avg_meter = tensor_tools.AverageMeter()
-        self.d_avg_meter = tensor_tools.AverageMeter()
+        self.on_new_epoch()
 
     def on_train_mode(self):
         self.netG.train()
@@ -170,18 +167,25 @@ class SRGanCore(BaseCore):
         self.logs = {}
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
+        self.mse_loss_meter = tensor_tools.AverageMeter()
+        self.adversarial_loss_meter = tensor_tools.AverageMeter()
+        self.vgg_loss_meter = tensor_tools.AverageMeter()
 
     def _update_loss_logs(self, g_loss, d_loss, mse_loss,
                           adversarial_loss, vgg_loss):
         # Update logs
         self.g_avg_meter.update(g_loss)
         self.d_avg_meter.update(d_loss)
+        self.mse_loss_meter.update(mse_loss)
+        self.adversarial_loss_meter.update(adversarial_loss)
+        self.vgg_loss_meter.update(vgg_loss)
+
         self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
-        self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.debias_loss,
-                                         "discriminator": self.d_avg_meter.debias_loss,
-                                         "mse": mse_loss,
-                                         "adversarial": adversarial_loss,
-                                         "vgg": vgg_loss}})
+        self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.avg,
+                                         "discriminator": self.d_avg_meter.avg,
+                                         "mse": self.mse_loss_meter.avg,
+                                         "adversarial": self.adversarial_loss_meter.avg,
+                                         "vgg": self.vgg_loss_meter.avg}})
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
@@ -215,8 +219,9 @@ class SRGanCore(BaseCore):
         # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
         ###########################
         # Gives feedback to the generator with d_sr_out
-        mse_loss, adversarial_loss, vgg_loss = self.g_criterion(d_sr_out, sr_images, hr_images)  # PerceptualLoss
+        mse_loss, adversarial_loss, vgg_loss = self.g_criterion(d_sr_out, sr_images, hr_images)
         g_loss = mse_loss + adversarial_loss + vgg_loss
+
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0], mse_loss.data[0],

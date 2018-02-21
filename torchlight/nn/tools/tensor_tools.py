@@ -23,7 +23,7 @@ class AverageMeter(object):
     def update(self, val):
         self.val = val
         self.count += 1
-        self.sum += val * self.count
+        self.sum += val
         self.avg_loss_mom = self.avg_loss_mom * self.avg_mom + val * (1 - self.avg_mom)
 
     @property

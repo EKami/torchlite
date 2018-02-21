@@ -31,7 +31,7 @@ tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard")
 saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
 
 
-def get_loaders(args, num_workers=os.cpu_count()):
+def get_loaders(args, num_workers):
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
     fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K.zip",
@@ -83,7 +83,8 @@ def evaluate(args, num_workers=os.cpu_count()):
 
 
 def train(args):
-    train_loader, valid_loader = get_loaders(args)
+    num_workers = os.cpu_count()
+    train_loader, valid_loader = get_loaders(args, num_workers)
 
     model_saver = ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5)
 
@@ -107,7 +108,7 @@ def train(args):
     callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
                  TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
-    g_loss = PerceptualLoss()
+    g_loss = PerceptualLoss(use_cuda=True, num_workers=num_workers)
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
     learner.train(args.adv_epochs, [SSIM("validation"), PSNR("validation")], train_loader, valid_loader, callbacks)
 
@@ -124,15 +125,15 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--gen_epochs', default=100, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
-    train_parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
+    train_parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
                                    "1: Restore the models from the 'checkpoint' folder")
     # Models with different upscale factors and crop sizes are not compatible together
-    train_parser.add_argument('--crop_size', default=384, type=int, help='training images crop size')
+    train_parser.add_argument('--crop_size', default=224, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                               help="Super Resolution upscale factor. "
                                    "/!\ Models trained on different scale factors won't be compatible with each other")
