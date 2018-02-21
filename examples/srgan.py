@@ -20,7 +20,7 @@ import torchlight.data.files as tfiles
 import torchlight.nn.tools.image_tools as image_tools
 from torchlight.nn.models.srgan import Generator, Discriminator
 from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlight.data.datasets.srgan import TrainDataset, ValDataset, EvalDataset
+from torchlight.data.datasets.srgan import TrainDataset, EvalDataset
 from torchlight.nn.learners.learner import Learner
 from torchlight.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlight.nn.losses.srgan import PerceptualLoss
@@ -44,12 +44,11 @@ def get_loaders(args, num_workers=os.cpu_count()):
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
     train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
-                            lr_image_filenames=None,  # Use LR images from dir?
                             crop_size=args.crop_size, upscale_factor=args.upscale_factor)
 
     # Use the DIV2K dataset for validation as default
-    val_ds = ValDataset(tfiles.get_files(val_hr_path.absolute()),
-                        crop_size=args.crop_size, upscale_factor=args.upscale_factor)
+    val_ds = TrainDataset(tfiles.get_files(val_hr_path.absolute()),
+                          crop_size=args.crop_size, upscale_factor=args.upscale_factor)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)
