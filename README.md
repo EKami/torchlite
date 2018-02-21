@@ -28,3 +28,24 @@ log folder:
 ```
 tensorboard --logdir=./tensorboard
 ```
+
+## Packaging the project for Pypi deploy
+
+```
+pip install twine
+pip install wheel
+python setup.py sdist
+python setup.py bdist_wheel
+```
+
+[Create a pypi account](https://packaging.python.org/tutorials/distributing-packages/#id76) and create `$HOME/.pypirc` with:
+```
+[pypi]
+username = <username>
+password = <password>
+```
+
+Then upload the packages with:
+```
+twine upload dist/*
+```
