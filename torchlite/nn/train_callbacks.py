@@ -253,7 +253,7 @@ class ModelSaverCallback(TrainCallback):
         self.to_dir = to_dir
 
     @staticmethod
-    def restore_model(models, from_dir, load_with_cpu=False):
+    def restore_models(models, from_dir, load_with_cpu=False):
         """
             Restore model(s) from the given dir.
             If models are multiples they will be automatically matched to
@@ -261,6 +261,10 @@ class ModelSaverCallback(TrainCallback):
         Args:
             models (list): A list of models (Pytorch modules)
             from_dir (str): The directory where the model is stored
+            load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
+
+        Returns:
+            list: The restored models
         """
         i = 0
         for model in models:
@@ -275,6 +279,28 @@ class ModelSaverCallback(TrainCallback):
 
         assert i == len(models), "Not all models were restored. Please check that your passed models and files match"
         print(f"\n--- Model(s) restored from {from_dir} ---", end='\n\n')
+        return models
+
+    @staticmethod
+    def restore_model_from_file(model, file, load_with_cpu=False):
+        """
+        Restore a model from a file
+        Args:
+            model (nn.Module): A model module
+            file (file): A file containing the pretrained model to load in
+            load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
+
+        Returns:
+            nn.Module: The restored model
+        """
+        if os.path.isfile(file):
+            if load_with_cpu:
+                state_dict = torch.load(file, map_location='cpu')
+            else:
+                state_dict = torch.load(file)
+            model.load_state_dict(state_dict)
+            print(f"\n--- Model restored ---", end='\n\n')
+        return model
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]

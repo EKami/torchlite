@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchlite',
-    version='0.1.4.1',
+    version='0.1.4.2',
 
     description='A high level library for Pytorch',
     long_description="https://github.com/EKami/Torchlite/master/README.md",

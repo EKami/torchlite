@@ -71,10 +71,11 @@ def evaluate(args, num_workers=os.cpu_count()):
     else:
         to_dir = Path(args.to_dir)
 
+    generator_file = saved_model_dir / "Generator.pth"
     file_paths = tfiles.get_files(imgs_path)
     file_names = [name for name in tfiles.get_file_names(file_paths)]
     pil_images = [Image.open(image) for image in file_paths]
-    pred_images = eval.srgan_eval(pil_images, saved_model_dir.absolute(),
+    pred_images = eval.srgan_eval(pil_images, generator_file.absolute(),
                                   args.upscale_factor, args.cuda, num_workers)
 
     for i, pred in enumerate(pred_images):
@@ -94,7 +95,7 @@ def train(args):
 
     # Restore models if they exists
     if args.restore_models == 1:
-        model_saver.restore_model([netG, netD], saved_model_dir.absolute())
+        model_saver.restore_models([netG, netD], saved_model_dir.absolute())
 
     if args.gen_epochs > 0:
         print("---------------------- Generator training ----------------------")
