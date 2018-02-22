@@ -20,6 +20,7 @@ pip install -r requirements.txt
 ```
 
 to install the required dependencies.
+Then install pytorch from [here](http://pytorch.org/).
 
 ## Documentation
 
