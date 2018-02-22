@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchlite',
-    version='0.1.4.2',
+    version='0.1.4.3',
 
     description='A high level library for Pytorch',
     long_description="https://github.com/EKami/Torchlite/master/README.md",
@@ -24,8 +24,9 @@ setup(
 
     keywords='development',
     packages=find_packages(exclude=['tests']),
-    install_requires=["isoweek", "tqdm", "torchvision", "bcolz", "kaggle_data", "opencv_python",
+    install_requires=["isoweek", "tqdm", "bcolz", "kaggle_data", "opencv_python",
                       "scikit_image", "setuptools", "numpy", "matplotlib", "scipy", "Pillow",
                       "dask", "scikit_learn", "tensorboardX", "typing", "PyYAML",
-                      find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests", "torchlite.*"])],
+                      find_packages(exclude=["*.tests", "*.tests.*", "tests.*",
+                                             "tests", "torchlite.*", "torchvision.*"])],
 )
