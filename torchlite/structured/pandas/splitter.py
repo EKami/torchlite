@@ -9,11 +9,11 @@ import gc
 
 def _save_split(train_df, split_df, name, split_file):
     if os.path.exists(split_file):
-        print(f"{name} split already exits")
+        print("{} split already exits".format(name))
         return
 
     with ProgressBar():
-        print(f"Saving {name} split to file:")
+        print("Saving {} split to file:".format(name))
         if isinstance(train_df, dask.dataframe.core.DataFrame):
             split_df = split_df.compute()
         split_df.reset_index().to_feather(split_file)

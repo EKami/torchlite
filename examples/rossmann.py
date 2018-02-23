@@ -17,10 +17,10 @@ import datetime
 import torch.optim as optim
 from tqdm import tqdm
 
-import data.files
+from torchlite.data import files as tfiles
 from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore
-import torchlite.nn.metrics as metrics
+import torchlite.nn.metrics.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
@@ -267,8 +267,8 @@ def main():
 
     # Save the predictions as a csv file
     sub_file_path = os.path.join(output_path, "submit.csv")
-    data.files.to_csv(preprocessed_test_path, sub_file_path, 'Id', 'Sales', test_pred, read_format='feather')
-    print(f"Predictions saved to {sub_file_path}")
+    tfiles.to_csv(preprocessed_test_path, sub_file_path, 'Id', 'Sales', test_pred, read_format='feather')
+    print("Predictions saved to {}".format(sub_file_path))
 
 
 if __name__ == "__main__":

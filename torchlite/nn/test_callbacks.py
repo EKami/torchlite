@@ -38,7 +38,8 @@ class TestCallbackList(object):
         self.queue_length = queue_length
 
     def append(self, callback):
-        assert isinstance(callback, TestCallback), f"Your callback is not an instance of TestCallback: {callback}"
+        assert isinstance(callback, TestCallback), \
+            "Your callback is not an instance of TestCallback: {}".format(callback)
         self.callbacks.append(callback)
 
     def on_test_begin(self, logs=None):

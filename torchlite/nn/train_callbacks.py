@@ -43,7 +43,8 @@ class TrainCallbackList(object):
         self.queue_length = queue_length
 
     def append(self, callback):
-        assert isinstance(callback, TrainCallback), f"Your callback is not an instance of TrainCallback: {callback}"
+        assert isinstance(callback, TrainCallback), \
+            "Your callback is not an instance of TrainCallback: {}".format(callback)
         self.callbacks.append(callback)
 
     def on_epoch_begin(self, epoch, logs=None):
@@ -278,7 +279,7 @@ class ModelSaverCallback(TrainCallback):
                 i += 1
 
         assert i == len(models), "Not all models were restored. Please check that your passed models and files match"
-        print(f"\n--- Model(s) restored from {from_dir} ---", end='\n\n')
+        print("\n--- Model(s) restored from {} ---".format(from_dir), end='\n\n')
         return models
 
     @staticmethod
@@ -299,7 +300,7 @@ class ModelSaverCallback(TrainCallback):
             else:
                 state_dict = torch.load(file)
             model.load_state_dict(state_dict)
-            print(f"\n--- Model restored ---", end='\n\n')
+            print("\n--- Model restored ---", end='\n\n')
         return model
 
     def on_epoch_end(self, epoch, logs=None):
@@ -308,7 +309,7 @@ class ModelSaverCallback(TrainCallback):
             if epoch % self.every_n_epoch == 0 or epoch == self.epochs:
                 for k, m in logs['models'].items():
                     torch.save(m.state_dict(), os.path.join(self.to_dir, k + ".pth"))
-                print(f"\n--- Model(s) saved in {self.to_dir} ---", end='\n\n')
+                print("\n--- Model(s) saved in {} ---".format(self.to_dir), end='\n\n')
 
 
 class CosineAnnealingCallback(TrainCallback):
@@ -365,4 +366,4 @@ class TensorboardVisualizerCallback(TrainCallback):
 
     def on_train_end(self, logs=None):
         self.writer.close()
-        print(f"\n--- Tensorboard logs saved in {self.to_dir} ---", end='\n\n')
+        print("\n--- Tensorboard logs saved in {} ---".format(self.to_dir), end='\n\n')

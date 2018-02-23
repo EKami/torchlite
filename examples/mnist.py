@@ -56,7 +56,7 @@ def main():
     # y_pred = learner.predict(test_loader)
     # y_true = test_loader.dataset.test_labels
     #
-    # print(f"Test accuracy: {CategoricalAccuracy()('test', y_pred, y_true)}%")
+    # print("Test accuracy: {}%".format(CategoricalAccuracy()('test', y_pred, y_true)))
 
 
 if __name__ == "__main__":

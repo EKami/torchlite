@@ -58,11 +58,11 @@ def _fix_na(df, na_dict):
         na_dict = {}
     print("Calculating NA...")
 
-    print(f"--- Fixing NA values ({len(columns)} passes) ---")
+    print("--- Fixing NA values ({} passes) ---".format(len(columns)))
     for c in tqdm(columns, total=len(columns)):
         na_dict = fix_missing(df, df[c], c, na_dict)
 
-    print(f"List of NA columns fixed: {list(na_dict.keys())}")
+    print("List of NA columns fixed: {}".format(list(na_dict.keys())))
     return df, na_dict
 
 
@@ -75,7 +75,7 @@ def scale_vars(df, scaler=None):
         scaler = StandardScaler().fit(df[num_cols].as_matrix())
     df[num_cols] = scaler.transform(df[num_cols])
     df[num_cols] = df[num_cols].astype(np.float32)
-    print(f"List of scaled columns: {num_cols}")
+    print("List of scaled columns: {}".format(num_cols))
     return scaler
 
 
@@ -141,14 +141,14 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
     df = df[[feat for feat in all_feat if feat in df.columns]].copy()
 
     df, encoder_blueprint.na_dict = _fix_na(df, encoder_blueprint.na_dict)
-    print(f"Warning: Missing columns: {missing_col}, dropping them...")
-    print(f"Categorizing features {categ_features}")
+    print("Warning: Missing columns: {}, dropping them...".format(missing_col))
+    print("Categorizing features {}".format(categ_features))
     # If the categorical mapping exists
     if encoder_blueprint.categ_var_map:
         for col_name, values in df.items():
             if col_name in categ_features:
                 var_map = encoder_blueprint.categ_var_map
-                print(f"Encoding categorical feature {col_name}...")
+                print("Encoding categorical feature {}...".format(col_name))
                 df[col_name] = pd.Categorical(values,
                                               categories=var_map[col_name].cat.categories,
                                               ordered=True)
@@ -178,11 +178,11 @@ def apply_encoding(df, cont_features, categ_features, scale_continuous=False,
     non_num_cols = get_all_non_numeric(df)
     nan_ratio = df.isnull().sum() / len(df)
 
-    print(f"------- Dataframe of len {len(df.columns)} summary -------\n")
+    print("------- Dataframe of len {} summary -------\n".format(len(df.columns)))
     for col, nan, dtype in zip(df.columns, nan_ratio.values, df.dtypes.values):
         print("Column {:<30}:\t dtype: {:<10}\t NaN ratio: {}".format(col, str(dtype), nan))
     if len(non_num_cols) > 0 and nan_ratio > 0:
-        raise Exception(f"Not all columns are numeric or NaN has been found: {non_num_cols}.")
+        raise Exception("Not all columns are numeric or NaN has been found: {}.".format(non_num_cols))
 
     print("---------- Preprocessing done -----------")
     return df, encoder_blueprint

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchlite',
-    version='0.1.4.3',
+    version='0.1.4.4',
 
     description='A high level library for Pytorch',
     long_description="https://github.com/EKami/Torchlite/master/README.md",
@@ -19,6 +19,8 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6'
     ],
 

@@ -38,7 +38,7 @@ def merge_datasets(on_df: list, from_df: list, merge_fnc: list, output_files: li
             on_df[idf_main] = df_second_fnc(df_main, df_second)
 
     for main_df, df_ofile in zip(on_df, output_files):
-        print(f"Processing {df_ofile}")
+        print("Processing {}".format(df_ofile))
         with ProgressBar():
             main_df.to_parquet(df_ofile, engine='fastparquet')
     # Ensure the original df have the same number of rows
