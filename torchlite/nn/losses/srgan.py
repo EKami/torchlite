@@ -40,10 +40,9 @@ class PerceptualLoss:
         # TODO add this loss
         self.tv_loss = TVLoss()  # Total variation loss (not included in the original paper)
 
-    def __call__(self, d_sr_out, sr_images, target_images):
+    def __call__(self, eps, d_sr_out, sr_images, target_images):
         # Adversarial Loss
-        #adversarial_loss = 1e-3 * F.binary_cross_entropy(d_sr_out, torch.ones_like(d_sr_out))
-        adversarial_loss = 1e-3 * torch.sum(-torch.log(d_sr_out))
+        adversarial_loss = 0.001 * torch.mean(-torch.log(d_sr_out + eps))
 
         # MSE Loss
         mse_loss = self.mse_loss(sr_images, target_images)
@@ -60,6 +59,6 @@ class PerceptualLoss:
 
         vgg_sr_out = self.vgg_network(Variable(sr_images_vgg))
         vgg_hr_out = self.vgg_network(Variable(hr_images_vgg))
-        vgg_loss = 0.006 * self.mse_loss(vgg_sr_out, vgg_hr_out)
+        vgg_loss = 0.0061 * self.mse_loss(vgg_sr_out, vgg_hr_out)
 
         return mse_loss, adversarial_loss, vgg_loss
