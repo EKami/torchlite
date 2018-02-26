@@ -90,8 +90,8 @@ def train(args):
 
     netG = Generator(args.upscale_factor)
     netD = Discriminator((3, args.crop_size, args.crop_size))
-    optimizer_g = optim.Adam(netG.parameters())
-    optimizer_d = optim.Adam(netD.parameters())
+    optimizer_g = optim.Adam(netG.parameters(), lr=1e-4)
+    optimizer_d = optim.Adam(netD.parameters(), lr=1e-4)
 
     # Restore models if they exists
     if args.restore_models == 1:
@@ -125,7 +125,7 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=1, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=32, type=int, help='Batch size')

@@ -11,6 +11,7 @@ import cv2
 import torch
 import numpy as np
 import random
+import torchlite.nn.tools.image_tools as im_tools
 from PIL import Image, ImageFilter
 import torch.nn.functional as F
 
@@ -60,3 +61,19 @@ class RandomSmooth:
         if rnd <= self.active_range:
             image = image.filter(ImageFilter.SMOOTH)
         return image
+
+
+class Denormalize:
+    def __init__(self, mean, std):
+        """
+            Denormalize a Tensor
+
+        Args:
+            mean (sequence): Sequence of means for each channel.
+            std (sequence): Sequence of standard deviations for each channels.
+        """
+        self.std = std
+        self.mean = mean
+
+    def __call__(self, tensor):
+        return im_tools.denormalize(tensor, self.mean, self.std)

@@ -1,6 +1,7 @@
 import os
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
+import torchlite.nn.transforms as ttransforms
 from PIL import Image
 
 
@@ -21,7 +22,8 @@ class TrainDataset(Dataset):
         self.crop_size = calculate_valid_crop_size(crop_size, upscale_factor)
         self.hr_transform = transforms.Compose([
             transforms.RandomCrop(self.crop_size),
-            transforms.ToTensor()  # Is normalized in the range [0, 1]
+            transforms.ToTensor(),  # Is normalized in the range [0, 1]
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
         ])
         self.lr_transform = transforms.Compose([
             transforms.ToPILImage(),
@@ -30,7 +32,8 @@ class TrainDataset(Dataset):
             # (1) Random Rotation: Randomly rotate the images by 90 or 180 degrees.
             # (2) Brightness adjusting: Randomly adjust the brightness of the images.
             # (3) Saturation adjusting: Randomly adjust the saturation of the images
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
         ])
 
     def __getitem__(self, index):
@@ -72,6 +75,7 @@ class VggTransformDataset(Dataset):
         """
         self.images_batch = images_batch.clone()
         self.vgg_transforms = transforms.Compose([
+            ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             transforms.ToPILImage(),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),

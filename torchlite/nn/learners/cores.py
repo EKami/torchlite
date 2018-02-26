@@ -140,7 +140,7 @@ class SRGanCore(BaseCore):
         self.g_optim = g_optimizer
         self.netD = discriminator
         self.netG = generator
-        self.eps = 1e-12 # The eps added to prevent nan
+        self.eps = 1e-12  # The eps added to prevent nan
         self.on_new_epoch()
 
     def on_train_mode(self):
@@ -171,22 +171,25 @@ class SRGanCore(BaseCore):
         self.mse_loss_meter = tensor_tools.AverageMeter()
         self.adversarial_loss_meter = tensor_tools.AverageMeter()
         self.vgg_loss_meter = tensor_tools.AverageMeter()
+        self.tv_loss_meter = tensor_tools.AverageMeter()
 
     def _update_loss_logs(self, g_loss, d_loss, mse_loss,
-                          adversarial_loss, vgg_loss):
+                          adversarial_loss, vgg_loss, tv_loss):
         # Update logs
         self.g_avg_meter.update(g_loss)
         self.d_avg_meter.update(d_loss)
         self.mse_loss_meter.update(mse_loss)
         self.adversarial_loss_meter.update(adversarial_loss)
         self.vgg_loss_meter.update(vgg_loss)
+        self.tv_loss_meter.update(tv_loss)
 
         self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
         self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.avg,
                                          "discriminator": self.d_avg_meter.avg,
                                          "mse": self.mse_loss_meter.avg,
                                          "adversarial": self.adversarial_loss_meter.avg,
-                                         "vgg": self.vgg_loss_meter.avg}})
+                                         "vgg": self.vgg_loss_meter.avg,
+                                         "tv": self.tv_loss_meter.avg}})
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
@@ -210,9 +213,11 @@ class SRGanCore(BaseCore):
         d_hr_out = self.netD(hr_images)  # Sigmoid output
         d_sr_out = self.netD(sr_images)  # Sigmoid output
 
-        d_sr_loss = torch.log(1 - d_sr_out + self.eps)
-        d_hr_loss = torch.log(d_hr_out + self.eps)
-        d_loss = torch.mean(-(d_sr_loss + d_hr_loss))
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.ones_like(d_hr_out))
+        d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
+        # d_sr_loss = torch.log(1 - d_sr_out + self.eps)
+        # d_hr_loss = torch.log(d_hr_out + self.eps)
+        d_loss = d_hr_loss + d_sr_loss
 
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
 
@@ -220,13 +225,13 @@ class SRGanCore(BaseCore):
         # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
         ###########################
         # Gives feedback to the generator with d_sr_out
-        mse_loss, adversarial_loss, vgg_loss = self.g_criterion(self.eps, d_sr_out, sr_images, hr_images)
-        g_loss = mse_loss + adversarial_loss + vgg_loss
+        mse_loss, adversarial_loss, vgg_loss, tv_loss = self.g_criterion(self.eps, d_sr_out, sr_images, hr_images)
+        g_loss = mse_loss + adversarial_loss + vgg_loss + tv_loss
 
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0], mse_loss.data[0],
-                               adversarial_loss.data[0], vgg_loss.data[0])
+                               adversarial_loss.data[0], vgg_loss.data[0], tv_loss.data[0])
 
         return sr_images
 

@@ -4,23 +4,29 @@ import numpy as np
 import torch
 
 
-def denormalize(image: np.ndarray, std, mean, channel_type="channel_first"):
+def _is_tensor_image(img):
+    return torch.is_tensor(img) and img.ndimension() == 3
+
+
+def denormalize(tensor, mean, std, channel_type="channel_first"):
     """
-        Reverse the normalization done to an image.
+        Denormalize a tensor image with mean and standard deviation.
     Args:
-        image (np.ndarray): Image matrix
-        std (np.ndarray, list): Standard deviation over channels
-        mean (np.ndarray, list): Mean over channels
+        tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        mean (sequence): Sequence of means for each channel.
+        std (sequence): Sequence of standard deviations for each channels.
         channel_type (str): Either channel_first or channel_last
     Returns:
-        np.ndarray: The image denormalized as (Height, Width, Channels)
+        Tensor: Normalized Tensor image.
     """
+    if not _is_tensor_image(tensor):
+        raise TypeError('tensor is not a torch image.')
     if channel_type == "channel_first":
-        image = np.transpose(image, (1, 2, 0))
+        tensor = np.transpose(tensor, (1, 2, 0))
 
-    image = image * std + mean
-    image = (image * 255).astype(np.uint8)
-    return image
+    for t, m, s in zip(tensor, mean, std):
+        t.mul_(s).add_(m)
+    return tensor
 
 
 def image_to_tensor(image, mean=0, std=1.):

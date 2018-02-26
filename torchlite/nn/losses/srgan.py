@@ -32,17 +32,17 @@ class PerceptualLoss:
         # TODO try VGG54
         vgg = vgg19(pretrained=True)
         # Don't take the classifier block
-        vgg_network = nn.Sequential(*FinetunedModelTools.freeze(ttools.children(vgg.features))).eval()
+        vgg_network = nn.Sequential(*FinetunedModelTools.freeze(ttools.children(vgg.features)[:36])).eval()
         if self.use_cuda:
             vgg_network.cuda()
         self.vgg_network = vgg_network
         self.mse_loss = nn.MSELoss()
-        # TODO add this loss
         self.tv_loss = TVLoss()  # Total variation loss (not included in the original paper)
 
     def __call__(self, eps, d_sr_out, sr_images, target_images):
         # Adversarial Loss
-        adversarial_loss = 0.001 * torch.mean(-torch.log(d_sr_out + eps))
+        #adversarial_loss = 0.001 * torch.mean(-torch.log(d_sr_out + eps))
+        adversarial_loss = 0.001 * F.binary_cross_entropy(d_sr_out, torch.ones_like(d_sr_out))
 
         # MSE Loss
         mse_loss = self.mse_loss(sr_images, target_images)
@@ -61,4 +61,6 @@ class PerceptualLoss:
         vgg_hr_out = self.vgg_network(Variable(hr_images_vgg))
         vgg_loss = 0.0061 * self.mse_loss(vgg_sr_out, vgg_hr_out)
 
-        return mse_loss, adversarial_loss, vgg_loss
+        tv_loss = 2e-8 * self.tv_loss(sr_images)
+
+        return mse_loss, adversarial_loss, vgg_loss, tv_loss

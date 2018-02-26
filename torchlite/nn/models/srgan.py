@@ -20,7 +20,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=9, padding=4),
-            nn.ReLU()
+            nn.PReLU()
         )
         self.res_blocks = []
         for i in range(res_blocks_count):
@@ -29,7 +29,7 @@ class Generator(nn.Module):
         self.res_blocks = nn.Sequential(*self.res_blocks)
         self.block_x1 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64)
+            nn.InstanceNorm2d(64)
         )
         self.block_x2 = nn.Sequential(*[UpsampleBLock(64, 2) for _ in range(upsample_block_num)])
         self.block_x3 = nn.Conv2d(64, 3, kernel_size=1, padding=0)
@@ -50,15 +50,15 @@ class ResidualBlock(nn.Module):
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(channels)
-        self.relu = nn.ReLU()
+        self.bn1 = nn.InstanceNorm2d(channels)
+        self.prelu = nn.PReLU()
         self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(channels)
+        self.bn2 = nn.InstanceNorm2d(channels)
 
     def forward(self, x):
         residual = self.conv1(x)
         residual = self.bn1(residual)
-        residual = self.relu(residual)
+        residual = self.prelu(residual)
         residual = self.conv2(residual)
         residual = self.bn2(residual)
 
@@ -87,43 +87,43 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(64, 128, kernel_size=(4, 4), stride=2, padding=1),
-            nn.BatchNorm2d(128),
+            nn.InstanceNorm2d(128),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(128, 256, kernel_size=(4, 4), stride=2, padding=1),
-            nn.BatchNorm2d(256),
+            nn.InstanceNorm2d(256),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(256, 512, kernel_size=(4, 4), stride=2, padding=1),
-            nn.BatchNorm2d(512),
+            nn.InstanceNorm2d(512),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(512, 1024, kernel_size=(4, 4), stride=2, padding=1),
-            nn.BatchNorm2d(1024),
+            nn.InstanceNorm2d(1024),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(1024, 2048, kernel_size=(4, 4), stride=2, padding=1),
-            nn.BatchNorm2d(2048),
+            nn.InstanceNorm2d(2048),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(2048, 1024, kernel_size=(1, 1), stride=1, padding=1),
-            nn.BatchNorm2d(1024),
+            nn.InstanceNorm2d(1024),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(1024, 512, kernel_size=(1, 1), stride=1, padding=1),
-            nn.BatchNorm2d(512),
+            nn.InstanceNorm2d(512),
         )
         self.block2 = nn.Sequential(
             nn.Conv2d(512, 128, kernel_size=(1, 1), stride=1, padding=1),
-            nn.BatchNorm2d(128),
+            nn.InstanceNorm2d(128),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(128, 128, kernel_size=(3, 3), stride=1, padding=0),
-            nn.BatchNorm2d(128),
+            nn.InstanceNorm2d(128),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(128, 512, kernel_size=(3, 3), stride=1, padding=1),
-            nn.BatchNorm2d(512),
+            nn.InstanceNorm2d(512),
         )
 
         in_size = self.infer_lin_size(input_shape)
