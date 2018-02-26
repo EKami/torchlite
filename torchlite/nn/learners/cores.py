@@ -172,8 +172,10 @@ class SRGanCore(BaseCore):
         self.adversarial_loss_meter = tensor_tools.AverageMeter()
         self.vgg_loss_meter = tensor_tools.AverageMeter()
         self.tv_loss_meter = tensor_tools.AverageMeter()
+        self.d_hr_loss_meter = tensor_tools.AverageMeter()
+        self.d_sr_loss_meter = tensor_tools.AverageMeter()
 
-    def _update_loss_logs(self, g_loss, d_loss, mse_loss,
+    def _update_loss_logs(self, g_loss, d_loss, mse_loss, d_hr_loss, d_sr_loss,
                           adversarial_loss, vgg_loss, tv_loss):
         # Update logs
         self.g_avg_meter.update(g_loss)
@@ -182,11 +184,15 @@ class SRGanCore(BaseCore):
         self.adversarial_loss_meter.update(adversarial_loss)
         self.vgg_loss_meter.update(vgg_loss)
         self.tv_loss_meter.update(tv_loss)
+        self.d_hr_loss_meter.update(d_hr_loss)
+        self.d_sr_loss_meter.update(d_sr_loss)
 
         self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
         self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.avg,
                                          "discriminator": self.d_avg_meter.avg,
                                          "mse": self.mse_loss_meter.avg,
+                                         "(Maximize) d_hr_loss": self.d_hr_loss_meter.avg,
+                                         "(Minimize) d_sr_loss": self.d_sr_loss_meter.avg,
                                          "adversarial": self.adversarial_loss_meter.avg,
                                          "vgg": self.vgg_loss_meter.avg,
                                          "tv": self.tv_loss_meter.avg}})
@@ -231,7 +237,8 @@ class SRGanCore(BaseCore):
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss.data[0], d_loss.data[0], mse_loss.data[0],
-                               adversarial_loss.data[0], vgg_loss.data[0], tv_loss.data[0])
+                               d_hr_loss.data[0], d_sr_loss.data[0], adversarial_loss.data[0],
+                               vgg_loss.data[0], tv_loss.data[0])
 
         return sr_images
 
