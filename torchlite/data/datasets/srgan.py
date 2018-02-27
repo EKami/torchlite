@@ -55,7 +55,8 @@ class EvalDataset(Dataset):
         """
         self.images = images
         self.tfs = transforms.Compose([
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
         ])
 
     def __getitem__(self, index):

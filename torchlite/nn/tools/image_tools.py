@@ -8,21 +8,18 @@ def _is_tensor_image(img):
     return torch.is_tensor(img) and img.ndimension() == 3
 
 
-def denormalize(tensor, mean, std, channel_type="channel_first"):
+def denormalize(tensor, mean, std):
     """
         Denormalize a tensor image with mean and standard deviation.
     Args:
         tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
         mean (sequence): Sequence of means for each channel.
         std (sequence): Sequence of standard deviations for each channels.
-        channel_type (str): Either channel_first or channel_last
     Returns:
         Tensor: Normalized Tensor image.
     """
     if not _is_tensor_image(tensor):
         raise TypeError('tensor is not a torch image.')
-    if channel_type == "channel_first":
-        tensor = np.transpose(tensor, (1, 2, 0))
 
     for t, m, s in zip(tensor, mean, std):
         t.mul_(s).add_(m)
