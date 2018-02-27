@@ -28,6 +28,7 @@ class TrainDataset(Dataset):
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
         ])
         self.lr_transform = transforms.Compose([
+            ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             transforms.ToPILImage(),
             transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
             # TODO augment the training data if random_augmentations in the following ways:
