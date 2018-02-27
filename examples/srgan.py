@@ -18,9 +18,9 @@ from torch.utils.data import DataLoader
 import torchlite.data.fetcher as fetcher
 import torchlite.data.files as tfiles
 import torchlite.nn.tools.image_tools as image_tools
-from torchlite.nn.models.srgan import Generator, Discriminator
+from torchlite.nn.models.srgan import Generator, Discriminator, weights_init
 from torchlite.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlite.data.datasets.srgan import TrainDataset, EvalDataset
+from torchlite.data.datasets.srgan import TrainDataset
 from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore, SRGanCore
 from torchlite.nn.losses.srgan import PerceptualLoss
@@ -89,7 +89,9 @@ def train(args):
     model_saver = ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5)
 
     netG = Generator(args.upscale_factor)
+    netG.apply(weights_init)
     netD = Discriminator((3, args.crop_size, args.crop_size))
+    netD.apply(weights_init)
     optimizer_g = optim.Adam(netG.parameters(), lr=1e-4)
     optimizer_d = optim.Adam(netD.parameters(), lr=1e-4)
 
