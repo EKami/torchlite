@@ -45,12 +45,12 @@ def get_loaders(args, num_workers):
         train_hr_path = Path(args.hr_dir)
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
-    train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
-                            crop_size=args.crop_size, upscale_factor=args.upscale_factor)
+    train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()), crop_size=args.crop_size,
+                            upscale_factor=args.upscale_factor, random_augmentations=True)
 
     # Use the DIV2K dataset for validation as default
-    val_ds = TrainDataset(tfiles.get_files(val_hr_path.absolute()),
-                          crop_size=args.crop_size, upscale_factor=args.upscale_factor)
+    val_ds = TrainDataset(tfiles.get_files(val_hr_path.absolute()), crop_size=args.crop_size,
+                          upscale_factor=args.upscale_factor, random_augmentations=False)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)
