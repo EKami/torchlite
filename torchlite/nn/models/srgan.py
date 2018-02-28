@@ -6,15 +6,7 @@ import math
 
 
 class Generator(nn.Module):
-    def __init__(self, scale_factor, res_blocks_count=16):
-        """
-        Generator for SRGAN
-        Args:
-            scale_factor (int): The new scale for the resulting image (x2, x4...)
-            res_blocks_count (int): Number of residual blocks, the less there is,
-            the faster the inference time will be but the network will capture
-            less information.
-        """
+    def __init__(self, scale_factor, res_blocks_count=6):
         upsample_block_num = int(math.log(scale_factor, 2))
 
         super(Generator, self).__init__()
@@ -22,38 +14,37 @@ class Generator(nn.Module):
             nn.Conv2d(3, 64, kernel_size=9, padding=4),
             nn.PReLU()
         )
-        self.res_blocks = []
-        for i in range(res_blocks_count):
-            self.res_blocks.append(ResidualBlock(64))
 
+        self.res_blocks = [ResidualBlock(64) for _ in range(res_blocks_count)]
         self.res_blocks = nn.Sequential(*self.res_blocks)
-        self.block_x1 = nn.Sequential(
+
+        self.block3 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.InstanceNorm2d(64)
+            nn.PReLU()
         )
-        self.block_x2 = nn.Sequential(*[UpsampleBLock(64, 2) for _ in range(upsample_block_num)])
-        self.block_x3 = nn.Conv2d(64, 3, kernel_size=1, padding=0)
+
+        up_blocks = [UpsampleBLock(64, 2) for _ in range(upsample_block_num)]
+        self.up_blocks = nn.Sequential(*up_blocks)
+        self.block4 = nn.Conv2d(64, 3, kernel_size=9, padding=4)
 
     def forward(self, x):
-        block1 = self.block1(x)
-        res_blocks = self.res_blocks(block1)
-        block_x1 = self.block_x1(res_blocks)
-        block_x2 = self.block_x2(block1 + block_x1)  # ElementWise sum
+        block_x1 = self.block1(x)
+        res_blocks = self.res_blocks(block_x1)
+        block_x3 = self.block3(res_blocks)
+        up_blocks = self.up_blocks(block_x1 + block_x3)
+        block_x4 = self.block4(up_blocks)
 
-        # TODO causes a memory leak on CPU
-        block_x3 = self.block_x3(block_x2)
-
-        return F.tanh(block_x3)
+        return (F.tanh(block_x4) + 1) / 2
 
 
 class ResidualBlock(nn.Module):
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn1 = nn.InstanceNorm2d(channels)
+        self.bn1 = nn.BatchNorm2d(channels)
         self.prelu = nn.PReLU()
         self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn2 = nn.InstanceNorm2d(channels)
+        self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x):
         residual = self.conv1(x)
@@ -62,7 +53,7 @@ class ResidualBlock(nn.Module):
         residual = self.conv2(residual)
         residual = self.bn2(residual)
 
-        return x + residual  # ElementWise sum
+        return x + residual
 
 
 class UpsampleBLock(nn.Module):
@@ -82,70 +73,47 @@ class UpsampleBLock(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, input_shape):
         super(Discriminator, self).__init__()
-        self.block1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=(4, 4), stride=2, padding=1),
+        self.net = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(64, 128, kernel_size=(4, 4), stride=2, padding=1),
-            nn.InstanceNorm2d(128),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(128, 256, kernel_size=(4, 4), stride=2, padding=1),
-            nn.InstanceNorm2d(256),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(256, 512, kernel_size=(4, 4), stride=2, padding=1),
-            nn.InstanceNorm2d(512),
+            nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(512, 1024, kernel_size=(4, 4), stride=2, padding=1),
-            nn.InstanceNorm2d(1024),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(1024, 2048, kernel_size=(4, 4), stride=2, padding=1),
-            nn.InstanceNorm2d(2048),
+            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(2048, 1024, kernel_size=(1, 1), stride=1, padding=1),
-            nn.InstanceNorm2d(1024),
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(1024, 512, kernel_size=(1, 1), stride=1, padding=1),
-            nn.InstanceNorm2d(512),
+            nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
+
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(512, 1024, kernel_size=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(1024, 1, kernel_size=1)
         )
-        self.block2 = nn.Sequential(
-            nn.Conv2d(512, 128, kernel_size=(1, 1), stride=1, padding=1),
-            nn.InstanceNorm2d(128),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(128, 128, kernel_size=(3, 3), stride=1, padding=0),
-            nn.InstanceNorm2d(128),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(128, 512, kernel_size=(3, 3), stride=1, padding=1),
-            nn.InstanceNorm2d(512),
-        )
-
-        in_size = self.infer_lin_size(input_shape)
-
-        self.out_block = nn.Sequential(
-            Flatten(),
-            nn.Linear(in_size, 1),
-            nn.Sigmoid(),
-        )
-
-    def infer_lin_size(self, shape):
-        bs = 1
-        input = torch.autograd.Variable(torch.rand(bs, *shape))
-        size = self.block1(input).data.view(bs, -1).size(1)
-        return size
 
     def forward(self, x):
-        block1 = self.block1(x)
-        block2 = self.block2(block1)
-        block3 = F.leaky_relu(block1 + block2, 0.2)
-        out = self.out_block(block3)
-        return out
+        batch_size = x.size(0)
+        return F.sigmoid(self.net(x).view(batch_size))
 
 
 def weights_init(m):

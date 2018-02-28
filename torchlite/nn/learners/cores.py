@@ -232,7 +232,7 @@ class SRGanCore(BaseCore):
         ###########################
         # Gives feedback to the generator with d_sr_out
         mse_loss, adversarial_loss, vgg_loss, tv_loss = self.g_criterion(self.eps, d_sr_out, sr_images, hr_images)
-        g_loss = mse_loss + adversarial_loss + vgg_loss + tv_loss
+        g_loss = mse_loss + adversarial_loss + vgg_loss # + tv_loss
 
         self._optimize(self.netG, self.g_optim, g_loss)
 
