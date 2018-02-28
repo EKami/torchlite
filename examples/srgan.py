@@ -128,9 +128,9 @@ def main():
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
     train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=10, type=int,
+    train_parser.add_argument('--adv_epochs', default=100, type=int,
                               help='Number of epochs for the adversarial training')
-    train_parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
                                    "1: Restore the models from the 'checkpoint' folder")
