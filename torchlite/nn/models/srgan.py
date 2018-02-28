@@ -71,7 +71,7 @@ class UpsampleBLock(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, input_shape):
+    def __init__(self):
         super(Discriminator, self).__init__()
         self.net = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),

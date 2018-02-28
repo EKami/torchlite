@@ -90,7 +90,7 @@ def train(args):
 
     netG = Generator(args.upscale_factor)
     netG.apply(weights_init)
-    netD = Discriminator((3, args.crop_size, args.crop_size))
+    netD = Discriminator()
     netD.apply(weights_init)
     optimizer_g = optim.Adam(netG.parameters(), lr=1e-4)
     optimizer_d = optim.Adam(netD.parameters(), lr=1e-4)
