@@ -35,7 +35,7 @@ def srgan_eval(images, generator_file, upscale_factor, use_cuda, num_workers=os.
         ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         transforms.ToPILImage(),
     ])
-    for i, pred in enumerate(predictions):
+    for pred in predictions:
         pred = pred.view(pred.size()[1:])  # Remove batch size == 1
         images_pred.append(tfs(pred.cpu()))
 
