@@ -295,7 +295,8 @@ class ModelSaverCallback(TrainCallback):
             nn.Module: The restored model
         """
         if load_with_cpu:
-            state_dict = torch.load(file, map_location='cpu')
+            # Load all tensors onto the CPU
+            state_dict = torch.load(file, map_location=lambda storage, loc: storage)
         else:
             state_dict = torch.load(file)
         model.load_state_dict(state_dict)
