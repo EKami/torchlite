@@ -25,7 +25,6 @@ class TrainDataset(Dataset):
         sometimes = lambda aug: iaa.Sometimes(0.25, aug)
 
         self.hr_image_filenames = hr_image_filenames
-        # http://pillow.readthedocs.io/en/latest/reference/ImageFilter.html
         self.crop_size = calculate_valid_crop_size(crop_size, upscale_factor)
         self.hr_transform = transforms.Compose([
             transforms.RandomCrop(self.crop_size) if random_augmentations else transforms.CenterCrop(self.crop_size),
@@ -43,10 +42,6 @@ class TrainDataset(Dataset):
                 rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
                 sometimes(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)),
             ]),
-            # TODO augment the training data if random_augmentations in the following ways:
-            # (1) Random Rotation: Randomly rotate the images by 90 or 180 degrees.
-            # (2) Brightness adjusting: Randomly adjust the brightness of the images.
-            # (3) Saturation adjusting: Randomly adjust the saturation of the images
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
         ])
