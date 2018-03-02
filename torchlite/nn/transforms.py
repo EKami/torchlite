@@ -6,10 +6,15 @@ https://github.com/aleju/imgaug
 These classes are intended to be used with torchvision.transforms.
 Typically you could do: transforms.Compose([FactorNormalize()])
 """
+import os
 import random
 import numpy as np
+from pathlib import Path
+from typing import Union
 import torchlite.nn.tools.image_tools as im_tools
+import torchvision.transforms as transforms
 from PIL import Image, ImageFilter
+import torch
 import torch.nn.functional as F
 import Augmentor
 from imgaug import augmenters as iaa
@@ -46,13 +51,21 @@ class ImgAugWrapper:
 
 
 class ImgSaver:
-    def __init__(self):
+    def __init__(self, to_file):
         """
         Save an image to disk
-        """
 
-    def __call__(self, image: Image):
-        pass
+        Args:
+            to_file (str): Path where to save the image (the directories will be created if they doesn't exist)
+        """
+        self.to_file = Path(to_file)
+        if not os.path.exists(self.to_file.parent):
+            os.makedirs(self.to_file.parent)
+
+    def __call__(self, image: Union[Image.Image, torch.Tensor]):
+        if isinstance(image, torch.Tensor):
+            image = transforms.ToPILImage()(image)
+        image.save(self.to_file, "png")
 
 
 class FactorNormalize:

@@ -32,7 +32,7 @@ def srgan_eval(images, generator_file, upscale_factor, use_cuda, num_workers=os.
     images_pred = []
     predictions = learner.predict(eval_dl)
     tfs = transforms.Compose([
-        #ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         transforms.ToPILImage(),
     ])
     for pred in predictions:

@@ -23,7 +23,6 @@ class TrainDataset(Dataset):
         # Imgaug augmentations
         rarely = lambda aug: iaa.Sometimes(0.1, aug)
         sometimes = lambda aug: iaa.Sometimes(0.25, aug)
-        often = lambda aug: iaa.Sometimes(0.5, aug)
 
         self.hr_image_filenames = hr_image_filenames
         # http://pillow.readthedocs.io/en/latest/reference/ImageFilter.html
@@ -37,9 +36,13 @@ class TrainDataset(Dataset):
             ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             transforms.ToPILImage(),
             transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
-            # ttransforms.ImgAugWrapper([
-            #     often(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)))
-            # ]),
+            ttransforms.ImgAugWrapper([
+                rarely(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5))),
+                rarely(iaa.GaussianBlur((0, 2.0))),
+                rarely(iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5)),
+                rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
+                sometimes(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)),
+            ]),
             # TODO augment the training data if random_augmentations in the following ways:
             # (1) Random Rotation: Randomly rotate the images by 90 or 180 degrees.
             # (2) Brightness adjusting: Randomly adjust the brightness of the images.
@@ -50,7 +53,28 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         hr_image = self.hr_transform(Image.open(self.hr_image_filenames[index]))
-        lr_image = self.lr_transform(hr_image)
+        lr_image = self.lr_transform(hr_image.clone())
+
+        # ---- Used to check the transformations (Uncomment to test)
+        # # HR save
+        # transforms.Compose([
+        #     ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/hr_img.png")])(hr_image)
+        # # AUG save
+        # transforms.Compose([
+        #     ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        #     transforms.ToPILImage(),
+        #
+        #     ttransforms.ImgAugWrapper([
+        #         # Put your test image transformations here
+        #         iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))
+        #     ]),
+        #
+        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/aug_img.png")])(hr_image)
+        # # LR save
+        # transforms.Compose([
+        #     ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/lr_img.png")])(lr_image)
 
         return lr_image, hr_image
 
