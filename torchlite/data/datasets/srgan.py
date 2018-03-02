@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 import torchlite.nn.transforms as ttransforms
 from PIL import Image
+from imgaug import augmenters as iaa
 
 
 def calculate_valid_crop_size(crop_size, upscale_factor):
@@ -19,6 +20,11 @@ class TrainDataset(Dataset):
             upscale_factor (int): The upscale factor, either 2, 4 or 8
             random_augmentations (bool): True if the images need to be randomly augmented, False otherwise
         """
+        # Imgaug augmentations
+        rarely = lambda aug: iaa.Sometimes(0.1, aug)
+        sometimes = lambda aug: iaa.Sometimes(0.25, aug)
+        often = lambda aug: iaa.Sometimes(0.5, aug)
+
         self.hr_image_filenames = hr_image_filenames
         # http://pillow.readthedocs.io/en/latest/reference/ImageFilter.html
         self.crop_size = calculate_valid_crop_size(crop_size, upscale_factor)
@@ -31,6 +37,9 @@ class TrainDataset(Dataset):
             ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             transforms.ToPILImage(),
             transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
+            # ttransforms.ImgAugWrapper([
+            #     often(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)))
+            # ]),
             # TODO augment the training data if random_augmentations in the following ways:
             # (1) Random Rotation: Randomly rotate the images by 90 or 180 degrees.
             # (2) Brightness adjusting: Randomly adjust the brightness of the images.

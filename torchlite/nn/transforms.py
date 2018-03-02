@@ -6,14 +6,53 @@ https://github.com/aleju/imgaug
 These classes are intended to be used with torchvision.transforms.
 Typically you could do: transforms.Compose([FactorNormalize()])
 """
-from typing import Union
-import cv2
-import torch
-import numpy as np
 import random
+import numpy as np
 import torchlite.nn.tools.image_tools as im_tools
 from PIL import Image, ImageFilter
 import torch.nn.functional as F
+import Augmentor
+from imgaug import augmenters as iaa
+
+
+class AugmentorWrapper:
+    def __init__(self, operations_list: list):
+        """
+        A wrapper around Augmentor: https://github.com/mdbloice/Augmentor
+        Args:
+            operations_list (list): A list of Augmentor.Operations
+        """
+        self.p = Augmentor.Pipeline()
+        for operation in operations_list:
+            self.p.add_operation(operation)
+
+    def __call__(self, image: Image):
+        return self.p.torch_transform
+
+
+class ImgAugWrapper:
+    def __init__(self, operations_list: list):
+        """
+            A wrapper around Augmentor: https://github.com/aleju/imgaug
+            Args:
+                operations_list (list): A list of imgaug transformations
+        """
+        self.seq = iaa.Sequential(operations_list)
+
+    def __call__(self, image: Image):
+        image_arr = np.array(image)
+        image_aug = self.seq.augment_images([image_arr])
+        return Image.fromarray(*image_aug)
+
+
+class ImgSaver:
+    def __init__(self):
+        """
+        Save an image to disk
+        """
+
+    def __call__(self, image: Image):
+        pass
 
 
 class FactorNormalize:
@@ -39,7 +78,7 @@ class FactorNormalize:
 
 
 class RandomSmooth:
-    def __init__(self, active_range: float=0.3):
+    def __init__(self, active_range: float = 0.3):
         """
         Add random smooth filters
 
