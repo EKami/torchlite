@@ -3,7 +3,6 @@ from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore
 from torchlite.nn.train_callbacks import ModelSaverCallback
 from torchlite.data.datasets.srgan import EvalDataset
-import torchlite.nn.transforms as ttransforms
 import os
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -32,7 +31,6 @@ def srgan_eval(images, generator_file, upscale_factor, use_cuda, num_workers=os.
     images_pred = []
     predictions = learner.predict(eval_dl)
     tfs = transforms.Compose([
-        ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         transforms.ToPILImage(),
     ])
     for pred in predictions:

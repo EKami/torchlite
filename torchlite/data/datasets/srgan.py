@@ -29,10 +29,8 @@ class TrainDataset(Dataset):
         self.hr_transform = transforms.Compose([
             transforms.RandomCrop(self.crop_size) if random_augmentations else transforms.CenterCrop(self.crop_size),
             transforms.ToTensor(),  # Is normalized in the range [0, 1]
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
         ])
         self.lr_transform = transforms.Compose([
-            ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             transforms.ToPILImage(),
             transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
             ttransforms.ImgAugWrapper([
@@ -42,8 +40,7 @@ class TrainDataset(Dataset):
                 rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
                 sometimes(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)),
             ]),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
+            transforms.ToTensor()
         ])
 
     def __getitem__(self, index):
@@ -51,25 +48,22 @@ class TrainDataset(Dataset):
         lr_image = self.lr_transform(hr_image.clone())
 
         # ---- Used to check the transformations (Uncomment to test)
-        # # HR save
-        # transforms.Compose([
-        #     ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/hr_img.png")])(hr_image)
-        # # AUG save
-        # transforms.Compose([
-        #     ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        #     transforms.ToPILImage(),
-        #
-        #     ttransforms.ImgAugWrapper([
-        #         # Put your test image transformations here
-        #         iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))
-        #     ]),
-        #
-        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/aug_img.png")])(hr_image)
-        # # LR save
-        # transforms.Compose([
-        #     ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/lr_img.png")])(lr_image)
+        # HR save
+        transforms.Compose([
+            ttransforms.ImgSaver("/tmp/images/" + str(index) + "/hr_img.png")])(hr_image.clone())
+        # AUG save
+        transforms.Compose([
+            transforms.ToPILImage(),
+
+            ttransforms.ImgAugWrapper([
+                # Put your test image transformations here
+                iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))
+            ]),
+
+            ttransforms.ImgSaver("/tmp/images/" + str(index) + "/aug_img.png")])(hr_image.clone())
+        # LR save
+        transforms.Compose([
+            ttransforms.ImgSaver("/tmp/images/" + str(index) + "/lr_img.png")])(lr_image.clone())
 
         return lr_image, hr_image
 
@@ -86,8 +80,7 @@ class EvalDataset(Dataset):
         """
         self.images = images
         self.tfs = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize between -1 and 1
+            transforms.ToTensor()
         ])
 
     def __getitem__(self, index):
