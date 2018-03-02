@@ -294,13 +294,12 @@ class ModelSaverCallback(TrainCallback):
         Returns:
             nn.Module: The restored model
         """
-        if os.path.isfile(file):
-            if load_with_cpu:
-                state_dict = torch.load(file, map_location='cpu')
-            else:
-                state_dict = torch.load(file)
-            model.load_state_dict(state_dict)
-            print("\n--- Model restored ---", end='\n\n')
+        if load_with_cpu:
+            state_dict = torch.load(file, map_location='cpu')
+        else:
+            state_dict = torch.load(file)
+        model.load_state_dict(state_dict)
+        print("\n--- Model restored ---", end='\n\n')
         return model
 
     def on_epoch_end(self, epoch, logs=None):
