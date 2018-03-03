@@ -21,6 +21,11 @@ pip install -r requirements.txt
 
 to install the required dependencies.
 Then install pytorch and torchvision from [here](http://pytorch.org/).
+Finally install the latest version of imgaug with:
+```
+pip install git+https://github.com/aleju/imgaug
+```
+Torchlite will use an outdated version from pypi by default.
 
 ## Documentation
 
