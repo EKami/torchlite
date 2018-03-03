@@ -39,7 +39,7 @@ class TrainDataset(Dataset):
                 rarely(iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5)),
                 rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
                 sometimes(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)),
-            ]),
+            ]) if random_augmentations else lambda x: x,
             transforms.ToTensor()
         ])
 
@@ -48,22 +48,22 @@ class TrainDataset(Dataset):
         lr_image = self.lr_transform(hr_image.clone())
 
         # ---- Used to check the transformations (Uncomment to test)
-        # HR save
-        transforms.Compose([
-            ttransforms.ImgSaver("/tmp/images/" + str(index) + "/hr_img.png")])(hr_image.clone())
-        # AUG save
-        transforms.Compose([
-            transforms.ToPILImage(),
-
-            ttransforms.ImgAugWrapper([
-                # Put your test image transformations here
-                iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))
-            ]),
-
-            ttransforms.ImgSaver("/tmp/images/" + str(index) + "/aug_img.png")])(hr_image.clone())
-        # LR save
-        transforms.Compose([
-            ttransforms.ImgSaver("/tmp/images/" + str(index) + "/lr_img.png")])(lr_image.clone())
+        # # HR save
+        # transforms.Compose([
+        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/hr_img.png")])(hr_image.clone())
+        # # AUG save
+        # transforms.Compose([
+        #     transforms.ToPILImage(),
+        #
+        #     ttransforms.ImgAugWrapper([
+        #         # Put your test image transformations here
+        #         iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))
+        #     ]),
+        #
+        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/aug_img.png")])(hr_image.clone())
+        # # LR save
+        # transforms.Compose([
+        #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/lr_img.png")])(lr_image.clone())
 
         return lr_image, hr_image
 
@@ -100,7 +100,6 @@ class VggTransformDataset(Dataset):
         """
         self.images_batch = images_batch.clone()
         self.vgg_transforms = transforms.Compose([
-            ttransforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             transforms.ToPILImage(),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
