@@ -71,26 +71,6 @@ class TrainDataset(Dataset):
         return len(self.hr_image_filenames)
 
 
-class EvalDataset(Dataset):
-    def __init__(self, images):
-        """
-        The evaluation dataset
-        Args:
-            images (list): A list of Pillow images
-        """
-        self.images = images
-        self.tfs = transforms.Compose([
-            transforms.ToTensor()
-        ])
-
-    def __getitem__(self, index):
-        image = self.tfs(self.images[index])
-        return image, image
-
-    def __len__(self):
-        return len(self.images)
-
-
 class VggTransformDataset(Dataset):
     def __init__(self, images_batch):
         """

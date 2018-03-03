@@ -1,11 +1,32 @@
+from torch.utils.data import Dataset
 from torchlite.nn.models.srgan import Generator
 from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore
 from torchlite.nn.train_callbacks import ModelSaverCallback
-from torchlite.data.datasets.srgan import EvalDataset
 import os
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+
+
+class EvalDataset(Dataset):
+    def __init__(self, images):
+        """
+        The evaluation dataset
+        (Don't move it elsewhere, it need to be self contained)
+        Args:
+            images (list): A list of Pillow images
+        """
+        self.images = images
+        self.tfs = transforms.Compose([
+            transforms.ToTensor()
+        ])
+
+    def __getitem__(self, index):
+        image = self.tfs(self.images[index])
+        return image, image
+
+    def __len__(self):
+        return len(self.images)
 
 
 def srgan_eval(images, generator_file, upscale_factor, use_cuda, num_workers=os.cpu_count()):
