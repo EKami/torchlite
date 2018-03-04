@@ -1,8 +1,7 @@
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
-import torchlite.nn.transforms as ttransforms
+from torchlite.nn.transforms import PillowAug
 from PIL import Image
-from imgaug import augmenters as iaa
 
 
 def calculate_valid_crop_size(crop_size, upscale_factor):
@@ -20,9 +19,6 @@ class TrainDataset(Dataset):
             upscale_factor (int): The upscale factor, either 2, 4 or 8
             random_augmentations (bool): True if the images need to be randomly augmented, False otherwise
         """
-        # Imgaug augmentations
-        rarely = lambda aug: iaa.Sometimes(0.1, aug)
-        sometimes = lambda aug: iaa.Sometimes(0.25, aug)
 
         self.hr_image_filenames = hr_image_filenames
         self.crop_size = calculate_valid_crop_size(crop_size, upscale_factor)
@@ -33,12 +29,11 @@ class TrainDataset(Dataset):
         self.lr_transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize(self.crop_size // upscale_factor, interpolation=Image.BICUBIC),
-            ttransforms.ImgAugWrapper([
-                rarely(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5))),
-                rarely(iaa.GaussianBlur((0, 2.0))),
-                rarely(iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5)),
-                rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
-                sometimes(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)),
+            PillowAug([
+                (PillowAug.brighten((0.7, 1.3)), 0.5),
+                (PillowAug.contrast((0.6, 1.4)), 0.5),
+                (PillowAug.sharpen((0.6, 1.2)), 0.3),
+                (PillowAug.gaussian_blur((1, 2)), 0.6)
             ]) if random_augmentations else lambda x: x,
             transforms.ToTensor()
         ])
@@ -55,9 +50,8 @@ class TrainDataset(Dataset):
         # transforms.Compose([
         #     transforms.ToPILImage(),
         #
-        #     ttransforms.ImgAugWrapper([
-        #         # Put your test image transformations here
-        #         iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))
+        #     PillowAug([
+        #         (PillowAug.gaussian_blur((1, 1)), 1.0),
         #     ]),
         #
         #     ttransforms.ImgSaver("/tmp/images/" + str(index) + "/aug_img.png")])(hr_image.clone())
@@ -93,3 +87,23 @@ class VggTransformDataset(Dataset):
 
     def __len__(self):
         return len(self.images_batch)
+
+
+class EvalDataset(Dataset):
+    def __init__(self, images):
+        """
+        The evaluation dataset
+        Args:
+            images (list): A list of Pillow images
+        """
+        self.images = images
+        self.tfs = transforms.Compose([
+            transforms.ToTensor()
+        ])
+
+    def __getitem__(self, index):
+        image = self.tfs(self.images[index])
+        return image, image
+
+    def __len__(self):
+        return len(self.images)

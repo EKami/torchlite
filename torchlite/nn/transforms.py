@@ -13,11 +13,10 @@ from pathlib import Path
 from typing import Union
 import torchlite.nn.tools.image_tools as im_tools
 import torchvision.transforms as transforms
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance
 import torch
 import torch.nn.functional as F
 import Augmentor
-from imgaug import augmenters as iaa
 
 
 class AugmentorWrapper:
@@ -35,19 +34,88 @@ class AugmentorWrapper:
         return self.p.torch_transform
 
 
-class ImgAugWrapper:
+class PillowAug:
     def __init__(self, operations_list: list):
         """
-            A wrapper around Augmentor: https://github.com/aleju/imgaug
-            Args:
-                operations_list (list): A list of imgaug transformations
+        A wrapper around Pillow for image augmentation
+
+        Args:
+            operations_list (list): A list of tuple. Each tuple containing
+            a Pillow transformation and a probability 0 <= p <= 1. E.g: [(ImageFilter.SHARPEN, 0.5)]
         """
-        self.seq = iaa.Sequential(operations_list)
+        self.operations_list = operations_list
 
     def __call__(self, image: Image):
-        image_arr = np.array(image)
-        image_aug = self.seq.augment_images([image_arr])
-        return Image.fromarray(*image_aug)
+        for op, p in self.operations_list:
+            assert 0 <= p <= 1, "p should be between 0 and 1"
+            s = random.uniform(0, 1)
+            if p >= s:
+                image = op(image)
+
+        return image
+
+    @staticmethod
+    def gaussian_blur(radius_range):
+        radius = random.uniform(*radius_range)
+        imf = ImageFilter.GaussianBlur(radius)
+        return lambda img: img.filter(imf)
+
+    @staticmethod
+    def sharpen(value_range):
+        """
+        Sharpen an image
+        Args:
+            value_range (tuple): A value range for contrast, will be picked uniformly
+
+        Returns:
+            callable: A callable function
+        """
+
+        def f(image):
+            factor = random.uniform(*value_range)
+            enhancer = ImageEnhance.Sharpness(image)
+            image = enhancer.enhance(factor)
+            return image
+
+        return f
+
+    @staticmethod
+    def contrast(value_range):
+        """
+        Contrast an image
+        Args:
+            value_range (tuple): A value range for contrast, will be picked uniformly
+
+        Returns:
+            callable: A callable function
+        """
+
+        def f(image):
+            factor = random.uniform(*value_range)
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(factor)
+            return image
+
+        return f
+
+    @staticmethod
+    def brighten(value_range):
+        """
+        Brighten an image
+        Args:
+            value_range (tuple): A value range for brightness, will be picked uniformly
+
+        Returns:
+            callable: A callable function
+        """
+
+        def f(image):
+            factor = random.uniform(*value_range)
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(factor)
+            return image
+
+        return f
 
 
 class ImgSaver:
