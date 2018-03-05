@@ -258,7 +258,7 @@ class ModelSaverCallback(TrainCallback):
         """
             Restore model(s) from the given dir.
             If models are multiples they will be automatically matched to
-            their the right files with a match between: class name -> file name
+            the right files with a match between: class name -> file name
         Args:
             models (list): A list of models (Pytorch modules)
             from_dir (str): The directory where the model is stored
@@ -308,6 +308,8 @@ class ModelSaverCallback(TrainCallback):
         if step == 'training':
             if epoch % self.every_n_epoch == 0 or epoch == self.epochs:
                 for k, m in logs['models'].items():
+                    torch.save(m.state_dict(), os.path.join(self.to_dir, k + "_epoch-{}".format(epoch) + "_" + ".pth"))
+                    # Erase the last default model
                     torch.save(m.state_dict(), os.path.join(self.to_dir, k + ".pth"))
                 print("\n--- Model(s) saved in {} ---".format(self.to_dir), end='\n\n')
 
