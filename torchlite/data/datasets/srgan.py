@@ -39,7 +39,10 @@ class TrainDataset(Dataset):
         ])
 
     def __getitem__(self, index):
-        hr_image = self.hr_transform(Image.open(self.hr_image_filenames[index]))
+        img = Image.open(self.hr_image_filenames[index])
+        assert img.height >= self.crop_size and img.width >= self.crop_size, \
+            "Image {} too little for crop_size".format(self.hr_image_filenames[index])
+        hr_image = self.hr_transform(img)
         lr_image = self.lr_transform(hr_image.clone())
 
         # ---- Used to check the transformations (Uncomment to test)

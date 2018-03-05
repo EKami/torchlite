@@ -1,5 +1,6 @@
 from sklearn.preprocessing.data import StandardScaler
 from dask.diagnostics import ProgressBar
+# TODO try pandas on ray: https://rise.cs.berkeley.edu/blog/pandas-on-ray/
 import pandas as pd
 
 import dask.dataframe as dd
