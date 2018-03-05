@@ -127,7 +127,7 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=100, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=800, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
