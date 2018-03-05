@@ -83,7 +83,7 @@ def train(args):
 
     netG = Generator(args.upscale_factor)
     netG.apply(weights_init)
-    netD = Discriminator()
+    netD = Discriminator((3, args.crop_size, args.crop_size))
     netD.apply(weights_init)
     optimizer_g = optim.Adam(netG.parameters(), lr=1e-4)
     optimizer_d = optim.Adam(netD.parameters(), lr=1e-4)
@@ -99,7 +99,7 @@ def train(args):
         learner = Learner(ClassifierCore(netG, optimizer_g, loss))
         learner.train(args.gen_epochs, None, train_loader, None, callbacks)
 
-    print("----------------- Adversarial (SRGAN) training -----------------")
+    print("----------------- Adversarial (SRPGAN) training -----------------")
     callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
                  TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
@@ -123,12 +123,12 @@ def main():
     train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
     train_parser.add_argument('--adv_epochs', default=800, type=int,
                               help='Number of epochs for the adversarial training')
-    train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
+    train_parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
                                    "1: Restore the models from the 'checkpoint' folder")
     # Models with different upscale factors and crop sizes are not compatible together
-    train_parser.add_argument('--crop_size', default=384, type=int, help='training images crop size')
+    train_parser.add_argument('--crop_size', default=128, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                               help="Super Resolution upscale factor. "
                                    "/!\ Models trained on different scale factors won't be compatible with each other")

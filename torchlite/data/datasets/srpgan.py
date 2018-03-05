@@ -11,7 +11,7 @@ def calculate_valid_crop_size(crop_size, upscale_factor):
 class TrainDataset(Dataset):
     def __init__(self, hr_image_filenames: list, crop_size, upscale_factor, random_augmentations=True):
         """
-        The train dataset for SRGAN.
+        The train dataset for SRPGAN.
         The dataset takes one unique list of files
         Args:
             hr_image_filenames (list): The HR images filename
