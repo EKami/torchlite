@@ -8,26 +8,28 @@ from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import torchlight.data.fetcher as fetcher
-import torchlight.data.files as tfiles
-import torchlight.nn.tools.image_tools as image_tools
-from torchlight.nn.models.srpgan import Generator, Discriminator
-from torchlight.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlight.data.datasets.srpgan import TrainDataset, EvalDataset
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore, SRPGanCore
-from torchlight.nn.losses.srpgan import GeneratorLoss
-from torchlight.nn.metrics.metrics import SSIM, PSNR
+import torchlite.data.fetcher as fetcher
+import torchlite.data.files as tfiles
+import torchlite.nn.tools.image_tools as image_tools
+from torchlite.nn.models.srpgan import Generator, Discriminator, weights_init
+from torchlite.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
+from torchlite.data.datasets.srpgan import TrainDataset
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore, SRPGanCore
+from torchlite.nn.losses.srpgan import GeneratorLoss
+from torchlite.nn.metrics.metrics import SSIM, PSNR
+from torchlite.eval import eval
+from PIL import Image
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
 tensorboard_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
 saved_model_dir = tfiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
 
 
-def get_loaders(args, num_workers=os.cpu_count()):
+def get_loaders(args, num_workers):
     # TODO take a look and use this datasets: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/DIV2K.zip",
+    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/DIV2K.zip",
                                         ds_path.absolute(), True)
     ds_path = ds_path / "DIV2K"
     if args.hr_dir == "@default" and args.lr_dir == "@default":
@@ -36,12 +38,12 @@ def get_loaders(args, num_workers=os.cpu_count()):
         train_hr_path = Path(args.hr_dir)
     val_hr_path = ds_path / "DIV2K_valid_HR"
 
-    train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()),
-                            crop_size=args.crop_size, upscale_factor=args.upscale_factor)
+    train_ds = TrainDataset(tfiles.get_files(train_hr_path.absolute()), crop_size=args.crop_size,
+                            upscale_factor=args.upscale_factor, random_augmentations=True)
 
     # Use the DIV2K dataset for validation as default
-    val_ds = TrainDataset(tfiles.get_files(val_hr_path.absolute()),
-                          crop_size=args.crop_size, upscale_factor=args.upscale_factor)
+    val_ds = TrainDataset(tfiles.get_files(val_hr_path.absolute()), crop_size=args.crop_size,
+                          upscale_factor=args.upscale_factor, random_augmentations=False)
 
     train_dl = DataLoader(train_ds, args.batch_size, shuffle=True, num_workers=num_workers)
     val_dl = DataLoader(val_ds, args.batch_size, shuffle=False, num_workers=num_workers)
@@ -61,33 +63,34 @@ def evaluate(args, num_workers=os.cpu_count()):
         to_dir = tfiles.del_dir_if_exists(os.path.join(cur_path, "results"))
     else:
         to_dir = Path(args.to_dir)
-    netG = Generator(args.upscale_factor)
-    learner = Learner(ClassifierCore(netG, None, None), use_cuda=args.cuda)
-    ModelSaverCallback.restore_model([netG], saved_model_dir.absolute(), load_with_cpu=not args.cuda)
-    eval_ds = EvalDataset(tfiles.get_files(imgs_path))
-    # One batch at a time as the pictures may differ in size
-    eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
 
-    predictions = learner.predict(eval_dl)
-    for i, pred in enumerate(predictions):
-        pred = pred.view(pred.size()[1:])  # Remove batch size == 1
-        file_name = eval_ds.get_file_from_index(i)
-        image_tools.save_tensor_as_png(pred, (to_dir / file_name).absolute())
+    generator_file = saved_model_dir / "Generator.pth"
+    file_paths = tfiles.get_files(imgs_path)
+    file_names = [name for name in tfiles.get_file_names(file_paths)]
+    pil_images = [Image.open(image) for image in file_paths]
+    pred_images = eval.srpgan_eval(pil_images, generator_file.absolute(),
+                                   args.upscale_factor, args.cuda, num_workers)
+
+    for i, pred in enumerate(pred_images):
+        image_tools.save_tensor_as_png(pred, (to_dir / file_names[i]).absolute())
 
 
 def train(args):
-    train_loader, valid_loader = get_loaders(args)
+    num_workers = os.cpu_count()
+    train_loader, valid_loader = get_loaders(args, num_workers)
 
     model_saver = ModelSaverCallback(saved_model_dir.absolute(), args.adv_epochs, every_n_epoch=5)
 
     netG = Generator(args.upscale_factor)
-    netD = Discriminator((3, args.crop_size, args.crop_size))
-    optimizer_g = optim.Adam(netG.parameters())
-    optimizer_d = optim.Adam(netD.parameters())
+    netG.apply(weights_init)
+    netD = Discriminator()
+    netD.apply(weights_init)
+    optimizer_g = optim.Adam(netG.parameters(), lr=1e-4)
+    optimizer_d = optim.Adam(netD.parameters(), lr=1e-4)
 
     # Restore models if they exists
     if args.restore_models == 1:
-        model_saver.restore_model([netG, netD], saved_model_dir.absolute())
+        model_saver.restore_models([netG, netD], saved_model_dir.absolute())
 
     if args.gen_epochs > 0:
         print("---------------------- Generator training ----------------------")
@@ -118,14 +121,14 @@ def main():
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
     train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=2000, type=int,
+    train_parser.add_argument('--adv_epochs', default=800, type=int,
                               help='Number of epochs for the adversarial training')
-    train_parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
+    train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
                                    "1: Restore the models from the 'checkpoint' folder")
     # Models with different upscale factors and crop sizes are not compatible together
-    train_parser.add_argument('--crop_size', default=128, type=int, help='training images crop size')
+    train_parser.add_argument('--crop_size', default=384, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
                               help="Super Resolution upscale factor. "
                                    "/!\ Models trained on different scale factors won't be compatible with each other")

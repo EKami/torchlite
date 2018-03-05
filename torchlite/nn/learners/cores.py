@@ -2,11 +2,10 @@
 This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlight.nn.tools import tensor_tools
-from torchlight.nn.models.srpgan import Generator, Discriminator
+from torchlite.nn.tools import tensor_tools
+from torchlite.nn.models.srpgan import Generator, Discriminator
 
 
 class BaseCore:
@@ -140,10 +139,7 @@ class SRPGanCore(BaseCore):
         self.g_optim = g_optimizer
         self.netD = discriminator
         self.netG = generator
-
-        self.logs = {}
-        self.g_avg_meter = tensor_tools.AverageMeter()
-        self.d_avg_meter = tensor_tools.AverageMeter()
+        self.on_new_epoch()
 
     def on_train_mode(self):
         self.netG.train()
@@ -170,18 +166,24 @@ class SRPGanCore(BaseCore):
         self.logs = {}
         self.g_avg_meter = tensor_tools.AverageMeter()
         self.d_avg_meter = tensor_tools.AverageMeter()
+        self.adversarial_loss_meter = tensor_tools.AverageMeter()
+        self.content_loss_meter = tensor_tools.AverageMeter()
+        self.perceptual_loss_meter = tensor_tools.AverageMeter()
 
-    def _update_loss_logs(self, g_loss, d_loss, adversarial_loss,
-                          content_loss, perceptual_loss):
+    def _update_loss_logs(self, g_loss, d_loss, adversarial_loss, content_loss, perceptual_loss):
         # Update logs
         self.g_avg_meter.update(g_loss)
         self.d_avg_meter.update(d_loss)
+        self.adversarial_loss_meter.update(adversarial_loss)
+        self.content_loss_meter.update(content_loss)
+        self.perceptual_loss_meter.update(perceptual_loss)
+
         self.logs.update({"batch_logs": {"g_loss": g_loss, "d_loss": d_loss}})
-        self.logs.update({"epoch_logs": {"generator_loss": self.g_avg_meter.debias_loss,
-                                         "discriminator_loss": self.d_avg_meter.debias_loss,
-                                         "adversarial_loss": adversarial_loss,
-                                         "content_loss": content_loss,
-                                         "perceptual_loss": perceptual_loss}})
+        self.logs.update({"epoch_logs": {"generator": self.g_avg_meter.avg,
+                                         "discriminator": self.d_avg_meter.avg,
+                                         "adversarial": self.adversarial_loss_meter.avg,
+                                         "content": self.content_loss_meter.avg,
+                                         "perceptual": self.perceptual_loss_meter.avg}})
 
     def _on_eval(self, images):
         sr_images = self.netG(images)  # Super resolution images
@@ -202,7 +204,7 @@ class SRPGanCore(BaseCore):
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
         d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
 
-        # torchlight.nn.losses.srpgan.GeneratorLoss
+        # torchlite.nn.losses.srpgan.GeneratorLoss
         adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
                                                                            d_hr_feat_maps, d_sr_feat_maps,
                                                                            sr_images, hr_images)

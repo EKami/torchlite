@@ -100,7 +100,7 @@ class WebFetcher:
                 os.makedirs(output_folder)
             print('Beginning file download...')
             with TqdmUpTo(unit='B', unit_scale=True, miniters=1,
-                          desc=f"Downloading {file_name}") as t:
+                          desc="Downloading {}".format(file_name)) as t:
                 file, _ = urllib.request.urlretrieve(url, output_file_arch, reporthook=t.update_to)
             print("Unzipping file...")
             if decompress:

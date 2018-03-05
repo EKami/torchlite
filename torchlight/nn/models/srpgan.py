@@ -1,6 +1,5 @@
 import torch
-import torchlight.nn.tools.tensor_tools as ttools
-from torchlight.nn.models.models import Flatten
+from torchlight.nn.models import Flatten
 import torch.nn as nn
 import torch.nn.functional as F
 import math

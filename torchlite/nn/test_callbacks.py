@@ -1,7 +1,7 @@
 """
 This module contains callbacks used during the test phase.
 """
-from torchlight.data.datasets.datasets import ImageDataset
+from torchlite.data.datasets.datasets import ImageDataset
 from tqdm import tqdm
 
 
@@ -38,7 +38,8 @@ class TestCallbackList(object):
         self.queue_length = queue_length
 
     def append(self, callback):
-        assert isinstance(callback, TestCallback), f"Your callback is not an instance of TestCallback: {callback}"
+        assert isinstance(callback, TestCallback), \
+            "Your callback is not an instance of TestCallback: {}".format(callback)
         self.callbacks.append(callback)
 
     def on_test_begin(self, logs=None):
@@ -106,7 +107,7 @@ class ActivationMapVisualizerCallback(TestCallback):
             using the Grad_cam++ technique: https://arxiv.org/abs/1710.11063
             # TODO may combines with TensorboardVisualizer?
 
-            /!\ This technique only works with image torchlight.data.datasets.ImagesDataset
+            /!\ This technique only works with image torchlite.data.datasets.ImagesDataset
         Args:
             filename (str): The file name that you want to visualize
         """
@@ -118,7 +119,7 @@ class ActivationMapVisualizerCallback(TestCallback):
         model = self.model
         ds = logs["loader"].dataset if logs["loader"] else None
         assert isinstance(ds, ImageDataset), \
-            "ActivationMapVisualizer: The loader is not an instance of torchlight.data.datasets.ImagesDataset"
+            "ActivationMapVisualizer: The loader is not an instance of torchlite.data.datasets.ImagesDataset"
         image, label, _ = ds.get_by_name(self.filename)
         # TODO finish grad cam here https://github.com/adityac94/Grad_CAM_plus_plus/blob/master/misc/utils.py#L51
 

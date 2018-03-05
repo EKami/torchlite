@@ -15,13 +15,13 @@ import torchvision.transforms as transforms
 from pathlib import Path
 import torch.optim as optim
 import torch.nn.functional as F
-import torchlight.data.fetcher as fetcher
-from torchlight.shortcuts import ImageClassifierShortcut
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore
-from torchlight.nn.metrics.metrics import CategoricalAccuracy
-from torchlight.nn.test_callbacks import ActivationMapVisualizerCallback
-from torchlight.nn.tools import tensor_tools
+import torchlite.data.fetcher as fetcher
+from torchlite.shortcuts import ImageClassifierShortcut
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore
+from torchlite.nn.metrics.metrics import CategoricalAccuracy
+from torchlite.nn.test_callbacks import ActivationMapVisualizerCallback
+from torchlite.nn.tools import tensor_tools
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -38,7 +38,7 @@ def main():
     batch_size = 512
     epochs = 2
     root_dir = "/tmp"
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlight-datasets/dogscats.zip",
+    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/dogscats.zip",
                                         root_dir, True)
     root_dir = "/tmp/dogscats"
     root_dir = Path(root_dir)

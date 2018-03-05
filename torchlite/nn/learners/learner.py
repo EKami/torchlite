@@ -3,14 +3,14 @@ This class contains a generalized learner which works across all kind of models
 """
 from datetime import datetime
 import torch
-import torchlight.nn.train_callbacks as train_callbacks
-import torchlight.nn.test_callbacks as test_callbacks
+import torchlite.nn.train_callbacks as train_callbacks
+import torchlite.nn.test_callbacks as test_callbacks
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from torchlight.nn.tools import tensor_tools
-from torchlight.nn.metrics.metrics import MetricsList
-from torchlight.nn.learners.cores import BaseCore
+from torchlite.nn.tools import tensor_tools
+from torchlite.nn.metrics.metrics import MetricsList
+from torchlite.nn.learners.cores import BaseCore
 
 
 class Learner:

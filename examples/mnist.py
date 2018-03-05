@@ -1,12 +1,11 @@
-import torch
 from torchvision import datasets, transforms
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from torchlight.nn.learners.learner import Learner
-from torchlight.nn.learners.cores import ClassifierCore
-from torchlight.nn.metrics.metrics import CategoricalAccuracy
+from torchlite.nn.learners.learner import Learner
+from torchlite.nn.learners.cores import ClassifierCore
+from torchlite.nn.metrics.metrics import CategoricalAccuracy
 import os
 
 
@@ -57,7 +56,7 @@ def main():
     # y_pred = learner.predict(test_loader)
     # y_true = test_loader.dataset.test_labels
     #
-    # print(f"Test accuracy: {CategoricalAccuracy()('test', y_pred, y_true)}%")
+    # print("Test accuracy: {}%".format(CategoricalAccuracy()('test', y_pred, y_true)))
 
 
 if __name__ == "__main__":

@@ -43,7 +43,8 @@ class TrainCallbackList(object):
         self.queue_length = queue_length
 
     def append(self, callback):
-        assert isinstance(callback, TrainCallback), f"Your callback is not an instance of TrainCallback: {callback}"
+        assert isinstance(callback, TrainCallback), \
+            "Your callback is not an instance of TrainCallback: {}".format(callback)
         self.callbacks.append(callback)
 
     def on_epoch_begin(self, epoch, logs=None):
@@ -253,7 +254,7 @@ class ModelSaverCallback(TrainCallback):
         self.to_dir = to_dir
 
     @staticmethod
-    def restore_model(models, from_dir, load_with_cpu=False):
+    def restore_models(models, from_dir, load_with_cpu=False):
         """
             Restore model(s) from the given dir.
             If models are multiples they will be automatically matched to
@@ -261,6 +262,10 @@ class ModelSaverCallback(TrainCallback):
         Args:
             models (list): A list of models (Pytorch modules)
             from_dir (str): The directory where the model is stored
+            load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
+
+        Returns:
+            list: The restored models
         """
         i = 0
         for model in models:
@@ -274,7 +279,29 @@ class ModelSaverCallback(TrainCallback):
                 i += 1
 
         assert i == len(models), "Not all models were restored. Please check that your passed models and files match"
-        print(f"\n--- Model(s) restored from {from_dir} ---", end='\n\n')
+        print("\n--- Model(s) restored from {} ---".format(from_dir), end='\n\n')
+        return models
+
+    @staticmethod
+    def restore_model_from_file(model, file, load_with_cpu=False):
+        """
+        Restore a model from a file
+        Args:
+            model (nn.Module): A model module
+            file (file): A file containing the pretrained model to load in
+            load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
+
+        Returns:
+            nn.Module: The restored model
+        """
+        if load_with_cpu:
+            # Load all tensors onto the CPU
+            state_dict = torch.load(file, map_location=lambda storage, loc: storage)
+        else:
+            state_dict = torch.load(file)
+        model.load_state_dict(state_dict)
+        print("\n--- Model restored ---", end='\n\n')
+        return model
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]
@@ -282,7 +309,7 @@ class ModelSaverCallback(TrainCallback):
             if epoch % self.every_n_epoch == 0 or epoch == self.epochs:
                 for k, m in logs['models'].items():
                     torch.save(m.state_dict(), os.path.join(self.to_dir, k + ".pth"))
-                print(f"\n--- Model(s) saved in {self.to_dir} ---", end='\n\n')
+                print("\n--- Model(s) saved in {} ---".format(self.to_dir), end='\n\n')
 
 
 class CosineAnnealingCallback(TrainCallback):
@@ -339,4 +366,4 @@ class TensorboardVisualizerCallback(TrainCallback):
 
     def on_train_end(self, logs=None):
         self.writer.close()
-        print(f"\n--- Tensorboard logs saved in {self.to_dir} ---", end='\n\n')
+        print("\n--- Tensorboard logs saved in {} ---".format(self.to_dir), end='\n\n')
