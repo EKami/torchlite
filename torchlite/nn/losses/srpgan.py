@@ -23,6 +23,4 @@ class GeneratorLoss:
             # TODO change charbonnier to use the same as the paper
             perceptual_loss += self.charbonnier(sr_feat_map, hr_feat_map, eps=1e-8)
 
-        #content_loss = 0.0001 * content_loss
-        #perceptual_loss = 0.0061 * perceptual_loss
         return adversarial_loss, content_loss, perceptual_loss
