@@ -347,6 +347,7 @@ class TensorboardVisualizerCallback(TrainCallback):
             Callback intended to be executed at each epoch
             of the training which goal is to display the result
             of the last validation batch in Tensorboard
+            # TODO add embeddings visualization
         Args:
             to_dir (str): The path where to store the log files
         """
