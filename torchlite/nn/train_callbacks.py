@@ -308,7 +308,7 @@ class ModelSaverCallback(TrainCallback):
         if step == 'training':
             if epoch % self.every_n_epoch == 0 or epoch == self.epochs:
                 for k, m in logs['models'].items():
-                    torch.save(m.state_dict(), os.path.join(self.to_dir, k + "_epoch-{}".format(epoch) + "_" + ".pth"))
+                    torch.save(m.state_dict(), os.path.join(self.to_dir, k + "_epoch-{}".format(epoch) + ".pth"))
                     # Erase the last default model
                     torch.save(m.state_dict(), os.path.join(self.to_dir, k + ".pth"))
                 print("\n--- Model(s) saved in {} ---".format(self.to_dir), end='\n\n')
