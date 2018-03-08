@@ -133,7 +133,7 @@ def main():
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
-                                   "1: Restore the models from the 'checkpoint' folder")
+                                   "1: Restore the models from the 'checkpoints' folder")
     # Models with different upscale factors and crop sizes are not compatible together
     train_parser.add_argument('--crop_size', default=224, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
