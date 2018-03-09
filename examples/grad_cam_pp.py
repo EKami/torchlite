@@ -10,6 +10,8 @@ Resources:
  - https://github.com/fastai/fastai/blob/master/courses/dl1/lesson7-CAM.ipynb
  - https://github.com/adityac94/Grad_CAM_plus_plus
  - http://www.gitxiv.com/posts/JradqzFyKi4pHebB4/grad-cam-generalized-gradient-based-visual-explanations-for
+
+Another interesting paper for interpretability: https://distill.pub/2018/building-blocks/
 """
 import torchvision.transforms as transforms
 from pathlib import Path

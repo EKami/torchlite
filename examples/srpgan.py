@@ -121,12 +121,12 @@ def main():
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
     train_parser.add_argument('--gen_epochs', default=0, type=int, help='Number of epochs for the generator training')
-    train_parser.add_argument('--adv_epochs', default=800, type=int,
+    train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
     train_parser.add_argument('--restore_models', default=0, type=int, choices=[0, 1],
                               help="0: Don't restore the models and erase the existing ones. "
-                                   "1: Restore the models from the 'checkpoint' folder")
+                                   "1: Restore the models from the 'checkpoints' folder")
     # Models with different upscale factors and crop sizes are not compatible together
     train_parser.add_argument('--crop_size', default=128, type=int, help='training images crop size')
     train_parser.add_argument('--upscale_factor', default=4, type=int, choices=[2, 4, 8],
