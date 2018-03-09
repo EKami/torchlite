@@ -2,6 +2,7 @@
 This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchlite.nn.tools import tensor_tools
@@ -208,8 +209,11 @@ class SRPGanCore(BaseCore):
         adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
                                                                            d_hr_feat_maps, d_sr_feat_maps,
                                                                            sr_images, hr_images)
-        # ld = −la(G,D)+λlp
-        d_loss = -adversarial_loss + 0.01 * perceptual_loss
+
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.ones_like(d_hr_out))
+        d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
+        d_loss = d_hr_loss + d_sr_loss
+
         # lg = la(G,D)+λ1lp+λ2ly
         g_loss = adversarial_loss + 1 * perceptual_loss + 1 * content_loss
 
