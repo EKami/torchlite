@@ -91,13 +91,13 @@ def train(args):
     # Restore models if they exists
     if args.restore_models == 1:
         model_saver.restore_models([netG, netD], saved_model_dir.absolute())
-
-    if args.gen_epochs > 0:
-        print("---------------------- Generator training ----------------------")
-        callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
-        loss = nn.MSELoss()
-        learner = Learner(ClassifierCore(netG, optimizer_g, loss))
-        learner.train(args.gen_epochs, None, train_loader, None, callbacks)
+    else:
+        if args.gen_epochs > 0:
+            print("---------------------- Generator training ----------------------")
+            callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
+            loss = nn.MSELoss()
+            learner = Learner(ClassifierCore(netG, optimizer_g, loss))
+            learner.train(args.gen_epochs, None, train_loader, None, callbacks)
 
     print("----------------- Adversarial (SRPGAN) training -----------------")
     callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
@@ -120,7 +120,8 @@ def main():
     train_parser.add_argument('--hr_dir', default="@default", type=str, help='The path to the HR files for training')
     train_parser.add_argument('--lr_dir', default="@default", type=str,
                               help='The path to the LR files for training (not used for now)')
-    train_parser.add_argument('--gen_epochs', default=10, type=int, help='Number of epochs for the generator training')
+    train_parser.add_argument('--gen_epochs', default=10, type=int, help='Number of epochs for the generator training'
+                                                                         '(will be ignored if models are restored)')
     train_parser.add_argument('--adv_epochs', default=2000, type=int,
                               help='Number of epochs for the adversarial training')
     train_parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
