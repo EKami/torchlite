@@ -4,6 +4,7 @@ Most of the time you'll make use of ClassifierCore.
 """
 import torch
 import torch.nn as nn
+import numpy as np
 import torch.nn.functional as F
 from torchlite.nn.tools import tensor_tools
 from torchlite.nn.models.srpgan import Generator, Discriminator
@@ -210,7 +211,11 @@ class SRPGanCore(BaseCore):
                                                                            d_hr_feat_maps, d_sr_feat_maps,
                                                                            sr_images, hr_images)
 
-        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.ones_like(d_hr_out))
+        # Labels smoothing
+        real_labels = np.random.uniform(0.7, 1.2, size=d_hr_out.size())
+        real_labels = torch.FloatTensor(real_labels).cuda()
+
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.autograd.Variable(real_labels))
         d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
         d_loss = d_hr_loss + d_sr_loss
 
