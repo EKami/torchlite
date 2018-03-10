@@ -24,7 +24,6 @@ def srgan_eval(images, generator_file, upscale_factor, use_cuda, num_workers=os.
     netG = Generator(upscale_factor)
     learner = Learner(ClassifierCore(netG, None, None), use_cuda=use_cuda)
     ModelSaverCallback.restore_model_from_file(netG, generator_file, load_with_cpu=not use_cuda)
-    # TODO 4 channels images doesn't work
     eval_ds = EvalDataset(images)
     # One batch at a time as the pictures may differ in size
     eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
