@@ -105,7 +105,16 @@ class EvalDataset(Dataset):
         ])
 
     def __getitem__(self, index):
-        image = self.tfs(self.images[index])
+        image = self.images[index]
+        # Check if the image is 4 channels wide
+
+        if image.mode in ('RGBA', 'LA') or (image.mode == 'P' and 'transparency' in image.info):
+            res_img = Image.new("RGB", image.size, (255, 255, 255))
+            res_img.paste(image, mask=image.split()[3])  # 3 is the alpha channel
+        else:
+            res_img = image
+
+        image = self.tfs(res_img)
         return image, image
 
     def __len__(self):
