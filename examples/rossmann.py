@@ -263,7 +263,8 @@ def main():
     learner = Learner(ClassifierCore(model, optim.Adam(model.parameters()), F.mse_loss))
     learner.train(epochs, [metrics.RMSPE(to_exp=True)],
                   shortcut.get_train_loader, shortcut.get_val_loader)
-    test_pred = np.exp(learner.predict(shortcut.get_test_loader))
+    test_pred = learner.predict(shortcut.get_test_loader, flatten_predictions=True)
+    test_pred = np.exp(test_pred)
 
     # Save the predictions as a csv file
     sub_file_path = os.path.join(output_path, "submit.csv")
