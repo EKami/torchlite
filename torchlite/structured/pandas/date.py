@@ -3,6 +3,17 @@ import numpy as np
 import re
 
 
+def lookup(s):
+    """
+    This is an extremely fast approach to datetime parsing.
+    For large data, the same dates are often repeated. Rather than
+    re-parse these, we store all unique dates, parse them, and
+    use a lookup to convert all dates.
+    """
+    dates = {date: pd.to_datetime(date) for date in s.unique()}
+    return s.map(dates)
+
+
 def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
                                                  'Dayofweek', 'Dayofyear',
                                                  'Is_month_end', 'Is_month_start',
@@ -30,7 +41,7 @@ def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
     targ_pre = re.sub('[Dd]ate$', '', field_name)
     if isinstance(df, pd.DataFrame):
         if not np.issubdtype(field.dtype, np.datetime64):
-            df[field_name] = field = pd.to_datetime(field, infer_datetime_format=True)
+            df[field_name] = field = lookup(field)
     for n in transform_list:
         df[targ_pre + n] = getattr(field.dt, n.lower())
         if df[targ_pre + n].dtype == np.int64:
