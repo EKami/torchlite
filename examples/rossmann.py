@@ -24,6 +24,7 @@ import torchlite.nn.metrics.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
+from torchlite.nn.train_callbacks import CosineAnnealingCallback
 from torchlite.structured.pandas.encoder import TreeEncoder
 
 
@@ -260,9 +261,10 @@ def main():
     model = shortcut.get_stationary_model(card_cat_features, len(train_df.columns) - len(cat_vars),
                                           output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                           hidden_dropouts=[0.001, 0.01], y_range=y_range)
-    learner = Learner(ClassifierCore(model, optim.Adam(model.parameters()), F.mse_loss))
-    learner.train(epochs, [metrics.RMSPE(to_exp=True)],
-                  shortcut.get_train_loader, shortcut.get_val_loader)
+    optimizer = optim.Adam(model.parameters())
+    learner = Learner(ClassifierCore(model, optimizer, F.mse_loss))
+    learner.train(epochs, [metrics.RMSPE(to_exp=True)], shortcut.get_train_loader, shortcut.get_val_loader,
+                  callbacks=[CosineAnnealingCallback(optimizer, T_max=epochs)])
     test_pred = learner.predict(shortcut.get_test_loader, flatten_predictions=True)
     test_pred = np.exp(test_pred)
 
