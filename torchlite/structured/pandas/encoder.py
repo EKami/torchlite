@@ -9,7 +9,7 @@ from pandas.api.types import is_numeric_dtype
 
 
 class EncoderBlueprint:
-    def __init__(self, continuous_scaler):
+    def __init__(self, continuous_scaler=None):
         """
         This class keeps all the transformations that went through
         the encoding of a dataframe for later use on another dataframe
@@ -20,6 +20,8 @@ class EncoderBlueprint:
                 An sklearn StandardScaler() will fit most common cases.
                 For a more robust scaling with outliers take a look at RankGauss:
                     https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
+                and rankdata:
+                    https://docs.scipy.org/doc/scipy-0.16.0/reference/generated/scipy.stats.rankdata.html
 
             Reference -> http://scikit-learn.org/stable/auto_examples/preprocessing/plot_all_scaling.html
         """
@@ -29,6 +31,8 @@ class EncoderBlueprint:
         self.is_scaler_fit = False
 
     def scale_vars(self, df):
+        if self.continuous_scaler is None:
+            return
         num_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
         # /!\ This previous transformation to float32 is very important
         df[num_cols] = df[num_cols].astype(np.float32)
