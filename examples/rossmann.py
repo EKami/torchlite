@@ -24,7 +24,7 @@ import torchlite.nn.metrics.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
-import torchlite.structured.pandas.encoder as encoder
+from torchlite.structured.pandas.encoder import TreeEncoder
 
 
 def join_df(left, right, left_on, right_on=None, suffix='_y'):
@@ -220,10 +220,10 @@ def create_features(train_df, test_df):
 
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
-    train_df, encoder_blueprint = encoder.apply_encoding(train_df, contin_vars, cat_vars,
-                                                         scale_continuous=True)
-    test_df, _ = encoder.apply_encoding(test_df, contin_vars, cat_vars, scale_continuous=True,
-                                        encoder_blueprint=encoder_blueprint)
+
+    train_df, encoder_blueprint = TreeEncoder(train_df, contin_vars, cat_vars).apply_encoding(scale_continuous=True)
+    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars, encoder_blueprint=encoder_blueprint)\
+        .apply_encoding(scale_continuous=True)
 
     assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
@@ -234,7 +234,7 @@ def main():
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
-    WebFetcher.download_dataset("http://files.fast.ai/part2/lesson14/rossmann.tgz", output_path, True)
+    WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/rossmann.tgz", output_path, True)
     if os.path.exists(preprocessed_train_path) and os.path.exists(preprocessed_test_path):
         train_df = pd.read_feather(preprocessed_train_path, nthreads=cpu_count())
         test_df = pd.read_feather(preprocessed_test_path, nthreads=cpu_count())
