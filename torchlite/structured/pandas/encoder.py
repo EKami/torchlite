@@ -1,4 +1,3 @@
-from sklearn.preprocessing.data import StandardScaler
 from dask.diagnostics import ProgressBar
 # TODO try pandas on ray: https://rise.cs.berkeley.edu/blog/pandas-on-ray/
 import pandas as pd
@@ -10,14 +9,35 @@ from pandas.api.types import is_numeric_dtype
 
 
 class EncoderBlueprint:
-    def __init__(self):
+    def __init__(self, continuous_scaler):
         """
         This class keeps all the transformations that went through
         the encoding of a dataframe for later use on another dataframe
+
+        Args:
+            continuous_scaler (None, Scaler): None or a scaler from sklearn.preprocessing.data
+                All features types will be encoded as float32.
+                An sklearn StandardScaler() will fit most common cases.
+                For a more robust scaling with outliers take a look at RankGauss:
+                    https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
+
+            Reference -> http://scikit-learn.org/stable/auto_examples/preprocessing/plot_all_scaling.html
         """
-        self.scaler = None
+        self.continuous_scaler = continuous_scaler
         self.na_dict = None
         self.categ_var_map = None
+        self.is_scaler_fit = False
+
+    def scale_vars(self, df):
+        num_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
+        # /!\ This previous transformation to float32 is very important
+        df[num_cols] = df[num_cols].astype(np.float32)
+        if not self.is_scaler_fit:
+            self.continuous_scaler.fit(df[num_cols].as_matrix())
+            self.is_scaler_fit = True
+        df[num_cols] = self.continuous_scaler.transform(df[num_cols])
+        df[num_cols] = df[num_cols].astype(np.float32)
+        print("List of scaled columns: {}".format(num_cols))
 
     def save_categ_vars_map(self, df):
         if not self.categ_var_map:
@@ -66,18 +86,6 @@ class BaseEncoder:
         print("List of NA columns fixed: {}".format(list(na_dict.keys())))
         return df, na_dict
 
-    def _scale_vars(self, df, scaler=None):
-        # TODO Try RankGauss: https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
-        num_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
-        # This previous transformation to float32 is very important
-        df[num_cols] = df[num_cols].astype(np.float32)
-        if scaler is None:
-            scaler = StandardScaler().fit(df[num_cols].as_matrix())
-        df[num_cols] = scaler.transform(df[num_cols])
-        df[num_cols] = df[num_cols].astype(np.float32)
-        print("List of scaled columns: {}".format(num_cols))
-        return scaler
-
     def _get_all_non_numeric(self, df):
         non_num_cols = []
         for col in df.columns:
@@ -87,7 +95,7 @@ class BaseEncoder:
 
 
 class TreeEncoder(BaseEncoder):
-    def __init__(self, df, cont_features, categ_features, encoder_blueprint=None):
+    def __init__(self, df, cont_features, categ_features, encoder_blueprint):
         """
             An encoder used for tree based models (RandomForests, GBTs) as well
             as deep neural networks with embeddings (DNN)
@@ -99,9 +107,7 @@ class TreeEncoder(BaseEncoder):
             cont_features (list): The list of features to encode as continuous values.
             categ_features (list): The list of features to encode as categorical features.
             encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
-                the passed df. Typically the first time you run this method you won't have any, a new
-                EncoderBlueprint will be returned from this function that you need to pass in to this
-                same function next time you want the same encoding to be applied to a different dataframe.
+                the passed df.
         """
         if isinstance(df, dd.DataFrame):
             with ProgressBar():
@@ -113,7 +119,7 @@ class TreeEncoder(BaseEncoder):
         self.cont_features = cont_features
         self.encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
 
-    def apply_encoding(self, scale_continuous=False):
+    def apply_encoding(self):
         """
         Changes the passed DataFrame to an entirely numeric DataFrame and return
         a new DataFrame with the encoded features.
@@ -121,10 +127,7 @@ class TreeEncoder(BaseEncoder):
         as `cont_features` nor as `categ_features` are just ignored for the resulting DataFrame.
         The columns which are listed in `cont_features` and `categ_features` and not present in the
         DataFrame are also ignored.
-        Args:
-            scale_continuous (bool): Whether or not to scale the *continuous variables* on a standard scale
-                    (mean subtraction and standard deviation division).
-                    All features types will be encoded as float32.
+
         Returns:
             (DataFrame, EncoderBlueprint):
                 Returns:
@@ -136,10 +139,10 @@ class TreeEncoder(BaseEncoder):
                 on which you want the values to be on the same scale/have the same missing columns
                 and have the same categorical codes.
                 E.g:
-                    train_df, encoderBlueprint = TreeEncoder(train_df, contin_vars, cat_vars). \
-                                                             apply_encoding(do_scale=True)
-                    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars, encoderBlueprint=encoderBlueprint)\
-                                            .apply_encoding(do_scale=True)
+                        train_df, encoder_blueprint = TreeEncoder(train_df, continuous_vars, cat_vars,
+                                                                  EncoderBlueprint(StandardScaler())).apply_encoding()
+                        test_df, _ = TreeEncoder(test_df, continuous_vars, cat_vars,
+                                                encoder_blueprint=encoder_blueprint).apply_encoding()
         """
 
         all_feat = self.categ_features + self.cont_features
@@ -166,8 +169,7 @@ class TreeEncoder(BaseEncoder):
                     df[feat] = df[feat].astype('category').cat.as_ordered()
 
         # Scale continuous vars
-        if scale_continuous:
-            self.encoder_blueprint.scaler = self._scale_vars(df, self.encoder_blueprint.scaler)
+        self.encoder_blueprint.scale_vars(df)
 
         # Save categorical codes into encoderBlueprint
         self.encoder_blueprint.save_categ_vars_map(df)

@@ -17,6 +17,7 @@ import datetime
 import torch.optim as optim
 from tqdm import tqdm
 
+from sklearn.preprocessing.data import StandardScaler
 from torchlite.data import files as tfiles
 from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore
@@ -25,7 +26,7 @@ from torchlite.data.fetcher import WebFetcher
 import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
 from torchlite.nn.train_callbacks import CosineAnnealingCallback
-from torchlite.structured.pandas.encoder import TreeEncoder
+from torchlite.structured.pandas.encoder import TreeEncoder, EncoderBlueprint
 
 
 def join_df(left, right, left_on, right_on=None, suffix='_y'):
@@ -222,9 +223,10 @@ def create_features(train_df, test_df):
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
-    train_df, encoder_blueprint = TreeEncoder(train_df, contin_vars, cat_vars).apply_encoding(scale_continuous=True)
-    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars, encoder_blueprint=encoder_blueprint)\
-        .apply_encoding(scale_continuous=True)
+    train_df, encoder_blueprint = TreeEncoder(train_df, contin_vars, cat_vars,
+                                              EncoderBlueprint(StandardScaler())).apply_encoding()
+    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars,
+                             encoder_blueprint=encoder_blueprint).apply_encoding()
 
     assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
