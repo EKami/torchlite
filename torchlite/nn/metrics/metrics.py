@@ -41,19 +41,17 @@ class MetricsList:
         if step == "training":
             for metric in self.metrics:
                 result = metric(step, logits, targets)
-                if result:
-                    if metric.get_name in self.train_acc.keys():
-                        self.train_acc[metric.get_name] += result
-                    else:
-                        self.train_acc[metric.get_name] = result
+                if metric.get_name in self.train_acc.keys():
+                    self.train_acc[metric.get_name] += result
+                else:
+                    self.train_acc[metric.get_name] = result
         elif step == "validation":
             for metric in self.metrics:
                 result = metric(step, logits, targets)
-                if result:
-                    if metric.get_name in self.val_acc.keys():
-                        self.val_acc[metric.get_name] += result
-                    else:
-                        self.val_acc[metric.get_name] = result
+                if metric.get_name in self.val_acc.keys():
+                    self.val_acc[metric.get_name] += result
+                else:
+                    self.val_acc[metric.get_name] = result
 
         self.step_count += 1
 
@@ -128,11 +126,13 @@ class RMSPE(Metric):
             The Root-mean-squared percent error
         """
         if self.to_exp:
+            logits = torch.exp(y_pred)
             targ = torch.exp(y_true)
         else:
+            logits = y_pred
             targ = y_true
-        pct_var = (targ - y_pred) / targ
-        res = np.sqrt((pct_var ** 2).mean())
+        pct_var = (targ - logits) / targ
+        res = torch.sqrt((pct_var ** 2).mean()).data[0]
         return res
 
     @property
