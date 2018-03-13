@@ -32,7 +32,7 @@ class ColumnarShortcut(BaseLoader):
     @classmethod
     def from_data_frames(cls, train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=None):
         train_ds = ColumnarDataset.from_data_frame(train_df, cat_fields, train_y)
-        val_ds = ColumnarDataset.from_data_frame(val_df, cat_fields, val_y) if val_df else None
+        val_ds = ColumnarDataset.from_data_frame(val_df, cat_fields, val_y) if val_df is not None else None
         test_ds = ColumnarDataset.from_data_frame(test_df, cat_fields) if test_df is not None else None
         return cls(train_ds, val_ds, test_ds, batch_size)
 
