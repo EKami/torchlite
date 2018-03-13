@@ -31,7 +31,7 @@ class Learner:
             else:
                 print("/!\ Warning: Cuda set but not available, using CPU...")
 
-    def _train_epoch(self, step, loader, metrics_list, callback_list):
+    def _run_batch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
         batch_size = loader.batch_size
         # We can have multiple inputs
@@ -44,10 +44,9 @@ class Learner:
             inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
             logits = self.learner_core.on_forward_batch(step, inputs, targets)
-            metrics_logs = metrics_list(step, logits, targets)
+            metrics_list.acc_batch(step, logits, targets)
 
             logs.update(self.learner_core.get_logs)
-            logs.update({"metrics_logs": metrics_logs})
             logs.update({"models": self.learner_core.get_models})
             callback_list.on_batch_end(ind, logs=logs)
         return logs
@@ -62,8 +61,12 @@ class Learner:
         logs = {"step": step, "epoch_id": self.epoch_id}
         self.learner_core.on_new_epoch()
         callback_list.on_epoch_begin(self.epoch_id, logs)
-        train_logs = self._train_epoch(step, train_loader, MetricsList(metrics), callback_list)
+
+        metric_list = MetricsList(metrics)
+        train_logs = self._run_batch(step, train_loader, metric_list, callback_list)
+
         train_logs.update(logs)
+        train_logs.update({"metrics_logs": metric_list.compute_flush(step)})
         train_logs.update({"models": self.learner_core.get_models})
         callback_list.on_epoch_end(self.epoch_id, train_logs)
 
@@ -76,8 +79,12 @@ class Learner:
             logs = {"step": step, "epoch_id": self.epoch_id}
             self.learner_core.on_new_epoch()
             callback_list.on_epoch_begin(self.epoch_id, logs)
-            val_logs = self._train_epoch(step, valid_loader, MetricsList(metrics), callback_list)
+
+            metric_list = MetricsList(metrics)
+            val_logs = self._run_batch(step, valid_loader, metric_list, callback_list)
+
             val_logs.update(logs)
+            val_logs.update({"metrics_logs": metric_list.compute_flush(step)})
             val_logs.update({"models": self.learner_core.get_models})
             callback_list.on_epoch_end(self.epoch_id, val_logs)
 
