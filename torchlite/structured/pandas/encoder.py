@@ -68,6 +68,7 @@ class BaseEncoder:
         """
         col_c = col
         if is_numeric_dtype(col):
+            # TODO xgboost can fix missing values itself
             # TODO: What if a NAN are found in the test set and not in the train set?
             # https://github.com/fastai/fastai/issues/74
             if pd.isnull(col).sum() or (name in na_dict):
