@@ -66,7 +66,7 @@ class Learner:
         train_logs = self._run_batch(step, train_loader, metric_list, callback_list)
 
         train_logs.update(logs)
-        train_logs.update({"metrics_logs": metric_list.compute_flush(step)})
+        train_logs.update({"metrics_logs": metric_list.avg(step)})
         train_logs.update({"models": self.learner_core.get_models})
         callback_list.on_epoch_end(self.epoch_id, train_logs)
 
@@ -84,7 +84,7 @@ class Learner:
             val_logs = self._run_batch(step, valid_loader, metric_list, callback_list)
 
             val_logs.update(logs)
-            val_logs.update({"metrics_logs": metric_list.compute_flush(step)})
+            val_logs.update({"metrics_logs": metric_list.avg(step)})
             val_logs.update({"models": self.learner_core.get_models})
             callback_list.on_epoch_end(self.epoch_id, val_logs)
 

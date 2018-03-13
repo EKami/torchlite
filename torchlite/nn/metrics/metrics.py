@@ -1,7 +1,6 @@
 """
 This class contains generalized metrics which works across different models
 """
-import gc
 import torch
 import copy
 import numpy as np
@@ -25,57 +24,54 @@ class MetricsList:
         else:
             self.metrics = []
 
-        self.train_acc = None
-        self.val_acc = None
+        self.train_acc = {}
+        self.val_acc = {}
+        self.step_count = 0
 
     def acc_batch(self, step, logits, targets):
         """
         Called on each batch prediction.
-        Will accumulate the Tensors on RAM for later computation
+        Will accumulate the metrics results.
         Args:
             step (str): Either "training" or "validation"
             logits (Variable): The output logits
             targets (Variable): The output targets
         """
-        logits = logits.cpu()
-        targets = targets.cpu()
 
         if step == "training":
-            if self.train_acc is None:
-                self.train_acc = [logits, targets]
-            else:
-                self.train_acc[0] = torch.cat((self.train_acc[0], logits), 0)
-                self.train_acc[1] = torch.cat((self.train_acc[1], targets), 0)
+            for metric in self.metrics:
+                result = metric(step, logits, targets)
+                if result:
+                    if metric.get_name in self.train_acc.keys():
+                        self.train_acc[metric.get_name] += result
+                    else:
+                        self.train_acc[metric.get_name] = result
         elif step == "validation":
-            if self.val_acc is None:
-                self.val_acc = [logits, targets]
-            else:
-                self.val_acc[0] = torch.cat((self.val_acc[0], logits), 0)
-                self.val_acc[1] = torch.cat((self.val_acc[1], targets), 0)
+            for metric in self.metrics:
+                result = metric(step, logits, targets)
+                if result:
+                    if metric.get_name in self.val_acc.keys():
+                        self.val_acc[metric.get_name] += result
+                    else:
+                        self.val_acc[metric.get_name] = result
 
-    def compute_flush(self, step):
+        self.step_count += 1
+
+    def avg(self, step):
         """
-        Will calculate and return the metrics results and flush the accumulated Tensors.
+        Will calculate and return the metrics average results
         Args:
             step (str): Either "training" or "validation"
         Returns:
-
+            dict: A dictionary containing the average of each metric
         """
         logs = {}
         if step == "training":
-            for metric in self.metrics:
-                result = metric(step, self.train_acc[0], self.train_acc[1])
-                if result:
-                    logs[metric.get_name] = result
-            self.train_acc = None
+            for name, total in self.train_acc.items():
+                logs[name] = total / self.step_count
         elif step == "validation":
-            for metric in self.metrics:
-                result = metric(step, self.val_acc[0], self.val_acc[1])
-                if result:
-                    logs[metric.get_name] = result
-            self.val_acc = None
-
-        gc.collect()
+            for name, total in self.val_acc.items():
+                logs[name] = total / self.step_count
         return logs
 
     def reset(self):
