@@ -120,7 +120,7 @@ class RMSPE(Metric):
             targ = y_true
         pct_var = (targ - torch.exp(y_pred)) / targ
         res = torch.sqrt((pct_var ** 2).mean()).data[0]
-        self.count += 1
+        self.count += y_pred.size()[0]  # Batch size
         self.sum += res
         return res
 
