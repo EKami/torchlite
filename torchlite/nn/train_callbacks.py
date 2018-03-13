@@ -138,9 +138,10 @@ class TQDM(TrainCallback):
             train_metrics = logs['metrics_logs']
             if len(train_logs) > 0:
                 print(*["{}={:03f}".format(k, v) for k, v in train_logs.items()], end=' ')
+                print()
 
             if len(train_metrics) > 0:
-                print("| Train metrics:", end=' ')
+                print("{:>14}".format("Train metrics:"), end=' ')
                 print(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
             else:
                 print()
@@ -149,10 +150,11 @@ class TQDM(TrainCallback):
             val_logs = logs.get('epoch_logs')
             if val_logs and len(val_logs) > 0:
                 print(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
+                print()
 
             val_metrics = logs.get('metrics_logs')
             if val_metrics and len(val_metrics) > 0:
-                print("| Val metrics:", end=' ')
+                print("{:>14}".format("Val metrics:"), end=' ')
                 print(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
             else:
                 print()
