@@ -17,6 +17,7 @@ import datetime
 import torch.optim as optim
 from tqdm import tqdm
 
+from sklearn.preprocessing.data import StandardScaler
 from torchlite.data import files as tfiles
 from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore
@@ -24,7 +25,8 @@ import torchlite.nn.metrics.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
-from torchlite.structured.pandas.encoder import TreeEncoder
+from torchlite.nn.train_callbacks import CosineAnnealingCallback
+from torchlite.structured.pandas.encoder import TreeEncoder, EncoderBlueprint
 
 
 def join_df(left, right, left_on, right_on=None, suffix='_y'):
@@ -221,9 +223,10 @@ def create_features(train_df, test_df):
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
-    train_df, encoder_blueprint = TreeEncoder(train_df, contin_vars, cat_vars).apply_encoding(scale_continuous=True)
-    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars, encoder_blueprint=encoder_blueprint)\
-        .apply_encoding(scale_continuous=True)
+    train_df, encoder_blueprint = TreeEncoder(train_df, contin_vars, cat_vars,
+                                              EncoderBlueprint(StandardScaler())).apply_encoding()
+    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars,
+                             encoder_blueprint=encoder_blueprint).apply_encoding()
 
     assert len(train_df.columns) == len(test_df.columns)
     return train_df, test_df, yl, cat_vars, card_cat_features
@@ -250,7 +253,7 @@ def main():
     epochs = 20
     val_idx = np.flatnonzero(
         (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
-    val_idx = [0]  # Uncomment this to train on the whole dataset
+    val_idx = None  # /!\ Comment this to get a real validation set
     # --
 
     max_log_y = np.max(yl)
@@ -260,9 +263,10 @@ def main():
     model = shortcut.get_stationary_model(card_cat_features, len(train_df.columns) - len(cat_vars),
                                           output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                           hidden_dropouts=[0.001, 0.01], y_range=y_range)
-    learner = Learner(ClassifierCore(model, optim.Adam(model.parameters()), F.mse_loss))
-    learner.train(epochs, [metrics.RMSPE(to_exp=True)],
-                  shortcut.get_train_loader, shortcut.get_val_loader)
+    optimizer = optim.Adam(model.parameters())
+    learner = Learner(ClassifierCore(model, optimizer, F.mse_loss))
+    learner.train(epochs, [metrics.RMSPE(to_exp=True)], shortcut.get_train_loader, shortcut.get_val_loader,
+                  callbacks=[CosineAnnealingCallback(optimizer, T_max=epochs)])
     test_pred = learner.predict(shortcut.get_test_loader, flatten_predictions=True)
     test_pred = np.exp(test_pred)
 

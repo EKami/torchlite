@@ -4,6 +4,7 @@ This module contains callbacks used during training/validation phases.
 import os
 import torch
 import torch.optim.lr_scheduler as lr_scheduler
+
 from tqdm import tqdm
 from collections import OrderedDict
 from tensorboardX import SummaryWriter
@@ -315,10 +316,14 @@ class ModelSaverCallback(TrainCallback):
 
 
 class CosineAnnealingCallback(TrainCallback):
-    # TODO implemented in pytorch http://pytorch.org/docs/0.3.1/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR
-    def __init__(self):
-        # TODO https://youtu.be/EKzSiuqiHNg?t=1h18m9s
-        super().__init__()
+    def __init__(self, optimizer, T_max, eta_min=0, last_epoch=-1):
+        # https://youtu.be/EKzSiuqiHNg?t=1h18m9s
+        self.lr_sch = lr_scheduler.CosineAnnealingLR(optimizer, T_max, eta_min, last_epoch)
+
+    def on_epoch_end(self, epoch, logs=None):
+        step = logs["step"]
+        if step == "training":
+            self.lr_sch.step(epoch)
 
 
 class CycleLenCallback(TrainCallback):

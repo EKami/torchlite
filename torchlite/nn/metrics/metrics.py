@@ -4,9 +4,6 @@ This class contains generalized metrics which works across different models
 import torch
 import copy
 import numpy as np
-import torch.nn as nn
-import torch.nn.functional as F
-import math
 from torch.autograd.variable import Variable
 import torchlite.nn.tools.ssim as ssim
 
@@ -19,12 +16,6 @@ class Metric:
     def get_name(self):
         raise NotImplementedError()
 
-    def avg(self):
-        raise NotImplementedError()
-
-    def reset(self):
-        raise NotImplementedError()
-
 
 class MetricsList:
     def __init__(self, metrics):
@@ -33,18 +24,52 @@ class MetricsList:
         else:
             self.metrics = []
 
-    def __call__(self, step, logits, target):
-        logs = {}
-        for metric in self.metrics:
-            result = metric(step, logits, target)
-            if result:
-                logs[metric.get_name] = result
-        return logs
+        self.train_acc = {}
+        self.val_acc = {}
+        self.step_count = 0
 
-    def avg(self):
+    def acc_batch(self, step, logits, targets):
+        """
+        Called on each batch prediction.
+        Will accumulate the metrics results.
+        Args:
+            step (str): Either "training" or "validation"
+            logits (Variable): The output logits
+            targets (Variable): The output targets
+        """
+
+        if step == "training":
+            for metric in self.metrics:
+                result = metric(step, logits, targets)
+                if metric.get_name in self.train_acc.keys():
+                    self.train_acc[metric.get_name] += result
+                else:
+                    self.train_acc[metric.get_name] = result
+        elif step == "validation":
+            for metric in self.metrics:
+                result = metric(step, logits, targets)
+                if metric.get_name in self.val_acc.keys():
+                    self.val_acc[metric.get_name] += result
+                else:
+                    self.val_acc[metric.get_name] = result
+
+        self.step_count += 1
+
+    def avg(self, step):
+        """
+        Will calculate and return the metrics average results
+        Args:
+            step (str): Either "training" or "validation"
+        Returns:
+            dict: A dictionary containing the average of each metric
+        """
         logs = {}
-        for metric in self.metrics:
-            logs[metric.get_name] = metric.avg()
+        if step == "training":
+            for name, total in self.train_acc.items():
+                logs[name] = total / self.step_count
+        elif step == "validation":
+            for name, total in self.val_acc.items():
+                logs[name] = total / self.step_count
         return logs
 
     def reset(self):
@@ -55,13 +80,9 @@ class MetricsList:
 
 
 class CategoricalAccuracy(Metric):
-    def __init__(self):
-        self.correct_count = 0
-        self.count = 0
-
     def __call__(self, step, y_pred, y_true):
         """
-        Return the accuracy of the predictions across the whole dataset
+        Return the accuracy of the predictions across the whole batch
          Args:
             y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
             y_true (Tensor): Tensor of shape (batch_size, 1)
@@ -76,19 +97,11 @@ class CategoricalAccuracy(Metric):
         if isinstance(y_pred_dense, Variable):
             y_pred_dense = y_pred_dense.data
         sm = torch.sum(y_true == y_pred_dense)
-        self.correct_count += sm
-        self.count += y_true.size()[0]
-        return self.avg()
-
-    def avg(self):
-        return 100. * self.correct_count / self.count
+        return 100. * sm / y_true.size()[0]
 
     @property
     def get_name(self):
         return "accuracy"
-
-    def reset(self):
-        self.correct_count = 0
 
 
 class RMSPE(Metric):
@@ -101,39 +114,30 @@ class RMSPE(Metric):
         """
         super().__init__()
         self.to_exp = to_exp
-        self.count = 0
-        self.sum = 0
 
     def __call__(self, step, y_pred, y_true):
         """
         Root-mean-squared percent error
         Args:
-            y_pred (Tensor): One-hot encoded tensor of shape (batch_size, preds)
-            y_true (Tensor): Tensor of shape (batch_size, 1)
+            y_pred (Tensor): One-hot encoded tensor
+            y_true (Tensor): Tensor of predictions
 
         Returns:
             The Root-mean-squared percent error
         """
         if self.to_exp:
+            logits = torch.exp(y_pred)
             targ = torch.exp(y_true)
         else:
+            logits = y_pred
             targ = y_true
-        pct_var = (targ - torch.exp(y_pred)) / targ
+        pct_var = (targ - logits) / targ
         res = torch.sqrt((pct_var ** 2).mean()).data[0]
-        self.count += 1
-        self.sum += res
         return res
 
     @property
     def get_name(self):
         return "rmspe"
-
-    def avg(self):
-        return self.sum / self.count
-
-    def reset(self):
-        self.count = 0
-        self.sum = 0
 
 
 class SSIM(Metric):
@@ -144,25 +148,14 @@ class SSIM(Metric):
             step (str, None): Either "training", "validation" or None to run this metric on all steps
         """
         self.step = step
-        self.count = 0
-        self.sum = 0
 
     @property
     def get_name(self):
         return "ssim"
 
-    def avg(self):
-        return self.sum / self.count
-
-    def reset(self):
-        self.count = 0
-        self.sum = 0
-
     def __call__(self, step, logits, target):
         if not self.step or self.step == step:
             res = ssim.ssim(logits, target).data[0]
-            self.count += logits.size()[0]  # Batch size
-            self.sum += res
             return res
 
 
@@ -174,25 +167,13 @@ class PSNR(Metric):
             step (str, None): Either "training", "validation" or None to run this metric on all steps
         """
         self.step = step
-        self.count = 0
-        self.sum = 0
 
     @property
     def get_name(self):
         return "psnr"
 
-    def avg(self):
-        return self.sum / self.count
-
-    def reset(self):
-        self.count = 0
-        self.sum = 0
-
     def __call__(self, step, logits, target):
         if not self.step or self.step == step:
-            batch_mse = ((target - logits) ** 2).data.mean()
-            psnr = 10 * np.log10((255 ** 2) / batch_mse)
-
-            self.count += logits.size(0)
-            self.sum += psnr
+            mse = ((target - logits) ** 2).data.mean()
+            psnr = 10 * np.log10((255 ** 2) / mse)
             return psnr

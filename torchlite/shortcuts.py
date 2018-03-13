@@ -31,13 +31,17 @@ class ColumnarShortcut(BaseLoader):
 
     @classmethod
     def from_data_frames(cls, train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=None):
+        train_ds = ColumnarDataset.from_data_frame(train_df, cat_fields, train_y)
+        val_ds = ColumnarDataset.from_data_frame(val_df, cat_fields, val_y) if val_df is not None else None
         test_ds = ColumnarDataset.from_data_frame(test_df, cat_fields) if test_df is not None else None
-        return cls(ColumnarDataset.from_data_frame(train_df, cat_fields, train_y),
-                   ColumnarDataset.from_data_frame(val_df, cat_fields, val_y), test_ds, batch_size)
+        return cls(train_ds, val_ds, test_ds, batch_size)
 
     @classmethod
     def from_data_frame(cls, df, val_idxs, y, cat_fields, batch_size, test_df=None):
-        ((val_df, train_df), (val_y, train_y)) = tfiles.split_by_idx(val_idxs, df, y)
+        if val_idxs is not None:
+            ((val_df, train_df), (val_y, train_y)) = tfiles.split_by_idx(val_idxs, df, y)
+        else:
+            train_df, train_y, val_df, val_y = df, y, None, None
         return cls.from_data_frames(train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=test_df)
 
     def get_stationary_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
