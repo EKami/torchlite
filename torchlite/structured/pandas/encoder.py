@@ -132,7 +132,12 @@ class TreeEncoder(BaseEncoder):
         as `cont_features` nor as `categ_features` are just ignored for the resulting DataFrame.
         The columns which are listed in `cont_features` and `categ_features` and not present in the
         DataFrame are also ignored.
-
+        This method will do the following:
+            - Remove NaN values by using the feature mean and adding a feature_missing feature
+            - Scale the continuous values according to the EncoderBlueprint scaler
+            - Encode categorical features to numeric types
+        What it doesn't do:
+            - Deal with outliers
         Returns:
             (DataFrame, EncoderBlueprint):
                 Returns:
