@@ -112,7 +112,7 @@ def train(args):
 
     g_loss = PerceptualLoss(use_cuda=True, num_workers=num_workers)
     learner = Learner(SRGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
-    learner.train(args.adv_epochs, [SSIM("validation"), PSNR("validation")], train_loader, valid_loader, callbacks)
+    learner.train(args.adv_epochs, [SSIM(), PSNR()], train_loader, valid_loader, callbacks)
 
 
 def main():

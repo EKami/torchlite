@@ -9,7 +9,7 @@ import torchlite.nn.tools.ssim as ssim
 
 
 class Metric:
-    def __call__(self, step, logits, target):
+    def __call__(self, logits, targets):
         raise NotImplementedError()
 
     @property
@@ -40,14 +40,14 @@ class MetricsList:
 
         if step == "training":
             for metric in self.metrics:
-                result = metric(step, logits, targets)
+                result = metric(logits, targets)
                 if metric.get_name in self.train_acc.keys():
                     self.train_acc[metric.get_name] += result
                 else:
                     self.train_acc[metric.get_name] = result
         elif step == "validation":
             for metric in self.metrics:
-                result = metric(step, logits, targets)
+                result = metric(logits, targets)
                 if metric.get_name in self.val_acc.keys():
                     self.val_acc[metric.get_name] += result
                 else:
@@ -80,7 +80,7 @@ class MetricsList:
 
 
 class CategoricalAccuracy(Metric):
-    def __call__(self, step, y_pred, y_true):
+    def __call__(self, y_pred, y_true):
         """
         Return the accuracy of the predictions across the whole batch
          Args:
@@ -115,7 +115,7 @@ class RMSPE(Metric):
         super().__init__()
         self.to_exp = to_exp
 
-    def __call__(self, step, y_pred, y_true):
+    def __call__(self, y_pred, y_true):
         """
         Root-mean-squared percent error
         Args:
@@ -141,39 +141,35 @@ class RMSPE(Metric):
 
 
 class SSIM(Metric):
-    def __init__(self, step=None):
+    def __init__(self):
         """
         Calculates SSIM
         Args:
             step (str, None): Either "training", "validation" or None to run this metric on all steps
         """
-        self.step = step
 
     @property
     def get_name(self):
         return "ssim"
 
-    def __call__(self, step, logits, target):
-        if not self.step or self.step == step:
-            res = ssim.ssim(logits, target).data[0]
-            return res
+    def __call__(self, logits, targets):
+        res = ssim.ssim(logits, targets).data[0]
+        return res
 
 
 class PSNR(Metric):
-    def __init__(self, step=None):
+    def __init__(self):
         """
         Calculates PSNR
         Args:
             step (str, None): Either "training", "validation" or None to run this metric on all steps
         """
-        self.step = step
 
     @property
     def get_name(self):
         return "psnr"
 
-    def __call__(self, step, logits, target):
-        if not self.step or self.step == step:
-            mse = ((target - logits) ** 2).data.mean()
-            psnr = 10 * np.log10((255 ** 2) / mse)
-            return psnr
+    def __call__(self, logits, targets):
+        mse = ((targets - logits) ** 2).data.mean()
+        psnr = 10 * np.log10((255 ** 2) / mse)
+        return psnr
