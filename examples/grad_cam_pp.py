@@ -72,7 +72,7 @@ def main():
     learner.train(epochs, metrics, shortcut.get_train_loader, shortcut.get_val_loader)
 
     y_mapping = shortcut.get_y_mapping
-    y_pred = learner.predict(shortcut.get_test_loader, callbacks=[grad_cam_callback])
+    y_pred = learner.predict(shortcut.get_test_loader, callbacks=[grad_cam_callback], flatten_predictions=True)
     heatmap = grad_cam_callback.get_heatmap
     show_test_image(test_image_name, shortcut, y_mapping, y_pred)
 
