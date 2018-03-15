@@ -29,7 +29,7 @@ def srpgan_eval(images, generator_file, upscale_factor, use_cuda, num_workers=os
     eval_dl = DataLoader(eval_ds, 1, shuffle=False, num_workers=num_workers)
 
     images_pred = []
-    predictions = learner.predict(eval_dl)
+    predictions = learner.predict(eval_dl, flatten_predictions=False)
     tfs = transforms.Compose([
         transforms.ToPILImage(),
     ])

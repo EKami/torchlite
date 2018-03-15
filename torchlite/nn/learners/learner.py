@@ -121,7 +121,7 @@ class Learner:
         callback_list.on_train_end()
         print('Total train time (hh:mm:ss.ms) {}\n'.format(datetime.now() - train_start_time))
 
-    def predict(self, test_loader: DataLoader, callbacks=None, flatten_predictions=False):
+    def predict(self, test_loader: DataLoader, callbacks=None, flatten_predictions=True):
         """
             Launch the prediction on the given loader and pass
             each predictions to the given callbacks.
@@ -131,7 +131,9 @@ class Learner:
                 as the train_loader passed in train() with the difference that
                 the targets will be ignored.
             callbacks (list, None): List of test callbacks functions
-            flatten_predictions (bool): If True will flatten the prediction array
+            flatten_predictions (bool): If True will flatten the prediction array over all batch.
+            Sometimes you don't want this to happen because you may have batch predictions of different
+            shapes and flattening over all the batch won't work.
         """
         test_start_time = datetime.now()
         # Switch to evaluation mode
@@ -161,7 +163,7 @@ class Learner:
             callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         if flatten_predictions:
-            ret_logits = np.array([pred.view(-1).cpu().numpy() for sublist in ret_logits for pred in sublist]).flatten()
+            ret_logits = np.array([pred.view(-1).cpu().numpy() for sublist in ret_logits for pred in sublist])
         callback_list.on_test_end({'loader': test_loader})
         print('Total prediction time (hh:mm:ss.ms) {}\n'.format(datetime.now() - test_start_time))
         return ret_logits
