@@ -1,12 +1,15 @@
 from setuptools import setup, find_packages
 import torchlite
 
+with open('README.md') as f:
+    long_description = f.read()
+
 setup(
     name='torchlite',
     version=torchlite.__version__,
 
     description='A high level library for Pytorch',
-    long_description="https://github.com/EKami/Torchlite/master/README.md",
+    long_description=long_description,
     url='https://github.com/EKami/Torchlite',
     author='GODARD Tuatini',
     author_email='tuatinigodard@gmail.com',
