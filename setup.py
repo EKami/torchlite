@@ -10,6 +10,8 @@ setup(
 
     description='A high level library for Pytorch',
     long_description=long_description,
+    # Markdown on pypi https://dustingram.com/articles/2018/03/16/markdown-descriptions-on-pypi
+    long_description_content_type="text/markdown",
     url='https://github.com/EKami/Torchlite',
     author='GODARD Tuatini',
     author_email='tuatinigodard@gmail.com',
