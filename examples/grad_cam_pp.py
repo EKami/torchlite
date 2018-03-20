@@ -23,17 +23,13 @@ from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore
 from torchlite.nn.metrics.metrics import CategoricalAccuracy
 from torchlite.nn.test_callbacks import ActivationMapVisualizerCallback
-from torchlite.nn.tools import tensor_tools
-import matplotlib.pyplot as plt
+import torchlite.matplotlib_utils as mat_utils
 import numpy as np
 
 
 def show_test_image(test_image_name, shortcut, y_mapping, y_pred):
     image_mat, _, image_index = shortcut.get_test_loader.dataset.get_by_name(test_image_name)
-    image_mat = tensor_tools.to_np(image_mat)
-    plt.imshow(image_mat)
-    plt.title("Predicted: " + str(y_mapping[np.argmax(y_pred[image_index])]))
-    plt.show()
+    mat_utils.draw_img(image_mat, title="Predicted: " + str(y_mapping[np.argmax(y_pred[image_index])]), show=True)
 
 
 def main():

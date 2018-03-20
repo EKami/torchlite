@@ -47,6 +47,8 @@ def to_np(v):
     """
     if isinstance(v, Variable):
         v = v.data.cpu().numpy()
+    if isinstance(v, torch.Tensor):
+        v = v.cpu().numpy()
     elif isinstance(v, PIL.Image.Image):
         v = np.asarray(v)
     return v
