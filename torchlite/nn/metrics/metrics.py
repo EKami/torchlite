@@ -160,9 +160,7 @@ class SSIM(Metric):
 class PSNR(Metric):
     def __init__(self):
         """
-        Calculates PSNR
-        Args:
-            step (str, None): Either "training", "validation" or None to run this metric on all steps
+        Calculates the PSNR
         """
 
     @property
@@ -171,5 +169,5 @@ class PSNR(Metric):
 
     def __call__(self, logits, targets):
         mse = ((targets - logits) ** 2).data.mean()
-        psnr = 10 * np.log10((255 ** 2) / mse)
+        psnr = 10 * np.log10(1 / mse)
         return psnr
