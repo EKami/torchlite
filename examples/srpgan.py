@@ -16,7 +16,7 @@ from torchlite.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, 
 from torchlite.data.datasets.srpgan import TrainDataset
 from torchlite.nn.learners.learner import Learner
 from torchlite.nn.learners.cores import ClassifierCore, SRPGanCore
-from torchlite.nn.losses.srpgan import GeneratorLoss
+from torchlite.nn.losses.srpgan import GeneratorLoss, DiscriminatorLoss
 from torchlite.nn.metrics.metrics import SSIM, PSNR
 from torchlite.eval import eval
 from PIL import Image
@@ -104,7 +104,8 @@ def train(args):
                  TensorboardVisualizerCallback(tensorboard_dir.absolute())]
 
     g_loss = GeneratorLoss()
-    learner = Learner(SRPGanCore(netG, netD, optimizer_g, optimizer_d, g_loss))
+    d_loss = DiscriminatorLoss()
+    learner = Learner(SRPGanCore(netG, netD, optimizer_g, optimizer_d, g_loss, d_loss))
     learner.train(args.adv_epochs, [SSIM(), PSNR()], train_loader, valid_loader, callbacks)
 
 

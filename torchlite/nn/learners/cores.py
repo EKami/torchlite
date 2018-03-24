@@ -126,7 +126,7 @@ class ClassifierCore(BaseCore):
 
 class SRPGanCore(BaseCore):
     def __init__(self, generator: Generator, discriminator: Discriminator,
-                 g_optimizer, d_optimizer, g_criterion):
+                 g_optimizer, d_optimizer, g_criterion, d_criterion):
         """
         A GAN core classifier which takes as input a generator and a discriminator
         Args:
@@ -135,7 +135,9 @@ class SRPGanCore(BaseCore):
             g_optimizer (Optimizer): Generator optimizer
             d_optimizer (Optimizer): Discriminator optimizer
             g_criterion (callable): The Generator criterion
+            d_criterion (callable): The discriminator criterion
         """
+        self.d_criterion = d_criterion
         self.g_criterion = g_criterion
         self.d_optim = d_optimizer
         self.g_optim = g_optimizer
@@ -207,20 +209,11 @@ class SRPGanCore(BaseCore):
         d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
 
         # torchlite.nn.losses.srpgan.GeneratorLoss
-        adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
-                                                                           d_hr_feat_maps, d_sr_feat_maps,
-                                                                           sr_images, hr_images)
+        g_loss, adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
+                                                                                   d_hr_feat_maps, d_sr_feat_maps,
+                                                                                   sr_images, hr_images)
 
-        # Labels smoothing
-        real_labels = np.random.uniform(0.7, 1.2, size=d_hr_out.size())
-        real_labels = torch.FloatTensor(real_labels).cuda()
-
-        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.autograd.Variable(real_labels))
-        d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
-        d_loss = d_hr_loss + d_sr_loss
-
-        # lg = la(G,D)+λ1lp+λ2ly
-        g_loss = adversarial_loss + 1 * perceptual_loss + 1 * content_loss
+        d_loss = self.d_criterion(d_hr_out, d_sr_out)
 
         self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
         self._optimize(self.netG, self.g_optim, g_loss)
