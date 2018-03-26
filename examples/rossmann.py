@@ -27,13 +27,7 @@ import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
 from torchlite.nn.train_callbacks import CosineAnnealingCallback
 from torchlite.structured.pandas.encoder import TreeEncoder, EncoderBlueprint
-
-
-def join_df(left, right, left_on, right_on=None, suffix='_y'):
-    if right_on is None:
-        right_on = left_on
-    return left.merge(right, how='left', left_on=left_on,
-                      right_on=right_on, suffixes=("", suffix))
+import torchlite.structured.pandas.merger as tmerger
 
 
 def get_elapsed(df, monitored_field, prefix='elapsed_'):
@@ -74,7 +68,7 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         test.StateHoliday = test.StateHoliday != '0'
 
         # Join tables
-        weather = join_df(weather, state_names, "file", "StateName")
+        weather = tmerger.join_df(weather, state_names, "file", "StateName")
         pbar.update(1)
 
         # Replace all instances of state name 'NI' to match the usage in the rest of the data: 'HB,NI'
@@ -94,15 +88,15 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         pbar.update(1)
 
         # Outer join to a single dataframe
-        store = join_df(store, store_states, "Store")
-        joined = join_df(train, store, "Store")
-        joined_test = join_df(test, store, "Store")
-        joined = join_df(joined, googletrend, ["State", "Year", "Week"])
-        joined_test = join_df(joined_test, googletrend, ["State", "Year", "Week"])
+        store = tmerger.join_df(store, store_states, "Store")
+        joined = tmerger.join_df(train, store, "Store")
+        joined_test = tmerger.join_df(test, store, "Store")
+        joined = tmerger.join_df(joined, googletrend, ["State", "Year", "Week"])
+        joined_test = tmerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
         joined = joined.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
         joined_test = joined_test.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
-        joined = join_df(joined, weather, ["State", "Date"])
-        joined_test = join_df(joined_test, weather, ["State", "Date"])
+        joined = tmerger.join_df(joined, weather, ["State", "Date"])
+        joined_test = tmerger.join_df(joined_test, weather, ["State", "Date"])
         for df in (joined, joined_test):
             for c in df.columns:
                 if c.endswith('_y'):
@@ -183,9 +177,9 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
             df["Date"] = pd.to_datetime(df.Date)
 
             if name == "train":
-                joined = join_df(joined, df, ['Store', 'Date'])
+                joined = tmerger.join_df(joined, df, ['Store', 'Date'])
             elif name == "test":
-                joined_test = join_df(joined_test, df, ['Store', 'Date'])
+                joined_test = tmerger.join_df(joined_test, df, ['Store', 'Date'])
             pbar.update(1)
 
         # The authors also removed all instances where the store had zero sale / was closed

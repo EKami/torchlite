@@ -1,45 +1,53 @@
-import os
-import shutil
-from dask.diagnostics import ProgressBar
-
-
-def merge_datasets(on_df: list, from_df: list, merge_fnc: list, output_files: list,
-                   replace_if_exist=False):
+def join_df(left_df, right_df, left_on, right_on=None, suffix='_y'):
     """
-    Merges pandas/dask dataframes from from_df to on_df. This allow
+    Join two DataFrame together with a left join
+    Args:
+        left_df (DataFrame): The DataFrame on which right_df will be merged
+        right_df (DataFrame): The DataFrame which will get merged into left_df
+        left_on (str, list): The column name or a list of column names of left_df used for joining
+        right_on (str, None): The column name of right_df used for joining or None if the column
+            name is the same as left_on
+        suffix (str, None):  Suffix to apply the merged column name or None for no suffix
+
+    Returns:
+        DataFrame: The merged DataFrame
+    """
+    if right_on is None:
+        right_on = left_on
+    return left_df.merge(right_df, how='left', left_on=left_on, right_on=right_on, suffixes=("", suffix))
+
+
+def join_mult_df(left_df: list, right_df: list, left_on, right_on=None, suffixes=None):
+    """
+    Merges Dataframes from from_df to on_df. This allow
     for efficient merging of tables
 
     Args:
-        on_df (list): List of main dataframes which will get metadata merged from from_df
-        from_df (list):
-        merge_fnc (list): List of functions for merging with signature
-            (on_df, from_df) -> on_df. Must be the same size as from_df.
-        output_files (list): List of output files. Will be saved into the Apache Parquet format.
-            Must be of the same size as on_df
-        replace_if_exist (bool): Replace if the files already exists
+        left_df (list): List of DataFrames which will get metadata merged from from_df
+        right_df (list): List of DataFrames to merge into on_df
+        left_on (list): The column names of left_df used for joining (must be in the same order as the passed df)
+        right_on (list, None): The column names of right_df used for joining or None if the column
+            names are the same as left_on (must be in the same order as the passed df)
+        suffixes (list):  List of suffix to apply to each merged column names
+            (must be in the same order as the passed df)
+
+        Example:
+            join_mult_df([sales_df], [shops_df, items_df], ["shop_id", "item_id"])
     Returns:
-
+        list: The merged DataFrame
     """
-    assert len(from_df) == len(merge_fnc), "from_df and merge_fnc length differs"
-    assert len(output_files) == len(on_df), "on_df and output_files length differs"
+    if right_on is None:
+        right_on = [None] * len(right_df)
+    if suffixes is None:
+        suffixes = [None] * len(right_df)
 
-    for df_opath in output_files:
-        if os.path.exists(df_opath):
-            if replace_if_exist:
-                shutil.rmtree(df_opath)
-            else:
-                print("Datasets already merged")
-                return
+    rows_count = sum([df.shape[0] for df in left_df])
+    res_df = [None] * len(left_df)
+    for i, ldf in enumerate(left_df):
+        res_df[i] = ldf
+        for rdf, lon, ron, suffix in zip(right_df, left_on, right_on, suffixes):
+            res_df[i] = join_df(res_df[i], rdf, lon, ron, suffix)
 
-    on_df_size = len(on_df)
-    for idf_main in range(on_df_size):
-        for df_second, df_second_fnc in zip(from_df, merge_fnc):
-            df_main = on_df[idf_main]
-            on_df[idf_main] = df_second_fnc(df_main, df_second)
-
-    for main_df, df_ofile in zip(on_df, output_files):
-        print("Processing {}".format(df_ofile))
-        with ProgressBar():
-            main_df.to_parquet(df_ofile, engine='fastparquet')
-    # Ensure the original df have the same number of rows
-    assert len(on_df) == on_df_size, "on_df size has changed during merging"
+    # Ensure all df has the same number of row
+    assert sum([df.shape[0] for df in res_df]) == rows_count, "Error: left_df size has changed during merging"
+    return res_df
