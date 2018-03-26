@@ -19,9 +19,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchlite.data.fetcher as fetcher
 from torchlite.shortcuts import ImageClassifierShortcut
-from torchlite.nn.learners.learner import Learner
-from torchlite.nn.learners.cores import ClassifierCore
-from torchlite.nn.metrics.metrics import CategoricalAccuracy
+from torchlite.nn.learner import Learner
+from torchlite.nn.learner.cores import ClassifierCore
+from torchlite.nn.metrics import CategoricalAccuracy
 from torchlite.nn.test_callbacks import ActivationMapVisualizerCallback
 import torchlite.matplotlib_utils as mat_utils
 import numpy as np

@@ -3,17 +3,17 @@
     in them. The serve as the "default way to go" when you train for a particular dataset
     but don't want to spend time creating the architecture of a model.
 """
+import numpy as np
+import torch.nn as nn
 from typing import Union
 import torchvision
 from torch.utils.data import Dataset
 
 import torchlite.data.files as tfiles
-from torchlite.data.datasets.datasets import ColumnarDataset, ImageClassificationDataset
-from torchlite.nn.models.models import MixedInputModel, FinetunedConvModel
+from torchlite.data.datasets import ColumnarDataset, ImageClassificationDataset
+from torchlite.nn.models import MixedInputModel, FinetunedConvModel
 from torchlite.data.loaders import BaseLoader
 from torchlite.nn.tools import tensor_tools
-import numpy as np
-import torch.nn as nn
 
 
 class ColumnarShortcut(BaseLoader):

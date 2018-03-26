@@ -10,8 +10,8 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from torchlite.nn.tools import tensor_tools
-from torchlite.nn.metrics.metrics import MetricsList
-from torchlite.nn.learners.cores import BaseCore
+from torchlite.nn.metrics import MetricsList
+from torchlite.nn.learner.cores import BaseCore
 
 
 class Learner:

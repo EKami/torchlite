@@ -8,7 +8,6 @@ Typically you could do: transforms.Compose([FactorNormalize()])
 """
 import os
 import random
-import numpy as np
 from pathlib import Path
 from typing import Union
 import torchlite.nn.tools.image_tools as im_tools

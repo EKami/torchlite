@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from torchlite.nn.models.models import Flatten
+from torchlite.nn.models import Flatten
 
 
 class Generator(nn.Module):

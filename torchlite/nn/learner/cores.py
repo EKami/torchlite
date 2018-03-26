@@ -2,10 +2,7 @@
 This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
-import torch
 import torch.nn as nn
-import numpy as np
-import torch.nn.functional as F
 from torchlite.nn.tools import tensor_tools
 from torchlite.nn.models.srpgan import Generator, Discriminator
 

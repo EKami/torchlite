@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-from torchlite.nn.losses.losses import CharbonnierLoss
+from torchlite.nn.losses import CharbonnierLoss
 
 
 class GeneratorLoss:

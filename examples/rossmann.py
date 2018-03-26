@@ -19,9 +19,9 @@ from tqdm import tqdm
 
 from sklearn.preprocessing.data import StandardScaler
 from torchlite.data import files as tfiles
-from torchlite.nn.learners.learner import Learner
-from torchlite.nn.learners.cores import ClassifierCore
-import torchlite.nn.metrics.metrics as metrics
+from torchlite.nn.learner import Learner
+from torchlite.nn.learner.cores import ClassifierCore
+import torchlite.nn.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.shortcuts as shortcuts
 import torchlite.structured.pandas.date as date
