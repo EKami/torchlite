@@ -68,7 +68,6 @@ class BaseEncoder:
         """
         col_c = col
         if is_numeric_dtype(col):
-            # TODO xgboost can fix missing values itself
             # TODO: What if a NAN are found in the test set and not in the train set?
             # https://github.com/fastai/fastai/issues/74
             if pd.isnull(col).sum() or (name in na_dict):
@@ -103,7 +102,7 @@ class TreeEncoder(BaseEncoder):
     def __init__(self, df, cont_features, categ_features, encoder_blueprint):
         """
             An encoder used for tree based models (RandomForests, GBTs) as well
-            as deep neural networks with embeddings (DNN)
+            as deep neural networks with categorical embeddings features (DNN)
 
         Args:
             df (DataFrame, dd.DataFrame): The DataFrame to manipulate.
@@ -124,7 +123,7 @@ class TreeEncoder(BaseEncoder):
         self.cont_features = cont_features
         self.encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
 
-    def apply_encoding(self):
+    def apply_encoding(self, fix_missing=True):
         """
         Changes the passed DataFrame to an entirely numeric DataFrame and return
         a new DataFrame with the encoded features.
@@ -138,6 +137,9 @@ class TreeEncoder(BaseEncoder):
             - Encode categorical features to numeric types
         What it doesn't do:
             - Deal with outliers
+        Args:
+            fix_missing (bool): True to fix the missing values (will add a new feature `is_missing` and replace
+            the missing value by its median). For some models like Xgboost you may want to set this value to False.
         Returns:
             (DataFrame, EncoderBlueprint):
                 Returns:
@@ -159,7 +161,8 @@ class TreeEncoder(BaseEncoder):
         missing_col = [col for col in self.df.columns if col not in all_feat]
         df = self.df[[feat for feat in all_feat if feat in self.df.columns]].copy()
 
-        df, self.encoder_blueprint.na_dict = self._fix_na(df, self.encoder_blueprint.na_dict)
+        if fix_missing:
+            df, self.encoder_blueprint.na_dict = self._fix_na(df, self.encoder_blueprint.na_dict)
         print("Warning: Missing columns: {}, dropping them...".format(missing_col))
         print("Categorizing features {}".format(self.categ_features))
         # If the categorical mapping exists
