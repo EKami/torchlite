@@ -1,4 +1,6 @@
-## High level library for Pytorch
+## Torchlite
+
+[![PyPI version](https://badge.fury.io/py/torchlite.svg)](https://badge.fury.io/py/torchlite)
 
 Torchlite is a high level library meant to be what Keras is for Tensorflow and Theano.
 It is not meant to micmic the Keras API at 100% but instead to get the best of both
