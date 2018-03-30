@@ -28,13 +28,14 @@ class EncoderBlueprint:
         """
         self.numeric_scaler = numeric_scaler
         self.na_dict = None
-        self.categ_var_map = None
         self.is_scaler_fit = False
+        self.categ_var_map = None
+        self.column_names = None
 
-    def scale_vars(self, df):
+    def scale_vars(self, df, cols):
         if self.numeric_scaler is None:
             return
-        num_cols = [n for n in df.columns if is_numeric_dtype(df[n])]
+        num_cols = [n for n in df.columns if is_numeric_dtype(df[n]) and n in cols]
         # /!\ This previous transformation to float32 is very important
         df[num_cols] = df[num_cols].astype(np.float32)
         if not self.is_scaler_fit:
@@ -43,13 +44,6 @@ class EncoderBlueprint:
         df[num_cols] = self.numeric_scaler.transform(df[num_cols])
         df[num_cols] = df[num_cols].astype(np.float32)
         print("List of scaled columns: {}".format(num_cols))
-
-    def save_categ_vars_map(self, df):
-        if not self.categ_var_map:
-            self.categ_var_map = {}
-        for col_name, values in df.items():
-            if df[col_name].dtype.name == 'category':
-                self.categ_var_map[col_name] = values
 
 
 class BaseEncoder:
@@ -62,8 +56,25 @@ class BaseEncoder:
         self.df = df.copy()
         self.categorical_cols = categorical_cols
         self.numeric_cols = numeric_cols
-        self.encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
+        self.blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
         self.fix_missing = fix_missing
+
+    def _check_integrity(self, df):
+        """
+        Check if the columns registered in the EncoderBlueprint are the same as the ones
+        in the passed df
+        Returns:
+            bool: Return True if the columns match, raise an exception otherwise
+        """
+        if self.blueprint.column_names is None:
+            self.blueprint.column_names = df.columns
+            return True
+
+        diff = list(set(self.blueprint.column_names) - set(df.columns))
+        if len(diff) > 0:
+            raise Exception("Columns in EncoderBlueprint and DataFrame do not match: {}".format(diff))
+
+        return True
 
     def _get_all_non_numeric(self, df):
         non_num_cols = []
@@ -135,19 +146,18 @@ class BaseEncoder:
         missing_col = [col for col in self.df.columns if col not in all_feat]
         df = self.df[[feat for feat in all_feat if feat in self.df.columns]].copy()
 
+        self._check_integrity(df)
+
         if self.fix_missing:
-            df, self.encoder_blueprint.na_dict = self._fix_na(df, self.encoder_blueprint.na_dict)
+            df, self.blueprint.na_dict = self._fix_na(df, self.blueprint.na_dict)
         print("Warning: Missing columns: {}, dropping them...".format(missing_col))
         print("Categorizing features {}".format(self.categorical_cols))
 
         # Encode numeric features
-        self.encode_categorical(df)
+        df = self.encode_categorical(df)
 
         # Scale numeric vars
-        self.encoder_blueprint.scale_vars(df)
-
-        # Save categorical codes into encoderBlueprint
-        self.encoder_blueprint.save_categ_vars_map(df)
+        self.blueprint.scale_vars(df, self.numeric_cols)
 
         for name, col in df.items():
             if not is_numeric_dtype(col):
@@ -163,7 +173,7 @@ class BaseEncoder:
             raise Exception("Not all columns are numeric or NaN has been found: {}.".format(non_num_cols))
 
         print("---------- Preprocessing done -----------")
-        return df, self.encoder_blueprint
+        return df, self.blueprint
 
 
 class TreeEncoder(BaseEncoder):
@@ -211,20 +221,21 @@ class TreeEncoder(BaseEncoder):
 
     def encode_categorical(self, df):
         # If the categorical mapping exists
-        if self.encoder_blueprint.categ_var_map:
+        if self.blueprint.categ_var_map:
             for col_name, values in df.items():
                 if col_name in self.categorical_cols:
-                    var_map = self.encoder_blueprint.categ_var_map
-                    print("Encoding categorical feature {}...".format(col_name))
-                    df[col_name] = pd.Categorical(values,
-                                                  categories=var_map[col_name].cat.categories,
-                                                  ordered=True)
+                    df[col_name] = pd.Categorical(values, ordered=True,
+                                                  categories=self.blueprint.categ_var_map[col_name].cat.categories)
         else:
+            self.blueprint.categ_var_map = {}
             for col in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
                 if col in df.columns:
                     # Transform all types of categorical columns to pandas category type
                     # Usually useful to make embeddings or keep the columns as numeric
                     df[col] = df[col].astype('category').cat.as_ordered()
+                    self.blueprint.categ_var_map[col] = df[col]
+
+        return df
 
 
 class LinearEncoder(BaseEncoder):
@@ -263,21 +274,24 @@ class LinearEncoder(BaseEncoder):
         return na_dict
 
     def encode_categorical(self, df):
+        # Encode values as onehot encoding
         # If the categorical mapping exists
-        if self.encoder_blueprint.categ_var_map:
+        if self.blueprint.categ_var_map:
             for col_name in df.keys():
                 if col_name in self.categorical_cols:
-                    # Encode values as onehot encoding
-                    var_map = self.encoder_blueprint.categ_var_map
-                    values = pd.get_dummies(df[col_name], prefix=col_name)
-                    print("Encoding categorical feature {}...".format(col_name))
-                    categ = pd.Categorical(values,
-                                           categories=var_map[col_name].cat.categories,
-                                           ordered=True)
-                    df = pd.concat([df.drop(col_name, axis=1), categ], axis=1)
+                    onehot = pd.get_dummies(df[col_name], prefix=col_name)
+
+                    sim_cols = list(set(self.blueprint.categ_var_map[col_name].columns).intersection(onehot.columns))
+                    print(sim_cols)
+                    col_match = pd.Series(onehot[sim_cols])
+                    # TODO finish
+                    df = pd.concat([df.drop(col_name, axis=1), col_match], axis=1)
         else:
-            for col in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
-                if col in df.columns:
-                    # Transform all types of categorical columns to pandas category type
-                    # Usually useful to make embeddings or keep the columns as numeric
-                    df[col] = df[col].astype('category').cat.as_ordered()
+            self.blueprint.categ_var_map = {}
+            for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
+                if col_name in df.columns:
+                    onehot = pd.get_dummies(df[col_name], prefix=col_name)
+                    self.blueprint.categ_var_map[col_name] = onehot
+                    df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
+
+        return df
