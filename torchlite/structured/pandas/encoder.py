@@ -63,6 +63,7 @@ class BaseEncoder:
         """
         Check if the columns registered in the EncoderBlueprint are the same as the ones
         in the passed df
+
         Returns:
             bool: Return True if the columns match, raise an exception otherwise
         """
@@ -74,7 +75,10 @@ class BaseEncoder:
         if len(diff) > 0:
             raise Exception("Columns in EncoderBlueprint and DataFrame do not match: {}".format(diff))
 
-        return True
+        if list(self.blueprint.column_names) == list(df.columns):
+            return True
+
+        raise Exception("Columns in EncoderBlueprint and DataFrame do not have the same order")
 
     def _get_all_non_numeric(self, df):
         non_num_cols = []
@@ -146,8 +150,6 @@ class BaseEncoder:
         missing_col = [col for col in self.df.columns if col not in all_feat]
         df = self.df[[feat for feat in all_feat if feat in self.df.columns]].copy()
 
-        self._check_integrity(df)
-
         if self.fix_missing:
             df, self.blueprint.na_dict = self._fix_na(df, self.blueprint.na_dict)
         print("Warning: Missing columns: {}, dropping them...".format(missing_col))
@@ -159,10 +161,6 @@ class BaseEncoder:
         # Scale numeric vars
         self.blueprint.scale_vars(df, self.numeric_cols)
 
-        for name, col in df.items():
-            if not is_numeric_dtype(col):
-                df[name] = col.cat.codes + 1
-
         non_num_cols = self._get_all_non_numeric(df)
         nan_ratio = df.isnull().sum() / len(df)
 
@@ -172,6 +170,7 @@ class BaseEncoder:
         if len(non_num_cols) > 0 and nan_ratio > 0:
             raise Exception("Not all columns are numeric or NaN has been found: {}.".format(non_num_cols))
 
+        self._check_integrity(df)
         print("---------- Preprocessing done -----------")
         return df, self.blueprint
 
@@ -234,6 +233,10 @@ class TreeEncoder(BaseEncoder):
                     # Usually useful to make embeddings or keep the columns as numeric
                     df[col] = df[col].astype('category').cat.as_ordered()
                     self.blueprint.categ_var_map[col] = df[col]
+
+        for name, col in df.items():
+            if not is_numeric_dtype(col):
+                df[name] = col.cat.codes + 1
 
         return df
 
