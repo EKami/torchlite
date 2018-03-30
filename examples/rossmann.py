@@ -202,10 +202,10 @@ def create_features(train_df, test_df):
                 'Promo2Weeks', 'StoreType', 'Assortment', 'PromoInterval', 'CompetitionOpenSinceYear',
                 'Promo2SinceYear', 'State', 'Week', 'Events', 'Promo_fw', 'Promo_bw', 'StateHoliday_fw',
                 'StateHoliday_bw', 'SchoolHoliday_fw', 'SchoolHoliday_bw']
-    contin_vars = ['CompetitionDistance', 'Max_TemperatureC', 'Mean_TemperatureC', 'Min_TemperatureC',
-                   'Max_Humidity', 'Mean_Humidity', 'Min_Humidity', 'Max_Wind_SpeedKm_h',
-                   'Mean_Wind_SpeedKm_h', 'CloudCover', 'trend', 'trend_DE',
-                   'AfterStateHoliday', 'BeforeStateHoliday', 'Promo', 'SchoolHoliday']
+    num_vars = ['CompetitionDistance', 'Max_TemperatureC', 'Mean_TemperatureC', 'Min_TemperatureC',
+                'Max_Humidity', 'Mean_Humidity', 'Min_Humidity', 'Max_Wind_SpeedKm_h',
+                'Mean_Wind_SpeedKm_h', 'CloudCover', 'trend', 'trend_DE',
+                'AfterStateHoliday', 'BeforeStateHoliday', 'Promo', 'SchoolHoliday']
     y = 'Sales'
     yl = np.log(train_df[y])
     train_df.drop(y, axis=1, inplace=True)
@@ -217,9 +217,9 @@ def create_features(train_df, test_df):
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
-    train_df, encoder_blueprint = TreeEncoder(train_df, contin_vars, cat_vars,
+    train_df, encoder_blueprint = TreeEncoder(train_df, num_vars, cat_vars,
                                               EncoderBlueprint(StandardScaler())).apply_encoding()
-    test_df, _ = TreeEncoder(test_df, contin_vars, cat_vars,
+    test_df, _ = TreeEncoder(test_df, num_vars, cat_vars,
                              encoder_blueprint=encoder_blueprint).apply_encoding()
 
     assert len(train_df.columns) == len(test_df.columns)

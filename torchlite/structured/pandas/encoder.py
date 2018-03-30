@@ -99,7 +99,7 @@ class BaseEncoder:
 
 
 class TreeEncoder(BaseEncoder):
-    def __init__(self, df, cont_features, categ_features, encoder_blueprint):
+    def __init__(self, df, numeric_cols, categorical_cols, encoder_blueprint):
         """
             An encoder used for tree based models (RandomForests, GBTs) as well
             as deep neural networks with categorical embeddings features (DNN)
@@ -108,8 +108,8 @@ class TreeEncoder(BaseEncoder):
             df (DataFrame, dd.DataFrame): The DataFrame to manipulate.
             The DataFrame will be copied and the original one won't be affected by the changes
             in this class
-            cont_features (list): The list of features to encode as continuous values.
-            categ_features (list): The list of features to encode as categorical features.
+            numeric_cols (list): The list of columns to encode as numeric values.
+            categorical_cols (list): The list of columns to encode as categorical.
             encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
                 the passed df.
         """
@@ -119,8 +119,8 @@ class TreeEncoder(BaseEncoder):
                 df = df.compute()
 
         self.df = df.copy()
-        self.categ_features = categ_features
-        self.cont_features = cont_features
+        self.categorical_cols = categorical_cols
+        self.numeric_cols = numeric_cols
         self.encoder_blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
 
     def apply_encoding(self, fix_missing=True):
@@ -157,25 +157,25 @@ class TreeEncoder(BaseEncoder):
                                                 encoder_blueprint=encoder_blueprint).apply_encoding()
         """
 
-        all_feat = self.categ_features + self.cont_features
+        all_feat = self.categorical_cols + self.numeric_cols
         missing_col = [col for col in self.df.columns if col not in all_feat]
         df = self.df[[feat for feat in all_feat if feat in self.df.columns]].copy()
 
         if fix_missing:
             df, self.encoder_blueprint.na_dict = self._fix_na(df, self.encoder_blueprint.na_dict)
         print("Warning: Missing columns: {}, dropping them...".format(missing_col))
-        print("Categorizing features {}".format(self.categ_features))
+        print("Categorizing features {}".format(self.categorical_cols))
         # If the categorical mapping exists
         if self.encoder_blueprint.categ_var_map:
             for col_name, values in df.items():
-                if col_name in self.categ_features:
+                if col_name in self.categorical_cols:
                     var_map = self.encoder_blueprint.categ_var_map
                     print("Encoding categorical feature {}...".format(col_name))
                     df[col_name] = pd.Categorical(values,
                                                   categories=var_map[col_name].cat.categories,
                                                   ordered=True)
         else:
-            for feat in tqdm(self.categ_features, total=len(self.categ_features)):
+            for feat in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
                 if feat in df.columns:
                     # Transform all types of categorical columns to pandas category type
                     # Usually useful to make embeddings or keep the columns as continuous
