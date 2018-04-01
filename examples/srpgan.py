@@ -10,14 +10,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchlite.data.fetcher as fetcher
 import torchlite.data.files as tfiles
-import torchlite.nn.tools.image_tools as image_tools
-from torchlite.nn.models.srpgan import Generator, Discriminator, weights_init
-from torchlite.nn.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
+import torchlite.torch.tools.image_tools as image_tools
+from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
+from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlite.data.datasets.srpgan import TrainDataset
-from torchlite.nn.learner import Learner
-from torchlite.nn.learner.cores import ClassifierCore, SRPGanCore
-from torchlite.nn.losses.srpgan import GeneratorLoss, DiscriminatorLoss
-from torchlite.nn.metrics import SSIM, PSNR
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore, SRPGanCore
+from torchlite.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
+from torchlite.torch.metrics import SSIM, PSNR
 from torchlite import eval
 from PIL import Image
 

@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from torchlite.nn.learner import Learner
-from torchlite.nn.learner.cores import ClassifierCore
-from torchlite.nn.metrics import CategoricalAccuracy
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore
+from torchlite.torch.metrics import CategoricalAccuracy
 import os
 
 

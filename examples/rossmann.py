@@ -18,16 +18,27 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from sklearn.preprocessing.data import StandardScaler
-from torchlite.data import files as tfiles
-from torchlite.nn.learner import Learner
-from torchlite.nn.learner.cores import ClassifierCore
-import torchlite.nn.metrics as metrics
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore
+import torchlite.torch.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
-import torchlite.shortcuts as shortcuts
-import torchlite.structured.pandas.date as date
-from torchlite.nn.train_callbacks import CosineAnnealingCallback
-from torchlite.structured.pandas.encoder import TreeEncoder, EncoderBlueprint
-import torchlite.structured.pandas.merger as tmerger
+import torchlite.torch.shortcuts as shortcuts
+import torchlite.pandas.date as date
+from torchlite.torch.train_callbacks import CosineAnnealingCallback
+from torchlite.pandas.encoder import TreeEncoder, EncoderBlueprint
+import torchlite.pandas.merger as tmerger
+
+
+def to_csv(test_file, output_file, identifier_field, predicted_field,
+           predictions, read_format='csv'):
+    df = None
+    if read_format == 'csv':
+        df = pd.read_csv(test_file)
+    elif read_format == 'feather':
+        df = pd.read_feather(test_file)
+    df = df[[identifier_field]]
+    df[predicted_field] = predictions
+    df.to_csv(output_file, index=False)
 
 
 def get_elapsed(df, monitored_field, prefix='elapsed_'):
@@ -266,7 +277,7 @@ def main():
 
     # Save the predictions as a csv file
     sub_file_path = os.path.join(output_path, "submit.csv")
-    tfiles.to_csv(preprocessed_test_path, sub_file_path, 'Id', 'Sales', test_pred, read_format='feather')
+    to_csv(preprocessed_test_path, sub_file_path, 'Id', 'Sales', test_pred, read_format='feather')
     print("Predictions saved to {}".format(sub_file_path))
 
 

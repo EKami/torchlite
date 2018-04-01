@@ -66,7 +66,7 @@ def to_gpu(x, *args, **kwargs):
 
 def children(module: nn.Module):
     """
-        Returns a list of an nn.Module children modules
+        Returns a list of an torch.Module children modules
         (in other terms the list of layers of a given model)
     Args:
         module (nn.Module):

@@ -290,12 +290,12 @@ class ModelSaverCallback(TrainCallback):
         """
         Restore a model from a file
         Args:
-            model (nn.Module): A model module
+            model (torch.Module): A model module
             file (file): A file containing the pretrained model to load in
             load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
 
         Returns:
-            nn.Module: The restored model
+            torch.Module: The restored model
         """
         if load_with_cpu:
             # Load all tensors onto the CPU

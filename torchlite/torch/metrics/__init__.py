@@ -5,7 +5,7 @@ import torch
 import copy
 import numpy as np
 from torch.autograd.variable import Variable
-import torchlite.nn.tools.ssim as ssim
+import torchlite.torch.tools.ssim as ssim
 
 
 class Metric:

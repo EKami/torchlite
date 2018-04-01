@@ -3,8 +3,8 @@ This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
 import torch.nn as nn
-from torchlite.nn.tools import tensor_tools
-from torchlite.nn.models.srpgan import Generator, Discriminator
+from torchlite.torch.tools import tensor_tools
+from torchlite.torch.models.srpgan import Generator, Discriminator
 
 
 class BaseCore:
@@ -32,7 +32,7 @@ class BaseCore:
         """
         Returns the core model(s) as dictionary
         Returns:
-            dict: A dictionary of models in the form {"model_name": nn.Module}
+            dict: A dictionary of models in the form {"model_name": torch.Module}
         """
         raise NotImplementedError()
 
@@ -205,7 +205,7 @@ class SRPGanCore(BaseCore):
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
         d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
 
-        # torchlite.nn.losses.srpgan.GeneratorLoss
+        # torchlite.torch.losses.srpgan.GeneratorLoss
         g_loss, adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
                                                                                    d_hr_feat_maps, d_sr_feat_maps,
                                                                                    sr_images, hr_images)

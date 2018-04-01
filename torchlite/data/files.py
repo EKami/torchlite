@@ -6,7 +6,6 @@ from pathlib import Path
 import shutil
 import bcolz
 import numpy as np
-import pandas as pd
 from skimage import io
 from tqdm import tqdm
 import os
@@ -138,15 +137,3 @@ def get_labels_from_folders(path, y_mapping=None):
               os.listdir(os.path.join(path, label))] for label in y_all]
     files = np.array(files).reshape(-1, 2)
     return files, y_mapping
-
-
-def to_csv(test_file, output_file, identifier_field, predicted_field,
-           predictions, read_format='csv'):
-    df = None
-    if read_format == 'csv':
-        df = pd.read_csv(test_file)
-    elif read_format == 'feather':
-        df = pd.read_feather(test_file)
-    df = df[[identifier_field]]
-    df[predicted_field] = predictions
-    df.to_csv(output_file, index=False)

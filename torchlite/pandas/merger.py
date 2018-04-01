@@ -68,7 +68,7 @@ class CatSplit:
 
     def get_joined(self):
         """
-        Returns nn unique DataFrame resulting of all the DataFrames passed in the constructor
+        Returns torch unique DataFrame resulting of all the DataFrames passed in the constructor
         Returns:
             DataFrame: A pandas DataFrame
         """

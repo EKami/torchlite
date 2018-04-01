@@ -18,12 +18,12 @@ from pathlib import Path
 import torch.optim as optim
 import torch.nn.functional as F
 import torchlite.data.fetcher as fetcher
-from torchlite.shortcuts import ImageClassifierShortcut
-from torchlite.nn.learner import Learner
-from torchlite.nn.learner.cores import ClassifierCore
-from torchlite.nn.metrics import CategoricalAccuracy
-from torchlite.nn.test_callbacks import ActivationMapVisualizerCallback
-import torchlite.matplotlib_utils as mat_utils
+from torchlite.torch.shortcuts import ImageClassifierShortcut
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore
+from torchlite.torch.metrics import CategoricalAccuracy
+from torchlite.torch.test_callbacks import ActivationMapVisualizerCallback
+import torchlite.matplotlib.utils as mat_utils
 import numpy as np
 
 
