@@ -1,4 +1,7 @@
 """
+
+TODO: The grad-cam callback still need to be implemented
+
 This script implements the grad-cam++ method to look inside
 a CNN and see a heatmap of where the network is looking to do
 its predictions. Link to the paper: https://arxiv.org/abs/1710.11063
