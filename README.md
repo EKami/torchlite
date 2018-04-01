@@ -22,25 +22,22 @@ pip install -r requirements.txt
 ```
 
 to install the required dependencies.
-Then install pytorch and torchvision from [here](http://pytorch.org/).
-Finally install the latest version of imgaug with:
-```
-pip install git+https://github.com/aleju/imgaug
-```
-Torchlite will use an outdated version from pypi by default.
+Then install pytorch and torchvision from [here](http://pytorch.org/) if you want to use the `torchlite.torch`
+package and/or head over to the [Tensorflow install page](https://www.tensorflow.org/install/) if you want to
+use the `torchlite.tf` package.
 
 ## Documentation
 
 For now the library has no complete documentation but you can quickly get to know how
-it works by looking at the examples in the `examples` folder. This library is still in
-pre-alpha and many things may break for now. The only things which will evolve at the same
+it works by looking at the examples in the `examples-*` folders. This library is still in
+alpha and few APIs may change in the future. The only things which will evolve at the same
 pace as the library are the examples, they are meant to always be up to date with
 the library.
 
 Few examples will generates folders/files such as saved models or tensorboard logs.
 To visualize the tensorboard logs download Tensorflow's tensorboard as well as 
-[Pytorch's tensorboard](https://github.com/lanpa/tensorboard-pytorch). Then execute on the
-log folder:
+[Pytorch's tensorboard](https://github.com/lanpa/tensorboard-pytorch) if you're interested by
+the `torchlite.torch` package. Then execute:
 ```
 tensorboard --logdir=./tensorboard
 ```
