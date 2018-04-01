@@ -30,7 +30,7 @@ def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
         field_name (str): A string that is the name of the date column you wish to expand.
             Assumes the column is of type datetime64 if df is a dask dataframe
         transform_list (list): List of data transformations to add to the original dataset
-        drop (bool): If true then the original date column will be removed
+        drop (bool): If True then the original date column will be removed
         inplace (bool): If the operations are done inplace or not
         date_format (str): The datetime format for parsing
     Returns:

@@ -51,3 +51,41 @@ def join_mult_df(left_df: list, right_df: list, left_on, right_on=None, suffixes
     # Ensure all df has the same number of row
     assert sum([df.shape[0] for df in res_df]) == rows_count, "Error: left_df size has changed during merging"
     return res_df
+
+
+class CatSplit:
+    def __init__(self, df_list):
+        """
+        A helper class used to join multiple DataFrame together and split
+        them back. Useful when you want to apply an operation to a bunch of
+        DataFrame at once (like train and test splits) and then split them
+        back after the operation is done
+
+        Args:
+            df_list (list): A list of DataFrames
+        """
+        pass
+
+    def get_joined(self):
+        """
+        Returns nn unique DataFrame resulting of all the DataFrames passed in the constructor
+        Returns:
+            DataFrame: A pandas DataFrame
+        """
+        return None
+
+    def set_joined(self, df):
+        """
+        Set back the joined DataFrames.
+        /!\ Do not try to use DataFrames which does not originates from get_joined()
+        Args:
+            df (DataFrame): A joined DataFrame
+        """
+        pass
+
+    def get_splits(self):
+        """
+        Returns the split DataFrames passed in the constructor with the applied transformations
+        Returns:
+            list: A list of DataFrame
+        """

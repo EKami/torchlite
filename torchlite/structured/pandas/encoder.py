@@ -1,8 +1,6 @@
-from dask.diagnostics import ProgressBar
 # TODO try pandas on ray: https://rise.cs.berkeley.edu/blog/pandas-on-ray/
 import pandas as pd
 
-import dask.dataframe as dd
 from tqdm import tqdm
 import numpy as np
 from pandas.api.types import is_numeric_dtype
@@ -48,11 +46,6 @@ class EncoderBlueprint:
 
 class BaseEncoder:
     def __init__(self, df, numeric_cols, categorical_cols, encoder_blueprint, fix_missing):
-        if isinstance(df, dd.DataFrame):
-            with ProgressBar():
-                print("Turning dask DataFrame into pandas DataFrame")
-                df = df.compute()
-
         self.df = df.copy()
         self.categorical_cols = categorical_cols
         self.numeric_cols = numeric_cols
@@ -145,7 +138,6 @@ class BaseEncoder:
                     test_df, _ = TreeEncoder(test_df, num_vars, cat_vars,
                                              encoder_blueprint=encoder_blueprint).apply_encoding()
         """
-
         all_feat = self.categorical_cols + self.numeric_cols
         missing_col = [col for col in self.df.columns if col not in all_feat]
         df = self.df[[feat for feat in all_feat if feat in self.df.columns]].copy()
@@ -284,11 +276,11 @@ class LinearEncoder(BaseEncoder):
                 if col_name in self.categorical_cols:
                     onehot = pd.get_dummies(df[col_name], prefix=col_name)
 
+                    # List of similar onehot columns
                     sim_cols = list(set(self.blueprint.categ_var_map[col_name].columns).intersection(onehot.columns))
-                    print(sim_cols)
-                    col_match = pd.Series(onehot[sim_cols])
-                    # TODO finish
-                    df = pd.concat([df.drop(col_name, axis=1), col_match], axis=1)
+                    #print(sim_cols)
+                    # TODO finish (df_test has not the right columns)
+                    df = pd.concat([df.drop(col_name, axis=1), onehot[sim_cols]], axis=1)
         else:
             self.blueprint.categ_var_map = {}
             for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
