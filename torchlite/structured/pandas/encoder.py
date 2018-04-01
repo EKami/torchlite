@@ -251,7 +251,7 @@ class LinearEncoder(BaseEncoder):
         super().__init__(df, numeric_cols, categorical_cols, encoder_blueprint, True)
 
     def _fix_missing(self, df, col, name, na_dict):
-        """ Fill missing data in a column by filling it by the maximum value of the column type
+        """ Fill missing data in a column by filling it by -9999
         (which is considered as an outlier for linear models).
 
         Args:
@@ -263,7 +263,7 @@ class LinearEncoder(BaseEncoder):
         col_c = col
         if is_numeric_dtype(col):
             if pd.isnull(col).sum() or (name in na_dict):
-                filler = na_dict[name] if name in na_dict else np.iinfo(col_c.dtype).max
+                filler = na_dict[name] if name in na_dict else -9999
                 na_dict[name] = filler
                 df[name] = col.fillna(filler)
         return na_dict
@@ -275,12 +275,10 @@ class LinearEncoder(BaseEncoder):
             for col_name in df.keys():
                 if col_name in self.categorical_cols:
                     onehot = pd.get_dummies(df[col_name], prefix=col_name)
-
-                    # List of similar onehot columns
-                    sim_cols = list(set(self.blueprint.categ_var_map[col_name].columns).intersection(onehot.columns))
-                    #print(sim_cols)
-                    # TODO finish (df_test has not the right columns)
-                    df = pd.concat([df.drop(col_name, axis=1), onehot[sim_cols]], axis=1)
+                    res_df = pd.DataFrame(data=onehot,
+                                          columns=list(self.blueprint.categ_var_map[col_name].columns))
+                    res_df = res_df.fillna(0)
+                    df = pd.concat([df.drop(col_name, axis=1), res_df], axis=1)
         else:
             self.blueprint.categ_var_map = {}
             for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
