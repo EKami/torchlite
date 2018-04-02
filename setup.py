@@ -8,7 +8,7 @@ setup(
     name='torchlite',
     version=torchlite.__version__,
 
-    description='A high level library for Pytorch',
+    description='A high level library on top of machine learning frameworks',
     long_description=long_description,
     # Markdown on pypi https://dustingram.com/articles/2018/03/16/markdown-descriptions-on-pypi
     long_description_content_type="text/markdown",
