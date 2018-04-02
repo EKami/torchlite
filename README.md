@@ -1,15 +1,15 @@
-## EzeeML
+## Torchlite
 
-[![PyPI version](https://badge.fury.io/py/ezeeml.svg)](https://badge.fury.io/py/ezeeml)
+[![PyPI version](https://badge.fury.io/py/torchlite.svg)](https://badge.fury.io/py/torchlite)
 
-EzeeML is a high level library on top of popular machine learning frameworks such as
+Torchlite is a high level library on top of popular machine learning frameworks such as
 pandas, Pytorch and Tensorflow.
 It gives a high layer abstraction of repetitive code used in machine learning for day-to-day data science tasks.
 
 ## Installation
 
 ```
-pip install ezeeml
+pip install torchlite
 ```
 
 or if you want to run this lib directly to have access to the examples clone this repository and run:
@@ -19,9 +19,9 @@ pip install -r requirements.txt
 ```
 
 to install the required dependencies.
-Then install pytorch and torchvision from [here](http://pytorch.org/) if you want to use the `ezeeml.torch`
+Then install pytorch and torchvision from [here](http://pytorch.org/) if you want to use the `torchlite.torch`
 package and/or head over to the [Tensorflow install page](https://www.tensorflow.org/install/) if you want to
-use the `ezeeml.tf` package.
+use the `torchlite.tf` package.
 
 ## Documentation
 
@@ -34,7 +34,7 @@ the library.
 Few examples will generates folders/files such as saved models or tensorboard logs.
 To visualize the tensorboard logs download Tensorflow's tensorboard as well as 
 [Pytorch's tensorboard](https://github.com/lanpa/tensorboard-pytorch) if you're interested by
-the `ezeeml.torch` package. Then execute:
+the `torchlite.torch` package. Then execute:
 ```
 tensorboard --logdir=./tensorboard
 ```

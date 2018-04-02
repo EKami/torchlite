@@ -18,16 +18,16 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from sklearn.preprocessing.data import StandardScaler
-from ezeeml.torch.learner import Learner
-from ezeeml.torch.learner.cores import ClassifierCore
-import ezeeml.torch.metrics as metrics
-from ezeeml.data.fetcher import WebFetcher
-import ezeeml.torch.shortcuts as shortcuts
-import ezeeml.pandas.date as edate
-from ezeeml.torch.train_callbacks import CosineAnnealingCallback
-from ezeeml.pandas.encoder import TreeEncoder, EncoderBlueprint
-import ezeeml.pandas.merger as emerger
-import ezeeml.pandas.splitter as esplitter
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore
+import torchlite.torch.metrics as metrics
+from torchlite.data.fetcher import WebFetcher
+import torchlite.torch.shortcuts as shortcuts
+import torchlite.pandas.date as edate
+from torchlite.torch.train_callbacks import CosineAnnealingCallback
+from torchlite.pandas.encoder import TreeEncoder, EncoderBlueprint
+import torchlite.pandas.merger as emerger
+import torchlite.pandas.splitter as esplitter
 
 
 def to_csv(test_file, output_file, identifier_field, predicted_field,
@@ -250,7 +250,7 @@ def main():
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
-    WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/ezeeml-datasets/rossmann.tgz", output_path, True)
+    WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/rossmann.tgz", output_path, True)
     if os.path.exists(preprocessed_train_path) and os.path.exists(preprocessed_test_path):
         train_df = pd.read_feather(preprocessed_train_path, nthreads=cpu_count())
         test_df = pd.read_feather(preprocessed_test_path, nthreads=cpu_count())

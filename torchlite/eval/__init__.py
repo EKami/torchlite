@@ -1,8 +1,8 @@
-from ezeeml.data.datasets.srpgan import EvalDataset
-from ezeeml.torch.models.srpgan import Generator
-from ezeeml.torch.learner import Learner
-from ezeeml.torch.learner.cores import ClassifierCore
-from ezeeml.torch.train_callbacks import ModelSaverCallback
+from torchlite.data.datasets.srpgan import EvalDataset
+from torchlite.torch.models.srpgan import Generator
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore
+from torchlite.torch.train_callbacks import ModelSaverCallback
 import os
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader

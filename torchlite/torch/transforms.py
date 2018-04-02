@@ -10,7 +10,7 @@ import os
 import random
 from pathlib import Path
 from typing import Union
-import ezeeml.torch.tools.image_tools as im_tools
+import torchlite.torch.tools.image_tools as im_tools
 import torchvision.transforms as transforms
 from PIL import Image, ImageFilter, ImageEnhance
 import torch

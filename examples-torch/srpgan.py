@@ -8,17 +8,17 @@ from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import ezeeml.data.fetcher as fetcher
-import ezeeml.data.files as efiles
-import ezeeml.torch.tools.image_tools as image_tools
-from ezeeml.torch.models.srpgan import Generator, Discriminator, weights_init
-from ezeeml.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from ezeeml.data.datasets.srpgan import TrainDataset
-from ezeeml.torch.learner import Learner
-from ezeeml.torch.learner.cores import ClassifierCore, SRPGanCore
-from ezeeml.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
-from ezeeml.torch.metrics import SSIM, PSNR
-from ezeeml import eval
+import torchlite.data.fetcher as fetcher
+import torchlite.data.files as efiles
+import torchlite.torch.tools.image_tools as image_tools
+from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
+from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
+from torchlite.data.datasets.srpgan import TrainDataset
+from torchlite.torch.learner import Learner
+from torchlite.torch.learner.cores import ClassifierCore, SRPGanCore
+from torchlite.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
+from torchlite.torch.metrics import SSIM, PSNR
+from torchlite import eval
 from PIL import Image
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +29,7 @@ saved_model_dir = efiles.create_dir_if_not_exists(os.path.join(cur_path, "checkp
 def get_loaders(args, num_workers):
     # TODO this dataset consider something else than bicubic interpolation: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/ezeeml-datasets/DIV2K.zip",
+    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/DIV2K.zip",
                                         ds_path.absolute(), True)
     ds_path = ds_path / "DIV2K"
     if args.hr_dir == "@default" and args.lr_dir == "@default":

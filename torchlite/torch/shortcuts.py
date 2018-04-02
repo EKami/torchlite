@@ -10,10 +10,10 @@ from typing import Union
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 
-import ezeeml.data.files as efiles
-from ezeeml.data.datasets import ColumnarDataset, ImageClassificationDataset
-from ezeeml.torch.models import MixedInputModel, FinetunedConvModel
-from ezeeml.torch.tools import tensor_tools
+import torchlite.data.files as efiles
+from torchlite.data.datasets import ColumnarDataset, ImageClassificationDataset
+from torchlite.torch.models import MixedInputModel, FinetunedConvModel
+from torchlite.torch.tools import tensor_tools
 
 
 class BaseLoader:
