@@ -27,6 +27,7 @@ import ezeeml.pandas.date as edate
 from ezeeml.torch.train_callbacks import CosineAnnealingCallback
 from ezeeml.pandas.encoder import TreeEncoder, EncoderBlueprint
 import ezeeml.pandas.merger as emerger
+import ezeeml.pandas.splitter as esplitter
 
 
 def to_csv(test_file, output_file, identifier_field, predicted_field,
@@ -222,9 +223,11 @@ def create_features(train_df, test_df):
                 'Max_Humidity', 'Mean_Humidity', 'Min_Humidity', 'Max_Wind_SpeedKm_h',
                 'Mean_Wind_SpeedKm_h', 'CloudCover', 'trend', 'trend_DE',
                 'AfterStateHoliday', 'BeforeStateHoliday', 'Promo', 'SchoolHoliday']
+
     y = 'Sales'
-    yl = np.log(train_df[y])
+    y_log = np.log(train_df[y]).astype(np.float32)
     train_df.drop(y, axis=1, inplace=True)
+
     train_df = train_df.set_index("Date")
     test_df = test_df.set_index("Date")
     # Get the categorical fields cardinality before turning them all to float32
@@ -239,7 +242,7 @@ def create_features(train_df, test_df):
                              encoder_blueprint=encoder_blueprint).apply_encoding()
 
     assert len(train_df.columns) == len(test_df.columns)
-    return train_df, test_df, yl, cat_vars, card_cat_features
+    return train_df, test_df, cat_vars, card_cat_features, y_log
 
 
 def main():
@@ -256,20 +259,22 @@ def main():
                                          preprocessed_train_path,
                                          preprocessed_test_path)
 
-    train_df, test_df, yl, cat_vars, card_cat_features = create_features(train_df, test_df)
+    train_df, test_df, cat_vars, card_cat_features, y_log = create_features(train_df, test_df)
 
     # -- Model parameters
     batch_size = 256
     epochs = 20
-    val_idx = np.flatnonzero(
-        (train_df.index <= datetime.datetime(2014, 9, 17)) & (train_df.index >= datetime.datetime(2014, 8, 1)))
-    val_idx = None  # /!\ Comment this to get a real validation set
+
+    train_df["Sales_log"] = y_log.values
+    max_log_y = np.max(train_df['Sales_log'])
+    y_range = (0, max_log_y * 1.2)
+
+    # /!\ Uncomment this to get a real validation set
+    #train_df, val_df = esplitter.time_split(train_df, datetime.datetime(2014, 8, 1), datetime.datetime(2014, 9, 17))
+    val_df = None
     # --
 
-    max_log_y = np.max(yl)
-    y_range = (0, max_log_y * 1.2)
-    shortcut = shortcuts.ColumnarShortcut.from_data_frame(train_df, val_idx, yl.astype(np.float32),
-                                                          cat_vars, batch_size=batch_size, test_df=test_df)
+    shortcut = shortcuts.ColumnarShortcut.from_data_frames(train_df, val_df, "Sales_log", cat_vars, batch_size, test_df)
     model = shortcut.get_stationary_model(card_cat_features, len(train_df.columns) - len(cat_vars),
                                           output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                           hidden_dropouts=[0.001, 0.01], y_range=y_range)

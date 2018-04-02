@@ -10,7 +10,7 @@ from typing import Union
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 
-import ezeeml.data.files as tfiles
+import ezeeml.data.files as efiles
 from ezeeml.data.datasets import ColumnarDataset, ImageClassificationDataset
 from ezeeml.torch.models import MixedInputModel, FinetunedConvModel
 from ezeeml.torch.tools import tensor_tools
@@ -49,19 +49,31 @@ class ColumnarShortcut(BaseLoader):
         super().__init__(train_ds, val_ds, batch_size, shuffle, test_ds)
 
     @classmethod
-    def from_data_frames(cls, train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=None):
-        train_ds = ColumnarDataset.from_data_frame(train_df, cat_fields, train_y)
-        val_ds = ColumnarDataset.from_data_frame(val_df, cat_fields, val_y) if val_df is not None else None
+    def from_data_frames(cls, train_df, val_df, y_field, cat_fields, batch_size, test_df=None):
+        """
+        Create a columnar shortcut from DataFrames.
+        Args:
+            train_df (DataFrame): The train DataFrame
+            val_df (DataFrame, None): The test DataFrame
+            y_field (str): The dependant field. This field will be removed from training
+            cat_fields (list): List of categorical fields
+            batch_size (int): Batch size
+            test_df (DataFrame, None): The test DataFrame
+
+        Returns:
+            ColumnarShortcut: A ColumnarShortcut object
+        """
+        y_train = train_df[y_field]
+        train_df.drop(y_field, axis=1, inplace=True)
+        train_ds = ColumnarDataset.from_data_frame(train_df, cat_fields, y_train)
+        if val_df is not None:
+            y_val = val_df[y_field]
+            val_df.drop(y_field, axis=1, inplace=True)
+            val_ds = ColumnarDataset.from_data_frame(val_df, cat_fields, y_val)
+        else:
+            val_ds = None
         test_ds = ColumnarDataset.from_data_frame(test_df, cat_fields) if test_df is not None else None
         return cls(train_ds, val_ds, test_ds, batch_size)
-
-    @classmethod
-    def from_data_frame(cls, df, val_idxs, y, cat_fields, batch_size, test_df=None):
-        if val_idxs is not None:
-            ((val_df, train_df), (val_y, train_y)) = tfiles.split_by_idx(val_idxs, df, y)
-        else:
-            train_df, train_y, val_df, val_y = df, y, None, None
-        return cls.from_data_frames(train_df, val_df, train_y, val_y, cat_fields, batch_size, test_df=test_df)
 
     def get_stationary_model(self, card_cat_features, n_cont, output_size, emb_drop, hidden_sizes, hidden_dropouts,
                              max_embedding_size=50, y_range=None, use_bn=False):
@@ -131,17 +143,17 @@ class ImageClassifierShortcut(BaseLoader):
         """
         datasets = []
 
-        files, y_mapping = tfiles.get_labels_from_folders(train_folder)
+        files, y_mapping = efiles.get_labels_from_folders(train_folder)
         datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
-            files, _ = tfiles.get_labels_from_folders(val_folder, y_mapping)
+            files, _ = efiles.get_labels_from_folders(val_folder, y_mapping)
             datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
-            files = tfiles.get_files(test_folder)
+            files = efiles.get_files(test_folder)
             datasets.append(ImageClassificationDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)

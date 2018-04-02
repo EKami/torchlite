@@ -1,62 +1,28 @@
-import os
-from dask.diagnostics import ProgressBar
-import dask
-import dask.dataframe as dd
-import pandas as pd
-from multiprocessing import cpu_count
-import gc
+from datetime import datetime
+import numpy as np
 
 
-def _save_split(train_df, split_df, name, split_file):
-    if os.path.exists(split_file):
-        print("{} split already exits".format(name))
-        return
-
-    with ProgressBar():
-        print("Saving {} split to file:".format(name))
-        if isinstance(train_df, dask.dataframe.core.DataFrame):
-            split_df = split_df.compute()
-        split_df.reset_index().to_feather(split_file)
-
-
-def _read_split(split_file):
-    f = pd.read_feather(split_file, nthreads=cpu_count())
-    f.set_index(f.columns[0], inplace=True)
-    return f
-
-
-def split_train_val(train_df, split_on, split_train_range, split_val_range, output_dir):
+def time_split(df, val_start_date, val_stop_date, split_field=None):
     """
-    Splits train_df into train/val sets
+    Split on a datetime64 field. Take the date between val_start_date and val_stop_date as validation split
+    and leave the rest for as the train set
     Args:
-        train_df (Dataframe): The training dataframe (either a pandas or dask dataframe)
-        split_on (str): The column on which to split
-        split_train_range (tuple): The range of train split according to the passed column in split_on
-        split_val_range (tuple, None): The range of test split according to the passed column in split_on
-        output_dir (str): The output dir where to sve the splits (their name will be based on the split
-        names and won't be regenerated if the files already exist)
+        df (DataFrame): A pandas DataFrame
+        val_start_date (datetime): A datetime date (E.g datetime.datetime(2014, 8, 1))
+        val_stop_date (datetime): A datetime date (E.g datetime.datetime(2014, 9, 17))
+        split_field (str, None): The column name contained the datetime64 values, or None to use the index
+
     Returns:
-        tuple: 2 pandas DataFrame (train_split_file_x, val_split_file_x)
+
     """
+    if split_field is None:
+        val_idxs = np.flatnonzero((df.index <= val_stop_date) & (df.index >= val_start_date))
+    else:
+        val_idxs = np.flatnonzero((df[split_field] <= val_stop_date) & (df[split_field] >= val_start_date))
+    return split_by_idx(val_idxs, df)
 
-    print("Generating splits...")
-    train_split_file = os.path.join(output_dir, "split_train_" + str(split_train_range[0]) +
-                                    "_to_" + str(split_train_range[1]) + ".feather")
 
-    train_split = train_df[(train_df[split_on] >= split_train_range[0]) &
-                           (train_df[split_on] <= split_train_range[1])]
-
-    _save_split(train_df, train_split, "Train", train_split_file)
-    gc.collect()
-    train_split = _read_split(train_split_file)
-    val_split = None
-    if split_val_range:
-        val_split_file = os.path.join(output_dir, "split_val_" + str(split_val_range[0]) +
-                                      "_to_" + str(split_val_range[1]) + ".feather")
-        val_split = train_df[(train_df[split_on] >= split_val_range[0]) &
-                             (train_df[split_on] <= split_val_range[1])]
-
-        _save_split(train_df, val_split, "Val", val_split_file)
-        gc.collect()
-        val_split = _read_split(val_split_file)
-    return train_split, val_split
+def split_by_idx(idxs, df):
+    mask = np.zeros(len(df), dtype=bool)
+    mask[np.array(idxs)] = True
+    return df[mask], df[~mask]

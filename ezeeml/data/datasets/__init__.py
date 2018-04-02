@@ -61,7 +61,6 @@ class ImageClassificationDataset(ImageDataset):
 
 
 class ColumnarDataset(Dataset):
-    # https://github.com/EKami/carvana-challenge/blob/master/src/data/dataset.py
     def __init__(self, cats, conts, y):
         n = len(cats[0]) if cats else len(conts[0])
         self.cats = np.stack(cats, 1).astype(np.int64) if cats else np.zeros((n, 1))

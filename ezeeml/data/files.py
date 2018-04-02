@@ -110,12 +110,6 @@ def get_file_names(file_paths, with_extension=True):
     return ret
 
 
-def split_by_idx(idxs, *a):
-    mask = np.zeros(len(a[0]), dtype=bool)
-    mask[np.array(idxs)] = True
-    return [(o[mask], o[~mask]) for o in a]
-
-
 def get_labels_from_folders(path, y_mapping=None):
     """
     Get labels from folder names as well as the absolute path to the files
