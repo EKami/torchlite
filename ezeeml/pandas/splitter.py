@@ -16,13 +16,9 @@ def time_split(df, val_start_date, val_stop_date, split_field=None):
 
     """
     if split_field is None:
-        val_idxs = np.flatnonzero((df.index <= val_stop_date) & (df.index >= val_start_date))
+        val_df = df[(df.index <= val_stop_date) & (df.index >= val_start_date)]
     else:
-        val_idxs = np.flatnonzero((df[split_field] <= val_stop_date) & (df[split_field] >= val_start_date))
-    return split_by_idx(val_idxs, df)
+        val_df = df[(df[split_field] <= val_stop_date) & (df[split_field] >= val_start_date)]
 
-
-def split_by_idx(idxs, df):
-    mask = np.zeros(len(df), dtype=bool)
-    mask[np.array(idxs)] = True
-    return df[mask], df[~mask]
+    train_df = df.drop(val_df.index)
+    return train_df, val_df
