@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib import patches, patheffects
-from torchlite.torch.tools import tensor_tools
+from ezeeml.torch.tools import tensor_tools
 
 
 def draw_img(image, figsize=None, title=None, show=False):

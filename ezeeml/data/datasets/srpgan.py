@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
-from torchlite.torch.transforms import PillowAug
+from ezeeml.torch.transforms import PillowAug
 from PIL import Image
 
 

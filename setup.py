@@ -1,18 +1,18 @@
 from setuptools import setup, find_packages
-import torchlite
+import ezeeml
 
 with open('README.md') as f:
     long_description = f.read()
 
 setup(
-    name='torchlite',
-    version=torchlite.__version__,
+    name='ezeeml',
+    version=ezeeml.__version__,
 
     description='A high level library for Pytorch',
     long_description=long_description,
     # Markdown on pypi https://dustingram.com/articles/2018/03/16/markdown-descriptions-on-pypi
     long_description_content_type="text/markdown",
-    url='https://github.com/EKami/Torchlite',
+    url='https://github.com/EKami/EzeeML',
     author='GODARD Tuatini',
     author_email='tuatinigodard@gmail.com',
     license='MIT',
@@ -36,5 +36,5 @@ setup(
                       "scikit_image", "setuptools", "numpy", "matplotlib", "scipy", "Pillow",
                       "dask", "scikit_learn", "tensorboardX", "typing", "PyYAML", "Augmentor",
                       find_packages(exclude=["*.tests", "*.tests.*", "tests.*",
-                                             "tests", "torchlite.*", "torchvision.*"])],
+                                             "tests", "ezeeml.*", "torchvision.*"])],
 )

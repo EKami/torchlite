@@ -1,7 +1,7 @@
 """
 This module contains callbacks used during the test phase.
 """
-from torchlite.data.datasets import ImageDataset
+from ezeeml.data.datasets import ImageDataset
 from tqdm import tqdm
 
 
@@ -107,7 +107,7 @@ class ActivationMapVisualizerCallback(TestCallback):
             using the Grad_cam++ technique: https://arxiv.org/abs/1710.11063
             # TODO may combines with TensorboardVisualizer?
 
-            /!\ This technique only works with image torchlite.data.datasets.ImagesDataset
+            /!\ This technique only works with image ezeeml.data.datasets.ImagesDataset
         Args:
             filename (str): The file name that you want to visualize
         """
@@ -119,7 +119,7 @@ class ActivationMapVisualizerCallback(TestCallback):
         model = self.model
         ds = logs["loader"].dataset if logs["loader"] else None
         assert isinstance(ds, ImageDataset), \
-            "ActivationMapVisualizer: The loader is not an instance of torchlite.data.datasets.ImagesDataset"
+            "ActivationMapVisualizer: The loader is not an instance of ezeeml.data.datasets.ImagesDataset"
         image, label, _ = ds.get_by_name(self.filename)
         # TODO finish grad cam here https://github.com/adityac94/Grad_CAM_plus_plus/blob/master/misc/utils.py#L51
 

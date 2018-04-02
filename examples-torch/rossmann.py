@@ -18,15 +18,15 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from sklearn.preprocessing.data import StandardScaler
-from torchlite.torch.learner import Learner
-from torchlite.torch.learner.cores import ClassifierCore
-import torchlite.torch.metrics as metrics
-from torchlite.data.fetcher import WebFetcher
-import torchlite.torch.shortcuts as shortcuts
-import torchlite.pandas.date as date
-from torchlite.torch.train_callbacks import CosineAnnealingCallback
-from torchlite.pandas.encoder import TreeEncoder, EncoderBlueprint
-import torchlite.pandas.merger as tmerger
+from ezeeml.torch.learner import Learner
+from ezeeml.torch.learner.cores import ClassifierCore
+import ezeeml.torch.metrics as metrics
+from ezeeml.data.fetcher import WebFetcher
+import ezeeml.torch.shortcuts as shortcuts
+import ezeeml.pandas.date as date
+from ezeeml.torch.train_callbacks import CosineAnnealingCallback
+from ezeeml.pandas.encoder import TreeEncoder, EncoderBlueprint
+import ezeeml.pandas.merger as emerger
 
 
 def to_csv(test_file, output_file, identifier_field, predicted_field,
@@ -79,7 +79,7 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         test.StateHoliday = test.StateHoliday != '0'
 
         # Join tables
-        weather = tmerger.join_df(weather, state_names, "file", "StateName")
+        weather = emerger.join_df(weather, state_names, "file", "StateName")
         pbar.update(1)
 
         # Replace all instances of state name 'NI' to match the usage in the rest of the data: 'HB,NI'
@@ -99,15 +99,15 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         pbar.update(1)
 
         # Outer join to a single dataframe
-        store = tmerger.join_df(store, store_states, "Store")
-        joined = tmerger.join_df(train, store, "Store")
-        joined_test = tmerger.join_df(test, store, "Store")
-        joined = tmerger.join_df(joined, googletrend, ["State", "Year", "Week"])
-        joined_test = tmerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
+        store = emerger.join_df(store, store_states, "Store")
+        joined = emerger.join_df(train, store, "Store")
+        joined_test = emerger.join_df(test, store, "Store")
+        joined = emerger.join_df(joined, googletrend, ["State", "Year", "Week"])
+        joined_test = emerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
         joined = joined.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
         joined_test = joined_test.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
-        joined = tmerger.join_df(joined, weather, ["State", "Date"])
-        joined_test = tmerger.join_df(joined_test, weather, ["State", "Date"])
+        joined = emerger.join_df(joined, weather, ["State", "Date"])
+        joined_test = emerger.join_df(joined_test, weather, ["State", "Date"])
         for df in (joined, joined_test):
             for c in df.columns:
                 if c.endswith('_y'):
@@ -188,9 +188,9 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
             df["Date"] = pd.to_datetime(df.Date)
 
             if name == "train":
-                joined = tmerger.join_df(joined, df, ['Store', 'Date'])
+                joined = emerger.join_df(joined, df, ['Store', 'Date'])
             elif name == "test":
-                joined_test = tmerger.join_df(joined_test, df, ['Store', 'Date'])
+                joined_test = emerger.join_df(joined_test, df, ['Store', 'Date'])
             pbar.update(1)
 
         # The authors also removed all instances where the store had zero sale / was closed
@@ -242,7 +242,7 @@ def main():
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
-    WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/rossmann.tgz", output_path, True)
+    WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/ezeeml-datasets/rossmann.tgz", output_path, True)
     if os.path.exists(preprocessed_train_path) and os.path.exists(preprocessed_test_path):
         train_df = pd.read_feather(preprocessed_train_path, nthreads=cpu_count())
         test_df = pd.read_feather(preprocessed_test_path, nthreads=cpu_count())

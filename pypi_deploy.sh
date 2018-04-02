@@ -1,5 +1,5 @@
 #!/bin/bash
-rm -fR torch_light.egg-info
+rm -fR ezeeml.egg-info
 rm -fR dist
 rm -fR build
 python setup.py sdist

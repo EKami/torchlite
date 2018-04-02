@@ -283,6 +283,8 @@ class LinearEncoder(BaseEncoder):
             self.blueprint.categ_var_map = {}
             for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
                 if col_name in df.columns:
+                    # TODO: Use feature hashing for categ > 20
+                    # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
                     onehot = pd.get_dummies(df[col_name], prefix=col_name)
                     self.blueprint.categ_var_map[col_name] = onehot
                     df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)

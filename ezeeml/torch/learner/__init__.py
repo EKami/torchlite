@@ -4,14 +4,14 @@ This class contains a generalized learner which works across all kind of models
 from datetime import datetime
 import torch
 import numpy as np
-import torchlite.torch.train_callbacks as train_callbacks
-import torchlite.torch.test_callbacks as test_callbacks
+import ezeeml.torch.train_callbacks as train_callbacks
+import ezeeml.torch.test_callbacks as test_callbacks
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from torchlite.torch.tools import tensor_tools
-from torchlite.torch.metrics import MetricsList
-from torchlite.torch.learner.cores import BaseCore
+from ezeeml.torch.tools import tensor_tools
+from ezeeml.torch.metrics import MetricsList
+from ezeeml.torch.learner.cores import BaseCore
 
 
 class Learner:
