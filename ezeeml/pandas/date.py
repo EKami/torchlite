@@ -40,6 +40,7 @@ def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
         df = df.copy()
     field = df[field_name]
     targ_pre = re.sub('[Dd]ate$', '', field_name)
+
     if isinstance(df, pd.DataFrame):
         if not np.issubdtype(field.dtype, np.datetime64):
             df[field_name] = field = lookup(field, date_format)
@@ -47,7 +48,38 @@ def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
         df[targ_pre + n] = getattr(field.dt, n.lower())
         if df[targ_pre + n].dtype == np.int64:
             df[targ_pre + n] = df[targ_pre + n].astype(np.int16)
-    df[targ_pre + 'Elapsed'] = field.astype(np.int64) // 10 ** 9
+
     if drop:
         df = df.drop(field_name, axis=1)
+    return df
+
+
+def get_elapsed(df, date_field, from_date=np.datetime64('1970-01-01'), prefix='Elapsed_',
+                inplace=False, dtype='timedelta64[s]'):
+    """
+    This function will add a new column which will count the time elapsed relative to a particular
+    date (1970-01-01 by default)
+    Args:
+        df (pd.DataFrame): A pandas DataFrame
+        date_field (str): The field containing the field of type datetime64
+        from_date (np.datetime64): The date from which you want to start the counter
+        prefix (str): The prefix you want to add to the newly created column. The prefix tail will depends on
+            the dtype
+        inplace (bool): If the operations are done inplace or not
+        dtype (str): "timedelta64[s]" for seconds, "timedelta64[m]" for minutes, "timedelta64[h]" for hours,
+            "timedelta64[D]" for days, "timedelta64[M]" for months, "timedelta64[Y]" for years.
+    Returns:
+        DataFrame: The passed DataFrame with the elapsed time column
+    """
+    if not inplace:
+        df = df.copy()
+
+    res = [None] * df.shape[0]
+    ts_type = "unknown"
+    for i, v in enumerate(df[date_field].values):
+        diff = (v - from_date).astype(dtype)
+        ts_type = str(diff).split(" ")[-1]
+        res[i] = diff.astype(np.int64)
+
+    df[prefix + ts_type] = res
     return df

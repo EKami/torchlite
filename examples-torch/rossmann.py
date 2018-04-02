@@ -23,7 +23,7 @@ from ezeeml.torch.learner.cores import ClassifierCore
 import ezeeml.torch.metrics as metrics
 from ezeeml.data.fetcher import WebFetcher
 import ezeeml.torch.shortcuts as shortcuts
-import ezeeml.pandas.date as date
+import ezeeml.pandas.date as edate
 from ezeeml.torch.train_callbacks import CosineAnnealingCallback
 from ezeeml.pandas.encoder import TreeEncoder, EncoderBlueprint
 import ezeeml.pandas.merger as emerger
@@ -89,10 +89,15 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         pbar.update(1)
 
         # Extracts particular date fields from a complete datetime for the purpose of constructing categoricals
-        date.get_datepart(weather, "Date", drop=False, inplace=True)
-        date.get_datepart(googletrend, "Date", drop=False, inplace=True)
-        date.get_datepart(train, "Date", drop=False, inplace=True)
-        date.get_datepart(test, "Date", drop=False, inplace=True)
+        edate.get_datepart(weather, "Date", drop=False, inplace=True)
+        edate.get_datepart(googletrend, "Date", drop=False, inplace=True)
+        edate.get_datepart(train, "Date", drop=False, inplace=True)
+        edate.get_datepart(test, "Date", drop=False, inplace=True)
+
+        edate.get_elapsed(weather, "Date", inplace=True)
+        edate.get_elapsed(googletrend, "Date", inplace=True)
+        edate.get_elapsed(train, "Date", inplace=True)
+        edate.get_elapsed(test, "Date", inplace=True)
 
         # The Google trends data has a special category for the whole of the US
         trend_de = googletrend[googletrend.file == 'Rossmann_DE']

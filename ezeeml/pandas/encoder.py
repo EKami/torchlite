@@ -285,6 +285,7 @@ class LinearEncoder(BaseEncoder):
                 if col_name in df.columns:
                     # TODO: Use feature hashing for categ > 20
                     # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
+                    # https://medium.com/open-machine-learning-course/open-machine-learning-course-topic-8-vowpal-wabbit-fast-learning-with-gigabytes-of-data-60f750086237
                     onehot = pd.get_dummies(df[col_name], prefix=col_name)
                     self.blueprint.categ_var_map[col_name] = onehot
                     df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
