@@ -10,10 +10,10 @@ def time_split(df, val_start_date, val_stop_date, split_field=None):
         df (DataFrame): A pandas DataFrame
         val_start_date (datetime): A datetime date (E.g datetime.datetime(2014, 8, 1))
         val_stop_date (datetime): A datetime date (E.g datetime.datetime(2014, 9, 17))
-        split_field (str, None): The column name contained the datetime64 values, or None to use the index
+        split_field (str, None): The column name containing the datetime64 values, or None to use the index
 
     Returns:
-
+        tuple: (train_df, val_df)
     """
     if split_field is None:
         val_df = df[(df.index <= val_stop_date) & (df.index >= val_start_date)]
@@ -22,3 +22,21 @@ def time_split(df, val_start_date, val_stop_date, split_field=None):
 
     train_df = df.drop(val_df.index)
     return train_df, val_df
+
+
+def id_split(df, val_ids, split_field=None):
+    """
+    Split on an identifier field. Take the id between start_id and stop_id as validation split
+    and leave the rest for as the train set.
+    This kind of split is particularly useful when the predictions on the test set have to be
+    made on unknown id from the train/val sets.
+    Args:
+        df (DataFrame): A pandas DataFrame
+        val_ids (list): A list of ids to use in the validation set
+        split_field (str, None): The column name containing the id values, or None to use the index
+
+    Returns:
+        tuple: (train_df, val_df)
+    """
+    # TODO finish
+    pass

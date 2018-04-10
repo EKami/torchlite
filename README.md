@@ -1,5 +1,5 @@
 ## Torchlite
-
+![](./docs/sources/img/logo.png)
 [![PyPI version](https://badge.fury.io/py/torchlite.svg)](https://badge.fury.io/py/torchlite)
 
 Torchlite is a high level library on top of popular machine learning frameworks such as

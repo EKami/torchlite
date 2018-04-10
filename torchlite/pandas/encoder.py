@@ -274,7 +274,7 @@ class LinearEncoder(BaseEncoder):
         if self.blueprint.categ_var_map:
             for col_name in df.keys():
                 if col_name in self.categorical_cols:
-                    onehot = pd.get_dummies(df[col_name], prefix=col_name)
+                    onehot = pd.get_dummies(df[col_name], prefix=col_name, drop_first=True)
                     res_df = pd.DataFrame(data=onehot,
                                           columns=list(self.blueprint.categ_var_map[col_name].columns))
                     res_df = res_df.fillna(0)
