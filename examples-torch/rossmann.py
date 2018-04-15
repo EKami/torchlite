@@ -226,7 +226,6 @@ def create_features(train_df, test_df):
 
     y = 'Sales'
     y_log = np.log(train_df[y]).astype(np.float32)
-    train_df.drop(y, axis=1, inplace=True)
 
     train_df = train_df.set_index("Date")
     test_df = test_df.set_index("Date")
@@ -236,9 +235,9 @@ def create_features(train_df, test_df):
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
-    train_df, encoder_blueprint = TreeEncoder(train_df, num_vars, cat_vars,
+    train_df, encoder_blueprint = TreeEncoder(train_df, num_vars, cat_vars, y,
                                               EncoderBlueprint(StandardScaler())).apply_encoding()
-    test_df, _ = TreeEncoder(test_df, num_vars, cat_vars,
+    test_df, _ = TreeEncoder(test_df, num_vars, cat_vars, y,
                              encoder_blueprint=encoder_blueprint).apply_encoding()
 
     assert len(train_df.columns) == len(test_df.columns)

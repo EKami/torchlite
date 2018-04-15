@@ -45,10 +45,11 @@ class EncoderBlueprint:
 
 
 class BaseEncoder:
-    def __init__(self, df, numeric_cols, categorical_cols, encoder_blueprint, fix_missing):
+    def __init__(self, df, numeric_vars, categorical_vars, target_var, encoder_blueprint, fix_missing):
         self.df = df.copy()
-        self.categorical_cols = categorical_cols
-        self.numeric_cols = numeric_cols
+        self.categorical_cols = categorical_vars
+        self.numeric_cols = numeric_vars
+        self.target_var = target_var
         self.blueprint = encoder_blueprint if encoder_blueprint else EncoderBlueprint()
         self.fix_missing = fix_missing
 
@@ -168,7 +169,7 @@ class BaseEncoder:
 
 
 class TreeEncoder(BaseEncoder):
-    def __init__(self, df, numeric_cols, categorical_cols, encoder_blueprint, fix_missing=True):
+    def __init__(self, df, numeric_vars, categorical_vars, target_var, encoder_blueprint, fix_missing=True):
         """
             An encoder used for tree based models (RandomForests, GBTs) as well
             as deep neural networks with categorical embeddings features (DNN)
@@ -177,14 +178,15 @@ class TreeEncoder(BaseEncoder):
             df (DataFrame, dd.DataFrame): The DataFrame to manipulate.
             The DataFrame will be copied and the original one won't be affected by the changes
             in this class.
-            numeric_cols (list): The list of columns to encode as numeric values.
-            categorical_cols (list): The list of columns to encode as categorical.
+            numeric_vars (list): The list of variables to encode as numeric values.
+            categorical_vars (list): The list of variables to encode as categorical.
+            target_var (str): The target variable
             encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
                 the passed df.
             fix_missing (bool): True to fix the missing values (will add a new feature `is_missing` and replace
                 the missing value by its median). For some models like Xgboost you may want to set this value to False.
         """
-        super().__init__(df, numeric_cols, categorical_cols, encoder_blueprint, fix_missing)
+        super().__init__(df, numeric_vars, categorical_vars, target_var, encoder_blueprint, fix_missing)
 
     def _fix_missing(self, df, col, name, na_dict):
         """ Fill missing data in a column of df with the median, and add a {name}_na column
@@ -234,7 +236,7 @@ class TreeEncoder(BaseEncoder):
 
 
 class LinearEncoder(BaseEncoder):
-    def __init__(self, df, numeric_cols, categorical_cols, encoder_blueprint):
+    def __init__(self, df, numeric_vars, categorical_vars, target_var, encoder_blueprint):
         """
             An encoder used for linear based models (Linear/Logistic regression) as well
             as deep neural networks with one hot encoded values.
@@ -243,12 +245,13 @@ class LinearEncoder(BaseEncoder):
             df (DataFrame, dd.DataFrame): The DataFrame to manipulate.
             The DataFrame will be copied and the original one won't be affected by the changes
             in this class
-            numeric_cols (list): The list of columns to encode as numeric values.
-            categorical_cols (list): The list of columns to encode as categorical.
+            numeric_vars (list): The list of variables to encode as numeric values.
+            categorical_vars (list): The list of variables to encode as categorical.
+            target_var (str): The target variable
             encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
             the passed df.
         """
-        super().__init__(df, numeric_cols, categorical_cols, encoder_blueprint, True)
+        super().__init__(df, numeric_vars, categorical_vars, target_var, encoder_blueprint, True)
 
     def _fix_missing(self, df, col, name, na_dict):
         """ Fill missing data in a column by filling it by -9999
@@ -283,11 +286,18 @@ class LinearEncoder(BaseEncoder):
             self.blueprint.categ_var_map = {}
             for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
                 if col_name in df.columns:
-                    # TODO: Use feature hashing for categ > 20
+                    # TODO: Could also use feature hashing
                     # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
                     # https://medium.com/open-machine-learning-course/open-machine-learning-course-topic-8-vowpal-wabbit-fast-learning-with-gigabytes-of-data-60f750086237
-                    onehot = pd.get_dummies(df[col_name], prefix=col_name)
-                    self.blueprint.categ_var_map[col_name] = onehot
-                    df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
+                    if df[col_name].nunique() < 10:
+                        onehot = pd.get_dummies(df[col_name], prefix=col_name)
+                        self.blueprint.categ_var_map[col_name] = onehot
+                        df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
+                    else:
+                        # TODO finish
+                        # Use mean encoding/target/likelihood encoding instead
+                        means = df.groupby(col_name)[self.target_var].mean()
+                        self.blueprint.categ_var_map[col_name] = means
+                        df[col_name + "_mean_target"] = df[col_name].map(means)
 
         return df
