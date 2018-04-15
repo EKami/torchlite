@@ -225,7 +225,9 @@ def create_features(train_df, test_df):
                 'AfterStateHoliday', 'BeforeStateHoliday', 'Promo', 'SchoolHoliday']
 
     y = 'Sales'
-    y_log = np.log(train_df[y]).astype(np.float32)
+    train_df["Sales_log"] = np.log(train_df[y]).astype(np.float32)
+    train_df.drop(y, axis=1, inplace=True)
+    y = 'Sales_log'
 
     train_df = train_df.set_index("Date")
     test_df = test_df.set_index("Date")
@@ -241,7 +243,7 @@ def create_features(train_df, test_df):
                              encoder_blueprint=encoder_blueprint).apply_encoding()
 
     assert len(train_df.columns) == len(test_df.columns)
-    return train_df, test_df, cat_vars, card_cat_features, y_log
+    return train_df, test_df, cat_vars, card_cat_features
 
 
 def main():
@@ -258,13 +260,12 @@ def main():
                                          preprocessed_train_path,
                                          preprocessed_test_path)
 
-    train_df, test_df, cat_vars, card_cat_features, y_log = create_features(train_df, test_df)
+    train_df, test_df, cat_vars, card_cat_features = create_features(train_df, test_df)
 
     # -- Model parameters
     batch_size = 256
     epochs = 20
 
-    train_df["Sales_log"] = y_log.values
     max_log_y = np.max(train_df['Sales_log'])
     y_range = (0, max_log_y * 1.2)
 

@@ -263,7 +263,6 @@ class LinearEncoder(BaseEncoder):
             name (str): The name of the new filled column in df.
             na_dict (dict): A dictionary of values to create na's of and the value to insert.
         """
-        col_c = col
         if is_numeric_dtype(col):
             if pd.isnull(col).sum() or (name in na_dict):
                 filler = na_dict[name] if name in na_dict else -9999
@@ -294,9 +293,11 @@ class LinearEncoder(BaseEncoder):
                         self.blueprint.categ_var_map[col_name] = onehot
                         df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
                     else:
-                        # TODO finish
+                        # TODO finish (regularization expanding mean)
                         # Use mean encoding/target/likelihood encoding instead
-                        means = df.groupby(col_name)[self.target_var].mean()
+                        cumsum = df.groupby(col_name)[self.target_var].cumsum() - df[self.target_var]
+                        cumcnt = df.groupby(col_name)[self.target_var].cumcount()
+                        means = cumsum / cumcnt
                         self.blueprint.categ_var_map[col_name] = means
                         df[col_name + "_mean_target"] = df[col_name].map(means)
 
