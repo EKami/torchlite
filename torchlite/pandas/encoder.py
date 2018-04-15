@@ -117,6 +117,7 @@ class BaseEncoder:
         as `numeric_cols` nor as `categorical_cols` are just ignored for the resulting DataFrame.
         The columns which are listed in `numeric_cols` and `categorical_cols` and not present in the
         DataFrame are also ignored.
+        If `target_var` is not None then it will be appended to the returning DataFrame.
         This method will do the following:
             - Remove NaN values by using the feature mean and adding a feature_missing feature
             - Scale the numeric values according to the EncoderBlueprint scaler
@@ -164,12 +165,14 @@ class BaseEncoder:
             raise Exception("Not all columns are numeric or NaN has been found: {}.".format(non_num_cols))
 
         self._check_integrity(df)
+        if self.target_var is not None:
+            df[self.target_var] = self.df[self.target_var]
         print("---------- Preprocessing done -----------")
         return df, self.blueprint
 
 
 class TreeEncoder(BaseEncoder):
-    def __init__(self, df, numeric_vars, categorical_vars, target_var, encoder_blueprint, fix_missing=True):
+    def __init__(self, df, numeric_vars, categorical_vars, target_var=None, encoder_blueprint=None, fix_missing=True):
         """
             An encoder used for tree based models (RandomForests, GBTs) as well
             as deep neural networks with categorical embeddings features (DNN)
@@ -285,7 +288,7 @@ class LinearEncoder(BaseEncoder):
             self.blueprint.categ_var_map = {}
             for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
                 if col_name in df.columns:
-                    # TODO: Could also use feature hashing
+                    # TODO: Could also use feature hashing or bin encoding (histogram bins)
                     # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
                     # https://medium.com/open-machine-learning-course/open-machine-learning-course-topic-8-vowpal-wabbit-fast-learning-with-gigabytes-of-data-60f750086237
                     if df[col_name].nunique() < 10:
@@ -293,8 +296,8 @@ class LinearEncoder(BaseEncoder):
                         self.blueprint.categ_var_map[col_name] = onehot
                         df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
                     else:
-                        # TODO finish (regularization expanding mean)
-                        # Use mean encoding/target/likelihood encoding instead
+                        # TODO BE CAREFUL TRAIN/VAL SPLIT SHOULD ALREADY BE DONE HERE!!
+                        # Mean/target/likelihood encoding
                         cumsum = df.groupby(col_name)[self.target_var].cumsum() - df[self.target_var]
                         cumcnt = df.groupby(col_name)[self.target_var].cumcount()
                         means = cumsum / cumcnt
