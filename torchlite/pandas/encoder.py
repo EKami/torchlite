@@ -302,6 +302,6 @@ class LinearEncoder(BaseEncoder):
                         cumcnt = df.groupby(col_name)[self.target_var].cumcount()
                         means = cumsum / cumcnt
                         self.blueprint.categ_var_map[col_name] = means
-                        df[col_name + "_mean_target"] = df[col_name].map(means)
+                        df_val[col_name + "_mean_target"] = df[col_name].map(means)
 
         return df
