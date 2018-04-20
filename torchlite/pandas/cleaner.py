@@ -1,3 +1,5 @@
+import numpy as np
+from pandas.api.types import is_numeric_dtype
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 
@@ -36,3 +38,28 @@ def replace_matches_in_column(df, column, string_to_match, min_ratio=90, limit=1
     # replace all rows with close matches with the input matches
     df.loc[rows_with_matches, column] = string_to_match
     return df
+
+
+def adjust_data_types(df_list, inplace=False):
+    """
+    Adjust the data type of a list of pandas DataFrames to take less space
+    in memory. For instance it will turn int64/float64 to int32/float32 if
+    the conversion can be made (sanity checks will be made).
+    Args:
+        df_list (list): A list of pandas DataFrame
+        inplace (bool): Do the operation inplace or not (inplace take less memory)
+    Returns:
+        list: The list of the same DataFrame but with types converted
+    """
+    if not inplace:
+        df_list = [df.copy() for df in df_list]
+
+    for df in df_list:
+        for name, type in zip(df.dtypes.index, df.dtypes.values):
+            if is_numeric_dtype(type):
+                col = df[name]
+                min = col.min()
+                max = col.max()
+                print(f"Min {min}, Max {max}")
+
+

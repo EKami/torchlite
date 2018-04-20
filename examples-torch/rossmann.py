@@ -25,7 +25,7 @@ from torchlite.data.fetcher import WebFetcher
 import torchlite.torch.shortcuts as shortcuts
 import torchlite.pandas.date as edate
 from torchlite.torch.train_callbacks import CosineAnnealingCallback
-from torchlite.pandas.encoder import TreeEncoder, EncoderBlueprint
+from torchlite.pandas.encoder import StructuredTreeEncoder, EncoderBlueprint
 import torchlite.pandas.merger as emerger
 import torchlite.pandas.splitter as esplitter
 
@@ -236,9 +236,9 @@ def create_features(train_df, test_df):
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
-    train_df, encoder_blueprint = TreeEncoder(train_df, num_vars, cat_vars, "Sales_log",
-                                              EncoderBlueprint(StandardScaler())).apply_encoding()
-    test_df, _ = TreeEncoder(test_df, num_vars, cat_vars, encoder_blueprint=encoder_blueprint).apply_encoding()
+    train_df, encoder_blueprint = StructuredTreeEncoder(train_df, num_vars, cat_vars, "Sales_log",
+                                                        EncoderBlueprint(StandardScaler())).apply_encoding()
+    test_df, _ = StructuredTreeEncoder(test_df, num_vars, cat_vars, encoder_blueprint=encoder_blueprint).apply_encoding()
 
     return train_df, test_df, cat_vars, card_cat_features
 

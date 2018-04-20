@@ -44,7 +44,7 @@ class EncoderBlueprint:
         print("List of scaled columns: {}".format(num_cols))
 
 
-class BaseEncoder:
+class StructuredBaseEncoder:
     def __init__(self, df, numeric_vars, categorical_vars, target_var, encoder_blueprint, fix_missing):
         self.df = df.copy()
         self.categorical_cols = categorical_vars
@@ -171,10 +171,11 @@ class BaseEncoder:
         return df, self.blueprint
 
 
-class TreeEncoder(BaseEncoder):
+class StructuredTreeEncoder(StructuredBaseEncoder):
     def __init__(self, df, numeric_vars, categorical_vars, target_var=None, encoder_blueprint=None, fix_missing=True):
         """
-            An encoder used for tree based models (RandomForests, GBTs) as well
+            An encoder to encode data from structured (tabular) data
+            used for tree based models (RandomForests, GBTs) as well
             as deep neural networks with categorical embeddings features (DNN)
 
         Args:
@@ -238,11 +239,12 @@ class TreeEncoder(BaseEncoder):
         return df
 
 
-class LinearEncoder(BaseEncoder):
-    def __init__(self, df, numeric_vars, categorical_vars, target_var, encoder_blueprint):
+class StructuredLinearEncoder(StructuredBaseEncoder):
+    def __init__(self, df, numeric_vars, categorical_vars, target_var=None, encoder_blueprint=None, fix_missing=True):
         """
-            An encoder used for linear based models (Linear/Logistic regression) as well
-            as deep neural networks with one hot encoded values.
+            An encoder to encode data from structured (tabular) data
+            used for linear based models (Linear/Logistic regression) as well
+            as deep neural networks without embeddings.
 
         Args:
             df (DataFrame, dd.DataFrame): The DataFrame to manipulate.
@@ -253,8 +255,9 @@ class LinearEncoder(BaseEncoder):
             target_var (str): The target variable
             encoder_blueprint (EncoderBlueprint): An encoder blueprint which map its encodings to
             the passed df.
+            fix_missing (bool): True to fix the missing values (will replace missing values by -9999)
         """
-        super().__init__(df, numeric_vars, categorical_vars, target_var, encoder_blueprint, True)
+        super().__init__(df, numeric_vars, categorical_vars, target_var, encoder_blueprint, fix_missing)
 
     def _fix_missing(self, df, col, name, na_dict):
         """ Fill missing data in a column by filling it by -9999
@@ -288,7 +291,25 @@ class LinearEncoder(BaseEncoder):
             self.blueprint.categ_var_map = {}
             for col_name in tqdm(self.categorical_cols, total=len(self.categorical_cols)):
                 if col_name in df.columns:
-                    # TODO: Could also use feature hashing or bin encoding (histogram bins)
+                    # https://github.com/scikit-learn-contrib/categorical-encoding
+                    # TODO:
+                    #  - Ordinal
+                    #  - One - Hot
+                    #  - Binary
+                    #  - Helmert
+                    #  - Contrast
+                    #  - Sum
+                    #  - Contrast
+                    #  - Polynomial
+                    #  - Contrast
+                    #  - Backward
+                    #  - Difference
+                    #  - Contrast
+                    #  - Hashing
+                    #  - BaseN
+                    #  - LeaveOneOut
+                    #  - Target Encoding
+                    # https://tech.yandex.com/catboost/doc/dg/concepts/algorithm-main-stages_cat-to-numberic-docpage/
                     # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
                     # https://medium.com/open-machine-learning-course/open-machine-learning-course-topic-8-vowpal-wabbit-fast-learning-with-gigabytes-of-data-60f750086237
                     if df[col_name].nunique() < 10:
