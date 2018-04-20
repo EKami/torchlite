@@ -1,5 +1,6 @@
+import pandas as pd
 import numpy as np
-from pandas.api.types import is_numeric_dtype
+from pandas.api.types import is_numeric_dtype, is_float_dtype, is_integer_dtype
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 
@@ -55,11 +56,14 @@ def adjust_data_types(df_list, inplace=False):
         df_list = [df.copy() for df in df_list]
 
     for df in df_list:
-        for name, type in zip(df.dtypes.index, df.dtypes.values):
-            if is_numeric_dtype(type):
+        for name, dtype in zip(df.dtypes.index, df.dtypes.values):
+            if is_numeric_dtype(dtype):
                 col = df[name]
-                min = col.min()
-                max = col.max()
-                print(f"Min {min}, Max {max}")
+                if is_float_dtype(dtype):
+                    df[name] = pd.to_numeric(col, downcast='float')
+                elif is_integer_dtype(dtype):
+                    df[name] = pd.to_numeric(col, downcast='integer')
+
+    return df_list
 
 
