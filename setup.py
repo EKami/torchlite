@@ -32,7 +32,7 @@ setup(
 
     keywords='development',
     packages=find_packages(exclude=['tests']),
-    install_requires=["isoweek", "tqdm", "bcolz", "kaggle_data", "opencv_python",
+    install_requires=["isoweek", "tqdm", "bcolz", "kaggle_data", "opencv_python", "torch",
                       "scikit_image", "setuptools", "numpy", "matplotlib", "scipy", "Pillow",
                       "dask", "scikit_learn", "tensorboardX", "typing", "PyYAML", "Augmentor",
                       find_packages(exclude=["*.tests", "*.tests.*", "tests.*",
