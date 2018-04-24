@@ -21,9 +21,12 @@ class BaseCore:
         """
         raise NotImplementedError()
 
-    def to_gpu(self):
+    def to_device(self, device):
         """
         Move the model onto the GPU
+
+        Args:
+            device (torch.device): Pytorch device object
         """
         raise NotImplementedError()
 
@@ -96,8 +99,8 @@ class ClassifierCore(BaseCore):
     def on_eval_mode(self):
         self.model.eval()
 
-    def to_gpu(self):
-        tensor_tools.to_gpu(self.model)
+    def to_device(self, device):
+        self.model.to(device)
 
     def on_forward_batch(self, step, inputs, targets=None):
         # forward
@@ -150,9 +153,9 @@ class SRPGanCore(BaseCore):
         self.netG.eval()
         self.netD.eval()
 
-    def to_gpu(self):
-        tensor_tools.to_gpu(self.netG)
-        tensor_tools.to_gpu(self.netD)
+    def to_device(self, device):
+        self.netG.to(device)
+        self.netD.to(device)
 
     @property
     def get_models(self):

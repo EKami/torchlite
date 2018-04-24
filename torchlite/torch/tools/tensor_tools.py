@@ -51,16 +51,6 @@ def to_np(v):
     return v
 
 
-def to_gpu(x, *args, **kwargs):
-    """
-    Moves torch tensor to gpu if possible
-
-    Returns:
-        torch.Tensor: Moved to the GPU or not
-    """
-    return x.cuda(*args, **kwargs) if torch.cuda.is_available() else x
-
-
 def children(module: nn.Module):
     """
         Returns a list of an torch.Module children modules
