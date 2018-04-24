@@ -318,6 +318,7 @@ class StructuredLinearEncoder(StructuredBaseEncoder):
                         df = pd.concat([df.drop(col_name, axis=1), onehot], axis=1)
                     else:
                         # TODO BE CAREFUL TRAIN/VAL SPLIT SHOULD ALREADY BE DONE HERE!!
+                        # TODO on the test set the means of the train is used
                         # Mean/target/likelihood encoding
                         cumsum = df.groupby(col_name)[self.target_var].cumsum() - df[self.target_var]
                         cumcnt = df.groupby(col_name)[self.target_var].cumcount()
