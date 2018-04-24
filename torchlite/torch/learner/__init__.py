@@ -6,7 +6,6 @@ import torch
 import numpy as np
 import torchlite.torch.train_callbacks as train_callbacks
 import torchlite.torch.test_callbacks as test_callbacks
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from torchlite.torch.tools import tensor_tools
@@ -41,7 +40,6 @@ class Learner:
             if self.use_cuda:
                 inputs = [tensor_tools.to_gpu(i) for i in inputs]
                 targets = tensor_tools.to_gpu(targets)
-            inputs, targets = [Variable(i) for i in inputs], Variable(targets)
 
             logits = self.learner_core.on_forward_batch(step, inputs, targets)
             metrics_list.acc_batch(step, logits, targets)
@@ -155,8 +153,6 @@ class Learner:
             callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
             if self.use_cuda:
                 inputs = [tensor_tools.to_gpu(i) for i in inputs]
-
-            inputs = [Variable(i, volatile=True) for i in inputs]
 
             logits = self.learner_core.on_forward_batch("prediction", inputs).data
             ret_logits.append(logits)

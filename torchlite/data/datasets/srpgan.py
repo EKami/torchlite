@@ -73,7 +73,7 @@ class VggTransformDataset(Dataset):
         """
         This dataset receive a batch of images and apply a transformation on them
         Args:
-            images_batch (Tensor, Variable): A pytorch tensor of size (batch_size, C, H, W)
+            images_batch (Tensor): A Pytorch tensor of size (batch_size, C, H, W)
         """
         self.images_batch = images_batch.clone()
         self.vgg_transforms = transforms.Compose([

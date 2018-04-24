@@ -43,7 +43,7 @@ class DiscriminatorLoss:
         real_labels = np.random.uniform(0.7, 1.2, size=d_hr_out.size())
         real_labels = torch.FloatTensor(real_labels).cuda()
 
-        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.autograd.Variable(real_labels))
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, real_labels)
         d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
 
         return d_hr_loss + d_sr_loss

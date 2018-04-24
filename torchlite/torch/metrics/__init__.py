@@ -4,7 +4,6 @@ This class contains generalized metrics which works across different models
 import torch
 import copy
 import numpy as np
-from torch.autograd.variable import Variable
 import torchlite.torch.tools.ssim as ssim
 
 
@@ -34,8 +33,8 @@ class MetricsList:
         Will accumulate the metrics results.
         Args:
             step (str): Either "training" or "validation"
-            logits (Variable): The output logits
-            targets (Variable): The output targets
+            logits (Tensor): The output logits
+            targets (Tensor): The output targets
         """
 
         if step == "training":
@@ -92,10 +91,6 @@ class CategoricalAccuracy(Metric):
         """
         _, y_pred_dense = y_pred.max(1)
         assert y_true.size() == y_pred_dense.size(), "y_true and y_pred shapes differ"
-        if isinstance(y_true, Variable):
-            y_true = y_true.data
-        if isinstance(y_pred_dense, Variable):
-            y_pred_dense = y_pred_dense.data
         sm = torch.sum(y_true == y_pred_dense)
         return 100. * sm / y_true.size()[0]
 

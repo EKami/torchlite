@@ -3,7 +3,6 @@ import torch
 import numpy as np
 import torch.nn as nn
 import PIL
-from torch.autograd.variable import Variable
 import torchvision.transforms.functional as t_vision
 
 
@@ -38,15 +37,13 @@ class AverageMeter(object):
 
 def to_np(v):
     """
-
+        Turn Pytorch tensor to numpy array
     Args:
-        v (Variable, Tensor, PIL.Image.Image):
-            Pytorch Variable/Tensor or Pillow image
+        v (Tensor, PIL.Image.Image):
+            Pytorch tensor or Pillow image
     Returns:
         np.ndarray: A numpy array
     """
-    if isinstance(v, Variable):
-        v = v.data.cpu().numpy()
     if isinstance(v, torch.Tensor):
         v = v.cpu().numpy()
     elif isinstance(v, PIL.Image.Image):
@@ -97,7 +94,7 @@ def normalize_batch(tensor, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225
     """
     Normalize a batch tensor of size () given the mean and standard deviation
     Args:
-        tensor (Tensor, Variable): A pytorch tensor
+        tensor (Tensor): A Pytorch tensor
         mean (list): The mean of each channels (defaults to all torchvision pretrained models).
         std (list): The standard deviation of each channels (defaults to all torchvision pretrained models).
 
@@ -106,7 +103,5 @@ def normalize_batch(tensor, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225
     """
     tensor = tensor.clone()
     for i, img in enumerate(tensor):
-        if isinstance(img, Variable):
-            img = img.data
         tensor[i, :] = t_vision.normalize(img, mean, std)
     return tensor
