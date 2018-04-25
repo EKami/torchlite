@@ -26,15 +26,14 @@ def get_datepart(df, field_name, transform_list=('Year', 'Month', 'Week', 'Day',
     A field "Elapsed" is always added to the resulting DataFrame.
 
     Args:
-        df (pd.DataFrame, dd.DataFrame): A pandas or dask dataframe
-        field_name (str): A string that is the name of the date column you wish to expand.
-            Assumes the column is of type datetime64 if df is a dask dataframe
+        df (pd.DataFrame): A pandas DataFrame
+        field_name (str): A string that is the name of the date column you wish to expand
         transform_list (list): List of data transformations to add to the original dataset
         drop (bool): If True then the original date column will be removed
         inplace (bool): If the operations are done inplace or not
         date_format (str): The datetime format for parsing
     Returns:
-        A pandas or dask DataFrame depending on what was passed in
+        A pandas DataFrame
     """
     if not inplace:
         df = df.copy()

@@ -110,8 +110,8 @@ class ClassifierCore(BaseCore):
             loss = self.crit(logits, targets)
 
             # Update logs
-            self.avg_meter.update(loss.data[0])
-            self.logs.update({"batch_logs": {"loss": loss.data[0]}})
+            self.avg_meter.update(loss.item())
+            self.logs.update({"batch_logs": {"loss": loss.item()}})
 
             # backward + optimize
             if step == "training":
