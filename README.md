@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/torchlite.svg)](https://badge.fury.io/py/torchlite)
 
 Torchlite is a high level library on top of popular machine learning frameworks such as
-pandas, Pytorch and Tensorflow.
+sklearn, Pytorch and Tensorflow.
 It gives a high layer abstraction of repetitive code used in machine learning for day-to-day data science tasks.
 
 ## Installation
@@ -19,7 +19,8 @@ pip install -r requirements.txt
 ```
 
 to install the required dependencies.
-Then install pytorch and torchvision from [here](http://pytorch.org/) if you want to use the `torchlite.torch`
+By default Pytorch and Tensorflow-GPU are installed along with this library but we recommend
+to install them from source from [here](http://pytorch.org/) if you want to use the `torchlite.torch`
 package and/or head over to the [Tensorflow install page](https://www.tensorflow.org/install/) if you want to
 use the `torchlite.tf` package.
 
