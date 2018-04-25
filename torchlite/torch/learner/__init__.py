@@ -148,8 +148,7 @@ class Learner:
         batch_size = test_loader.batch_size
         for ind, (*inputs, _) in enumerate(test_loader):
             callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
-            if self.use_cuda:
-                inputs = [i.to(self.device) for i in inputs]
+            inputs = [i.to(self.device) for i in inputs]
 
             logits = self.learner_core.on_forward_batch("prediction", inputs).data
             ret_logits.append(logits)

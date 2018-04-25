@@ -91,7 +91,7 @@ class CategoricalAccuracy(Metric):
         """
         _, y_pred_dense = y_pred.max(1)
         assert y_true.size() == y_pred_dense.size(), "y_true and y_pred shapes differ"
-        sm = torch.sum(y_true == y_pred_dense)
+        sm = torch.sum(y_true == y_pred_dense).float()
         return 100. * sm / y_true.size()[0]
 
     @property
