@@ -191,7 +191,7 @@ class SRPGanCore(BaseCore):
                                          "perceptual": self.perceptual_loss_meter.avg}})
 
     def _on_eval(self, images):
-        sr_images = self.netG(images) # Super resolution images
+        sr_images = self.netG(images)  # Super resolution images
         return sr_images
 
     def _on_validation(self, lr_images, hr_images):
@@ -205,9 +205,9 @@ class SRPGanCore(BaseCore):
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
-        sr_images = self.netG(lr_images)  # TODO the generator have leaks
+        sr_images = self.netG(lr_images)
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
-        d_sr_out, d_sr_feat_maps = self.netD(sr_images.detach())  # Sigmoid output
+        d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
 
         # torchlite.torch.losses.srpgan.GeneratorLoss
         g_loss, adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
@@ -221,7 +221,7 @@ class SRPGanCore(BaseCore):
 
         self._update_loss_logs(g_loss, d_loss, adversarial_loss, content_loss, perceptual_loss)
 
-        return sr_images
+        return sr_images.detach()  # Need to detach otherwise the Tensor will accumulate in GPU memory
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}
