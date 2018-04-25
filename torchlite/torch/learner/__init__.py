@@ -146,13 +146,14 @@ class Learner:
 
         ret_logits = []
         batch_size = test_loader.batch_size
-        for ind, (*inputs, _) in enumerate(test_loader):
-            callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
-            inputs = [i.to(self.device) for i in inputs]
+        with torch.no_grad():
+            for ind, (*inputs, _) in enumerate(test_loader):
+                callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
+                inputs = [i.to(self.device) for i in inputs]
 
-            logits = self.learner_core.on_forward_batch("prediction", inputs).data
-            ret_logits.append(logits)
-            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
+                logits = self.learner_core.on_forward_batch("prediction", inputs).data
+                ret_logits.append(logits)
+                callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         if flatten_predictions:
             ret_logits = np.array([pred.view(-1).cpu().numpy() for sublist in ret_logits for pred in sublist])

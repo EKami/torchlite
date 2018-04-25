@@ -2,6 +2,7 @@
 This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
+import torch
 import torch.nn as nn
 from torchlite.torch.tools import tensor_tools
 from torchlite.torch.models.srpgan import Generator, Discriminator
@@ -198,15 +199,15 @@ class SRPGanCore(BaseCore):
 
         return sr_images
 
-    def _optimize(self, model, optim, loss, retain_graph=False):
+    def _optimize(self, model, optim, loss):
         model.zero_grad()
-        loss.backward(retain_graph=retain_graph)
+        loss.backward()
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
         sr_images = self.netG(lr_images)
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
-        d_sr_out, d_sr_feat_maps = self.netD(sr_images)  # Sigmoid output
+        d_sr_out, d_sr_feat_maps = self.netD(sr_images.detach())  # Sigmoid output
 
         # torchlite.torch.losses.srpgan.GeneratorLoss
         g_loss, adversarial_loss, content_loss, perceptual_loss = self.g_criterion(d_hr_out, d_sr_out,
@@ -215,11 +216,10 @@ class SRPGanCore(BaseCore):
 
         d_loss = self.d_criterion(d_hr_out, d_sr_out)
 
-        self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
+        self._optimize(self.netD, self.d_optim, d_loss)
         self._optimize(self.netG, self.g_optim, g_loss)
 
-        self._update_loss_logs(g_loss.data[0], d_loss.data[0], adversarial_loss.data[0],
-                               content_loss.data[0], perceptual_loss.data[0])
+        self._update_loss_logs(g_loss, d_loss, adversarial_loss, content_loss, perceptual_loss)
 
         return sr_images
 

@@ -148,7 +148,7 @@ class SSIM(Metric):
         return "ssim"
 
     def __call__(self, logits, targets):
-        res = ssim.ssim(logits, targets).data[0]
+        res = ssim.ssim(logits, targets)
         return res
 
 
@@ -163,6 +163,7 @@ class PSNR(Metric):
         return "psnr"
 
     def __call__(self, logits, targets):
+        logits, targets = logits.cpu().detach().numpy(), targets.cpu().detach().numpy()
         mse = ((targets - logits) ** 2).mean()
         psnr = 10 * np.log10(1 / mse)
         return psnr

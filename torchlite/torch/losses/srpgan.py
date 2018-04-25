@@ -32,15 +32,11 @@ class GeneratorLoss:
 
 
 class DiscriminatorLoss:
-    def __init__(self, device):
+    def __init__(self):
         """
         The Discriminator loss
-
-        Args:
-            device (torch.device): The device on which to compute the loss
         """
         super(DiscriminatorLoss, self).__init__()
-        self.device = device
 
     def __call__(self, d_hr_out, d_sr_out):
         # Labels smoothing
