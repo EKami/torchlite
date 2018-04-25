@@ -191,21 +191,21 @@ class SRPGanCore(BaseCore):
                                          "perceptual": self.perceptual_loss_meter.avg}})
 
     def _on_eval(self, images):
-        sr_images = self.netG(images)  # Super resolution images
+        sr_images = self.netG(images).detach()  # Super resolution images
         return sr_images
 
     def _on_validation(self, lr_images, hr_images):
-        sr_images = self.netG(lr_images)
+        sr_images = self.netG(lr_images).detach()
 
         return sr_images
 
-    def _optimize(self, model, optim, loss):
+    def _optimize(self, model, optim, loss, retain_graph=False):
         model.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=retain_graph)
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
-        sr_images = self.netG(lr_images)
+        sr_images = self.netG(lr_images).detach()  # Detach, otherwise grad will be accumulated and memory will explode
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
         d_sr_out, d_sr_feat_maps = self.netD(sr_images.detach())  # Sigmoid output
 
@@ -216,7 +216,7 @@ class SRPGanCore(BaseCore):
 
         d_loss = self.d_criterion(d_hr_out, d_sr_out)
 
-        self._optimize(self.netD, self.d_optim, d_loss)
+        self._optimize(self.netD, self.d_optim, d_loss, retain_graph=True)
         self._optimize(self.netG, self.g_optim, g_loss)
 
         self._update_loss_logs(g_loss, d_loss, adversarial_loss, content_loss, perceptual_loss)
