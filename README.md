@@ -19,7 +19,7 @@ pip install -r requirements.txt
 ```
 
 to install the required dependencies.
-By default Pytorch and Tensorflow-GPU are installed along with this library but we recommend
+By default Pytorch (0.4.0+) and Tensorflow-GPU (1.8.0+) are installed along with this library but it's recommended
 to install them from source from [here](http://pytorch.org/) if you want to use the `torchlite.torch`
 package and/or head over to the [Tensorflow install page](https://www.tensorflow.org/install/) if you want to
 use the `torchlite.tf` package.

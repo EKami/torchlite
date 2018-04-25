@@ -127,7 +127,7 @@ class RMSPE(Metric):
             logits = y_pred
             targ = y_true
         pct_var = (targ - logits) / targ
-        res = torch.sqrt((pct_var ** 2).mean()).data[0]
+        res = torch.sqrt((pct_var ** 2).mean())
         return res
 
     @property
@@ -163,6 +163,6 @@ class PSNR(Metric):
         return "psnr"
 
     def __call__(self, logits, targets):
-        mse = ((targets - logits) ** 2).data.mean()
+        mse = ((targets - logits) ** 2).mean()
         psnr = 10 * np.log10(1 / mse)
         return psnr

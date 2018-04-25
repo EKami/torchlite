@@ -52,9 +52,9 @@ class MixedInputModel(nn.Module):
         self.batch_norms = nn.ModuleList([nn.BatchNorm1d(sz) for sz in hidden_sizes[1:]])
 
         for o in self.linears:
-            nn.init.kaiming_normal(o.weight.data)
+            nn.init.kaiming_normal_(o.weight.data)
         self.outp = nn.Linear(hidden_sizes[-1], output_sizes)
-        nn.init.kaiming_normal(self.outp.weight.data)
+        nn.init.kaiming_normal_(self.outp.weight.data)
 
         self.emb_drop = nn.Dropout(emb_drop)
         self.drops = nn.ModuleList([nn.Dropout(drop) for drop in hidden_dropouts])
