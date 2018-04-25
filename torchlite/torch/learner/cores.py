@@ -191,11 +191,11 @@ class SRPGanCore(BaseCore):
                                          "perceptual": self.perceptual_loss_meter.avg}})
 
     def _on_eval(self, images):
-        sr_images = self.netG(images).detach()  # Super resolution images
+        sr_images = self.netG(images) # Super resolution images
         return sr_images
 
     def _on_validation(self, lr_images, hr_images):
-        sr_images = self.netG(lr_images).detach()
+        sr_images = self.netG(lr_images)
 
         return sr_images
 
@@ -205,7 +205,7 @@ class SRPGanCore(BaseCore):
         optim.step()
 
     def _on_training(self, lr_images, hr_images):
-        sr_images = self.netG(lr_images).detach()  # Detach, otherwise grad will be accumulated and memory will explode
+        sr_images = self.netG(lr_images)  # TODO the generator have leaks
         d_hr_out, d_hr_feat_maps = self.netD(hr_images)  # Sigmoid output
         d_sr_out, d_sr_feat_maps = self.netD(sr_images.detach())  # Sigmoid output
 
