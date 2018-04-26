@@ -6,10 +6,8 @@ import torch
 import numpy as np
 import torchlite.torch.train_callbacks as train_callbacks
 import torchlite.torch.test_callbacks as test_callbacks
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from torchlite.torch.tools import tensor_tools
 from torchlite.torch.metrics import MetricsList
 from torchlite.torch.learner.cores import BaseCore
 
@@ -24,12 +22,14 @@ class Learner:
         """
         self.learner_core = learner_core
         self.epoch_id = 1
-        self.use_cuda = False
+        self.device = torch.device("cpu")
         if use_cuda:
             if torch.cuda.is_available():
-                self.use_cuda = True
+                device = "cuda:0"
             else:
+                device = "cpu"
                 print("/!\ Warning: Cuda set but not available, using CPU...")
+            self.device = torch.device(device)
 
     def _run_batch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
@@ -38,12 +38,11 @@ class Learner:
         logs = {"step": step, "batch_size": batch_size}
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs=logs)
-            if self.use_cuda:
-                inputs = [tensor_tools.to_gpu(i) for i in inputs]
-                targets = tensor_tools.to_gpu(targets)
-            inputs, targets = [Variable(i) for i in inputs], Variable(targets)
+            inputs = [i.to(self.device) for i in inputs]
+            targets = targets.to(self.device)
 
-            logits = self.learner_core.on_forward_batch(step, inputs, targets)
+            # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
+            logits = self.learner_core.on_forward_batch(step, inputs, targets).detach()
             metrics_list.acc_batch(step, logits, targets)
 
             logs.update(self.learner_core.get_logs)
@@ -101,8 +100,7 @@ class Learner:
             callbacks (list, None): List of train callbacks functions
         """
         train_start_time = datetime.now()
-        if self.use_cuda:
-            self.learner_core.to_gpu()
+        self.learner_core.to_device(self.device)
 
         if not callbacks:
             callbacks = []
@@ -138,9 +136,7 @@ class Learner:
         test_start_time = datetime.now()
         # Switch to evaluation mode
         self.learner_core.on_eval_mode()
-
-        if self.use_cuda:
-            self.learner_core.to_gpu()
+        self.learner_core.to_device(self.device)
 
         if not callbacks:
             callbacks = []
@@ -151,16 +147,15 @@ class Learner:
 
         ret_logits = []
         batch_size = test_loader.batch_size
-        for ind, (*inputs, _) in enumerate(test_loader):
-            callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
-            if self.use_cuda:
-                inputs = [tensor_tools.to_gpu(i) for i in inputs]
+        with torch.no_grad():
+            for ind, (*inputs, _) in enumerate(test_loader):
+                callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
+                inputs = [i.to(self.device) for i in inputs]
 
-            inputs = [Variable(i, volatile=True) for i in inputs]
-
-            logits = self.learner_core.on_forward_batch("prediction", inputs).data
-            ret_logits.append(logits)
-            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
+                # Need to detach and move to CPU otherwise the Tensor and gradients will accumulate in GPU memory
+                logits = self.learner_core.on_forward_batch("prediction", inputs).cpu().detach()
+                ret_logits.append(logits)
+                callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 
         if flatten_predictions:
             ret_logits = np.array([pred.view(-1).cpu().numpy() for sublist in ret_logits for pred in sublist])

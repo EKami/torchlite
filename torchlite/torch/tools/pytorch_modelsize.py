@@ -2,7 +2,6 @@
 https://github.com/jacobkimmel/pytorch_modelsize
 """
 import torch
-from torch.autograd import Variable
 import numpy as np
 
 
@@ -45,7 +44,7 @@ class SizeEstimator(object):
         """
         Run sample input through each layer to get output sizes
         """
-        input_ = Variable(torch.FloatTensor(*self.input_size), volatile=True)
+        input_ = torch.FloatTensor(*self.input_size)
         mods = list(self.model.modules())
         out_sizes = []
         for i in range(1, len(mods)):

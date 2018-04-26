@@ -41,9 +41,9 @@ class DiscriminatorLoss:
     def __call__(self, d_hr_out, d_sr_out):
         # Labels smoothing
         real_labels = np.random.uniform(0.7, 1.2, size=d_hr_out.size())
-        real_labels = torch.FloatTensor(real_labels).cuda()
+        real_labels = torch.FloatTensor(real_labels).to(d_hr_out.get_device())
 
-        d_hr_loss = F.binary_cross_entropy(d_hr_out, torch.autograd.Variable(real_labels))
+        d_hr_loss = F.binary_cross_entropy(d_hr_out, real_labels)
         d_sr_loss = F.binary_cross_entropy(d_sr_out, torch.zeros_like(d_sr_out))
 
         return d_hr_loss + d_sr_loss

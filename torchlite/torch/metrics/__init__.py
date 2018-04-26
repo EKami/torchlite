@@ -4,7 +4,6 @@ This class contains generalized metrics which works across different models
 import torch
 import copy
 import numpy as np
-from torch.autograd.variable import Variable
 import torchlite.torch.tools.ssim as ssim
 
 
@@ -34,8 +33,8 @@ class MetricsList:
         Will accumulate the metrics results.
         Args:
             step (str): Either "training" or "validation"
-            logits (Variable): The output logits
-            targets (Variable): The output targets
+            logits (Tensor): The output logits
+            targets (Tensor): The output targets
         """
 
         if step == "training":
@@ -92,11 +91,7 @@ class CategoricalAccuracy(Metric):
         """
         _, y_pred_dense = y_pred.max(1)
         assert y_true.size() == y_pred_dense.size(), "y_true and y_pred shapes differ"
-        if isinstance(y_true, Variable):
-            y_true = y_true.data
-        if isinstance(y_pred_dense, Variable):
-            y_pred_dense = y_pred_dense.data
-        sm = torch.sum(y_true == y_pred_dense)
+        sm = torch.sum(y_true == y_pred_dense).float()
         return 100. * sm / y_true.size()[0]
 
     @property
@@ -132,7 +127,7 @@ class RMSPE(Metric):
             logits = y_pred
             targ = y_true
         pct_var = (targ - logits) / targ
-        res = torch.sqrt((pct_var ** 2).mean()).data[0]
+        res = torch.sqrt((pct_var ** 2).mean())
         return res
 
     @property
@@ -153,7 +148,7 @@ class SSIM(Metric):
         return "ssim"
 
     def __call__(self, logits, targets):
-        res = ssim.ssim(logits, targets).data[0]
+        res = ssim.ssim(logits, targets)
         return res
 
 
@@ -168,6 +163,7 @@ class PSNR(Metric):
         return "psnr"
 
     def __call__(self, logits, targets):
-        mse = ((targets - logits) ** 2).data.mean()
+        logits, targets = logits.cpu().detach().numpy(), targets.cpu().detach().numpy()
+        mse = ((targets - logits) ** 2).mean()
         psnr = 10 * np.log10(1 / mse)
         return psnr

@@ -10,7 +10,7 @@ from typing import Union
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 
-import torchlite.data.files as efiles
+import torchlite.data.files as tfiles
 from torchlite.data.datasets import ColumnarDataset, ImageClassificationDataset
 from torchlite.torch.models import MixedInputModel, FinetunedConvModel
 from torchlite.torch.tools import tensor_tools
@@ -143,17 +143,17 @@ class ImageClassifierShortcut(BaseLoader):
         """
         datasets = []
 
-        files, y_mapping = efiles.get_labels_from_folders(train_folder)
+        files, y_mapping = tfiles.get_labels_from_folders(train_folder)
         datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
 
         if val_folder:
-            files, _ = efiles.get_labels_from_folders(val_folder, y_mapping)
+            files, _ = tfiles.get_labels_from_folders(val_folder, y_mapping)
             datasets.append(ImageClassificationDataset(files[:, 0], files[:, 1], transforms=transforms))
         else:
             datasets.append(None)
 
         if test_folder:
-            files = efiles.get_files(test_folder)
+            files = tfiles.get_files(test_folder)
             datasets.append(ImageClassificationDataset(files, np.repeat(-1, len(files)), transforms=transforms))
         else:
             datasets.append(None)

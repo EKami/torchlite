@@ -48,7 +48,7 @@ class ImageClassificationDataset(ImageDataset):
         if isinstance(y, list):
             self.y = y
         else:
-            self.y = torch.from_numpy(y.astype(np.int32))
+            self.y = torch.from_numpy(y.astype(np.int64))
 
     def __getitem__(self, idx):
         image = Image.open(self.images_path[idx])

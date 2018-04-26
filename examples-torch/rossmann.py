@@ -50,7 +50,7 @@ def get_elapsed(df, monitored_field, prefix='elapsed_'):
     Args:
         df (pd.DataFrame): A pandas DataFrame
         monitored_field (str): A string that is the name of the date column you wish to expand.
-            Assumes the column is of type datetime64 if df is a dask dataframe
+            Assumes the column is of type datetime64
         prefix (str): The prefix to add to the newly created field.
     """
     day1 = np.timedelta64(1, 'D')

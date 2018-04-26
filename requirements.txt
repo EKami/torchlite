@@ -8,10 +8,12 @@ setuptools>=38.4
 numpy>=1.14
 matplotlib>=2.1
 Pillow>=5.0
-dask>=0.17
 scikit_learn>=0.19
 tensorboardX>=1.1
 typing>=3.6
 PyYAML>=3.12
 fuzzywuzzy>=0.16
 python-Levenshtein
+torch>=0.4.0
+torchvision
+tensorflow-gpu

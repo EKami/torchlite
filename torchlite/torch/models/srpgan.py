@@ -133,7 +133,7 @@ class Discriminator(nn.Module):
 
     def infer_lin_size(self, shape):
         bs = 1
-        input = torch.autograd.Variable(torch.rand(bs, *shape))
+        input = torch.rand(bs, *shape)
         model = nn.Sequential(
             self.block1,
             self.block2,
