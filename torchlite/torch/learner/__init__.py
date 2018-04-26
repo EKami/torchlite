@@ -41,7 +41,8 @@ class Learner:
             inputs = [i.to(self.device) for i in inputs]
             targets = targets.to(self.device)
 
-            logits = self.learner_core.on_forward_batch(step, inputs, targets)
+            # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
+            logits = self.learner_core.on_forward_batch(step, inputs, targets).detach()
             metrics_list.acc_batch(step, logits, targets)
 
             logs.update(self.learner_core.get_logs)
@@ -151,7 +152,8 @@ class Learner:
                 callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
                 inputs = [i.to(self.device) for i in inputs]
 
-                logits = self.learner_core.on_forward_batch("prediction", inputs).data
+                # Need to detach and move to CPU otherwise the Tensor and gradients will accumulate in GPU memory
+                logits = self.learner_core.on_forward_batch("prediction", inputs).cpu().detach()
                 ret_logits.append(logits)
                 callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
 

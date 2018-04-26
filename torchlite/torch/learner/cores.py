@@ -221,7 +221,7 @@ class SRPGanCore(BaseCore):
 
         self._update_loss_logs(g_loss, d_loss, adversarial_loss, content_loss, perceptual_loss)
 
-        return sr_images.detach()  # Need to detach otherwise the Tensor will accumulate in GPU memory
+        return sr_images
 
     def on_forward_batch(self, step, inputs, targets=None):
         self.logs = {}
