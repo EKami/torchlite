@@ -10,7 +10,7 @@ class EncoderBlueprint:
     def __init__(self, numeric_scaler=None):
         """
         This class keeps all the transformations that went through
-        the encoding of a dataframe for later use on another dataframe
+        the encoding of a DataFrame for later use on another DataFrame
 
         Args:
             numeric_scaler (None, Scaler): None or a scaler from sklearn.preprocessing.data for scaling
@@ -65,7 +65,7 @@ class StructuredBaseEncoder:
             self.blueprint.column_names = df.columns
             return True
 
-        diff = list(set(self.blueprint.column_names) - set(df.columns))
+        diff = list(set(self.blueprint.column_names) ^ set(df.columns))
         if len(diff) > 0:
             raise Exception("Columns in EncoderBlueprint and DataFrame do not match: {}".format(diff))
 
