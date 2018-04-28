@@ -13,7 +13,6 @@ from multiprocessing import cpu_count
 import numpy as np
 import torch.nn.functional as F
 import isoweek
-import datetime
 import torch.optim as optim
 from tqdm import tqdm
 
@@ -25,9 +24,8 @@ from torchlite.data.fetcher import WebFetcher
 import torchlite.torch.shortcuts as shortcuts
 import torchlite.pandas.date as edate
 from torchlite.torch.train_callbacks import CosineAnnealingCallback
-from torchlite.pandas.encoder import StructuredTreeEncoder, EncoderBlueprint
-import torchlite.pandas.merger as emerger
-import torchlite.pandas.splitter as esplitter
+from torchlite.pandas.structured_encoder import TreeEncoder
+import torchlite.pandas.merger as tmerger
 
 
 def to_csv(test_file, output_file, identifier_field, predicted_field,
@@ -80,7 +78,7 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         test.StateHoliday = test.StateHoliday != '0'
 
         # Join tables
-        weather = emerger.join_df(weather, state_names, "file", "StateName")
+        weather = tmerger.join_df(weather, state_names, "file", "StateName")
         pbar.update(1)
 
         # Replace all instances of state name 'NI' to match the usage in the rest of the data: 'HB,NI'
@@ -105,15 +103,15 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         pbar.update(1)
 
         # Outer join to a single dataframe
-        store = emerger.join_df(store, store_states, "Store")
-        joined = emerger.join_df(train, store, "Store")
-        joined_test = emerger.join_df(test, store, "Store")
-        joined = emerger.join_df(joined, googletrend, ["State", "Year", "Week"])
-        joined_test = emerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
+        store = tmerger.join_df(store, store_states, "Store")
+        joined = tmerger.join_df(train, store, "Store")
+        joined_test = tmerger.join_df(test, store, "Store")
+        joined = tmerger.join_df(joined, googletrend, ["State", "Year", "Week"])
+        joined_test = tmerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
         joined = joined.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
         joined_test = joined_test.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
-        joined = emerger.join_df(joined, weather, ["State", "Date"])
-        joined_test = emerger.join_df(joined_test, weather, ["State", "Date"])
+        joined = tmerger.join_df(joined, weather, ["State", "Date"])
+        joined_test = tmerger.join_df(joined_test, weather, ["State", "Date"])
         for df in (joined, joined_test):
             for c in df.columns:
                 if c.endswith('_y'):
@@ -194,9 +192,9 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
             df["Date"] = pd.to_datetime(df.Date)
 
             if name == "train":
-                joined = emerger.join_df(joined, df, ['Store', 'Date'])
+                joined = tmerger.join_df(joined, df, ['Store', 'Date'])
             elif name == "test":
-                joined_test = emerger.join_df(joined_test, df, ['Store', 'Date'])
+                joined_test = tmerger.join_df(joined_test, df, ['Store', 'Date'])
             pbar.update(1)
 
         # The authors also removed all instances where the store had zero sale / was closed
@@ -225,7 +223,7 @@ def create_features(train_df, test_df):
                 'AfterStateHoliday', 'BeforeStateHoliday', 'Promo', 'SchoolHoliday']
 
     y = 'Sales'
-    train_df["Sales_log"] = np.log(train_df[y]).astype(np.float32)
+    y_log = np.log(train_df[y]).astype(np.float32)
     train_df.drop(y, axis=1, inplace=True)
 
     train_df = train_df.set_index("Date")
@@ -236,9 +234,10 @@ def create_features(train_df, test_df):
     for v in cat_vars:
         train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
-    train_df, encoder_blueprint = StructuredTreeEncoder(train_df, num_vars, cat_vars, "Sales_log",
-                                                        EncoderBlueprint(StandardScaler())).apply_encoding()
-    test_df, _ = StructuredTreeEncoder(test_df, num_vars, cat_vars, encoder_blueprint=encoder_blueprint).apply_encoding()
+    enc = TreeEncoder(num_vars, cat_vars, fix_missing=True, numeric_scaler=StandardScaler())
+    train_df = enc.fit_transform(train_df)
+    test_df = enc.transform(test_df)
+    train_df["Sales_log"] = y_log.values
 
     return train_df, test_df, cat_vars, card_cat_features
 
