@@ -232,8 +232,9 @@ def create_features(train_df, test_df):
     enc = TreeEncoder(num_vars, cat_vars, fix_missing=True, numeric_scaler=StandardScaler())
     train_df = enc.fit_transform(train_df)
     test_df = enc.transform(test_df)
-    train_df["Sales_log"] = y_log.values
 
+    assert len(train_df.columns) == len(test_df.columns)
+    train_df["Sales_log"] = y_log.values
     return train_df, test_df, cat_vars, card_cat_features
 
 
