@@ -78,7 +78,7 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         test.StateHoliday = test.StateHoliday != '0'
 
         # Join tables
-        weather = tmerger.join_df(weather, state_names, "file", "StateName")
+        weather = emerger.join_df(weather, state_names, "file", "StateName")
         pbar.update(1)
 
         # Replace all instances of state name 'NI' to match the usage in the rest of the data: 'HB,NI'
@@ -103,15 +103,15 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         pbar.update(1)
 
         # Outer join to a single dataframe
-        store = tmerger.join_df(store, store_states, "Store")
-        joined = tmerger.join_df(train, store, "Store")
-        joined_test = tmerger.join_df(test, store, "Store")
-        joined = tmerger.join_df(joined, googletrend, ["State", "Year", "Week"])
-        joined_test = tmerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
+        store = emerger.join_df(store, store_states, "Store")
+        joined = emerger.join_df(train, store, "Store")
+        joined_test = emerger.join_df(test, store, "Store")
+        joined = emerger.join_df(joined, googletrend, ["State", "Year", "Week"])
+        joined_test = emerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
         joined = joined.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
         joined_test = joined_test.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
-        joined = tmerger.join_df(joined, weather, ["State", "Date"])
-        joined_test = tmerger.join_df(joined_test, weather, ["State", "Date"])
+        joined = emerger.join_df(joined, weather, ["State", "Date"])
+        joined_test = emerger.join_df(joined_test, weather, ["State", "Date"])
         for df in (joined, joined_test):
             for c in df.columns:
                 if c.endswith('_y'):
@@ -157,26 +157,19 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
             field = 'SchoolHoliday'
             df = df.sort_values(['Store', 'Date'])
             get_elapsed(df, field, 'After')
-            df = df.sort_values(['Store', 'Date'], ascending=[True, False])
-            get_elapsed(df, field, 'Before')
             field = 'StateHoliday'
             df = df.sort_values(['Store', 'Date'])
             get_elapsed(df, field, 'After')
-            df = df.sort_values(['Store', 'Date'], ascending=[True, False])
-            get_elapsed(df, field, 'Before')
             field = 'Promo'
             df = df.sort_values(['Store', 'Date'])
             get_elapsed(df, field, 'After')
-            df = df.sort_values(['Store', 'Date'], ascending=[True, False])
-            get_elapsed(df, field, 'Before')
             # Set the active index to Date
             df = df.set_index("Date")
             # Set null values from elapsed field calculations to 0
             columns = ['SchoolHoliday', 'StateHoliday', 'Promo']
-            for o in ['Before', 'After']:
-                for p in columns:
-                    a = o + p
-                    df[a] = df[a].fillna(0)
+            for p in columns:
+                a = 'After' + p
+                df[a] = df[a].fillna(0)
             # Window functions in pandas to calculate rolling quantities
             bwd = df[['Store'] + columns].sort_index().groupby("Store").rolling(7, min_periods=1).sum()
             fwd = df[['Store'] + columns].sort_index(ascending=False).groupby("Store").rolling(7, min_periods=1).sum()
@@ -192,9 +185,9 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
             df["Date"] = pd.to_datetime(df.Date)
 
             if name == "train":
-                joined = tmerger.join_df(joined, df, ['Store', 'Date'])
+                joined = emerger.join_df(joined, df, ['Store', 'Date'])
             elif name == "test":
-                joined_test = tmerger.join_df(joined_test, df, ['Store', 'Date'])
+                joined_test = emerger.join_df(joined_test, df, ['Store', 'Date'])
             pbar.update(1)
 
         # The authors also removed all instances where the store had zero sale / was closed
@@ -220,7 +213,7 @@ def create_features(train_df, test_df):
     num_vars = ['CompetitionDistance', 'Max_TemperatureC', 'Mean_TemperatureC', 'Min_TemperatureC',
                 'Max_Humidity', 'Mean_Humidity', 'Min_Humidity', 'Max_Wind_SpeedKm_h',
                 'Mean_Wind_SpeedKm_h', 'CloudCover', 'trend', 'trend_DE',
-                'AfterStateHoliday', 'BeforeStateHoliday', 'Promo', 'SchoolHoliday']
+                'AfterStateHoliday', 'Promo', 'AfterPromo', 'SchoolHoliday']
 
     y = 'Sales'
     y_log = np.log(train_df[y]).astype(np.float32)
