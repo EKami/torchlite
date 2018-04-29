@@ -2,7 +2,6 @@
 A structured data encoder based on sklearn API
 """
 import pandas as pd
-from tqdm import tqdm
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from pandas.api.types import is_numeric_dtype
@@ -40,7 +39,13 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
 
         raise Exception("Columns in EncoderBlueprint and DataFrame do not have the same order")
 
-    def _perform_fix_na(self, df):
+    def _perform_na_fit(self, df, y):
+        raise NotImplementedError()
+
+    def _perform_na_transform(self, df):
+        raise NotImplementedError()
+
+    def _perform_categ_fit(self, df, y):
         raise NotImplementedError()
 
     def _perform_categ_transform(self, df):
@@ -71,21 +76,11 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         df = X[[feat for feat in all_feat if feat in X.columns]].copy()
 
         # Missing values
-        missing = []
-        for feat in all_feat:
-            if is_numeric_dtype(df[feat]):
-                if pd.isnull(df[feat]).sum():
-                    missing.append(feat)
-        self.tfs_list["missing"] = missing
-        self._perform_fix_na(df)
+        self._perform_na_fit(df, y)
+        self._perform_na_transform(df)
 
         # Categorical columns
-        categ_cols = {}
-        for col in self.categorical_vars:
-            if col in df.columns:
-                categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
-                categ_cols[col] = categs
-        self.tfs_list["categ_cols"] = categ_cols
+        self._perform_categ_fit(df, y)
         self._perform_categ_transform(df)
 
         # Scaling
@@ -93,7 +88,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         self.tfs_list["num_cols"] = num_cols
         if self.numeric_scaler is not None:
             # Turning all the columns to the same dtype before scaling is important
-            self.numeric_scaler.fit(df[num_cols].astype(np.float64).values)
+            self.numeric_scaler.fit(df[num_cols].astype(np.float32).values)
 
         self.tfs_list["cols"] = df.columns
         self.tfs_list["y"] = y
@@ -116,7 +111,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
 
         print("Warning: Missing columns: {}, dropping them...".format(missing_col))
         print("--- Fixing NA values ({}) ---".format(len(self.tfs_list["missing"])))
-        self._perform_fix_na(df)
+        self._perform_na_transform(df)
         print("List of NA columns fixed: {}".format(list(self.tfs_list["missing"])))
         print("Categorizing features {}".format(self.categorical_vars))
 
@@ -127,7 +122,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         if self.numeric_scaler is not None:
             num_cols = self.tfs_list["num_cols"]
             # Turning all the columns to the same dtype before scaling is important
-            df[num_cols] = self.numeric_scaler.transform(df[num_cols].astype(np.float64).values)
+            df[num_cols] = self.numeric_scaler.transform(df[num_cols].astype(np.float32).values)
             print("List of scaled columns: {}".format(num_cols))
 
         # Print stats
@@ -168,11 +163,28 @@ class TreeEncoder(BaseEncoder):
         """
         super().__init__(numeric_vars, categorical_vars, fix_missing, numeric_scaler)
 
-    def _perform_fix_na(self, df):
+    def _perform_na_fit(self, df, y):
+        missing = []
+        all_feat = self.categorical_vars + self.numeric_vars
+        for feat in all_feat:
+            if is_numeric_dtype(df[feat]):
+                if pd.isnull(df[feat]).sum():
+                    missing.append(feat)
+        self.tfs_list["missing"] = missing
+
+    def _perform_na_transform(self, df):
         for col in self.tfs_list["missing"]:
             med = df[col].median()
             df[col].fillna(med, inplace=True)
             df[col + '_na'] = df[col].isnull()
+
+    def _perform_categ_fit(self, df, y):
+        categ_cols = {}
+        for col in self.categorical_vars:
+            if col in df.columns:
+                categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
+                categ_cols[col] = categs
+        self.tfs_list["categ_cols"] = categ_cols
 
     def _perform_categ_transform(self, df):
         for col, vals in self.tfs_list["categ_cols"].items():
@@ -180,9 +192,21 @@ class TreeEncoder(BaseEncoder):
 
 
 class LinearEncoder(BaseEncoder):
-    def _perform_fix_na(self, df):
+    def _perform_na_fit(self, df, y):
+        missing = []
+        all_feat = self.categorical_vars + self.numeric_vars
+        for feat in all_feat:
+            if is_numeric_dtype(df[feat]):
+                if pd.isnull(df[feat]).sum():
+                    missing.append(feat)
+        self.tfs_list["missing"] = missing
+
+    def _perform_na_transform(self, df):
         for col in self.tfs_list["missing"]:
             df[col].fillna(-9999, inplace=True)
+
+    def _perform_categ_fit(self, df, y):
+        pass
 
     def _perform_categ_transform(self, df):
         for col in self.tfs_list["categ_cols"]:
