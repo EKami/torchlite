@@ -78,7 +78,7 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         test.StateHoliday = test.StateHoliday != '0'
 
         # Join tables
-        weather = emerger.join_df(weather, state_names, "file", "StateName")
+        weather = tmerger.join_df(weather, state_names, "file", "StateName")
         pbar.update(1)
 
         # Replace all instances of state name 'NI' to match the usage in the rest of the data: 'HB,NI'
@@ -103,15 +103,15 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
         pbar.update(1)
 
         # Outer join to a single dataframe
-        store = emerger.join_df(store, store_states, "Store")
-        joined = emerger.join_df(train, store, "Store")
-        joined_test = emerger.join_df(test, store, "Store")
-        joined = emerger.join_df(joined, googletrend, ["State", "Year", "Week"])
-        joined_test = emerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
+        store = tmerger.join_df(store, store_states, "Store")
+        joined = tmerger.join_df(train, store, "Store")
+        joined_test = tmerger.join_df(test, store, "Store")
+        joined = tmerger.join_df(joined, googletrend, ["State", "Year", "Week"])
+        joined_test = tmerger.join_df(joined_test, googletrend, ["State", "Year", "Week"])
         joined = joined.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
         joined_test = joined_test.merge(trend_de, 'left', ["Year", "Week"], suffixes=('', '_DE'))
-        joined = emerger.join_df(joined, weather, ["State", "Date"])
-        joined_test = emerger.join_df(joined_test, weather, ["State", "Date"])
+        joined = tmerger.join_df(joined, weather, ["State", "Date"])
+        joined_test = tmerger.join_df(joined_test, weather, ["State", "Date"])
         for df in (joined, joined_test):
             for c in df.columns:
                 if c.endswith('_y'):
@@ -185,9 +185,9 @@ def prepare_data(files_path, preprocessed_train_path, preprocessed_test_path):
             df["Date"] = pd.to_datetime(df.Date)
 
             if name == "train":
-                joined = emerger.join_df(joined, df, ['Store', 'Date'])
+                joined = tmerger.join_df(joined, df, ['Store', 'Date'])
             elif name == "test":
-                joined_test = emerger.join_df(joined_test, df, ['Store', 'Date'])
+                joined_test = tmerger.join_df(joined_test, df, ['Store', 'Date'])
             pbar.update(1)
 
         # The authors also removed all instances where the store had zero sale / was closed
