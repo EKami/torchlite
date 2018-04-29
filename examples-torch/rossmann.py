@@ -16,7 +16,8 @@ import isoweek
 import torch.optim as optim
 from tqdm import tqdm
 
-from sklearn.preprocessing.data import StandardScaler
+import datetime
+from sklearn.preprocessing import StandardScaler
 from torchlite.torch.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
 import torchlite.torch.metrics as metrics
@@ -26,6 +27,7 @@ import torchlite.pandas.date as edate
 from torchlite.torch.train_callbacks import CosineAnnealingCallback
 from torchlite.pandas.structured_encoder import TreeEncoder
 import torchlite.pandas.merger as tmerger
+import torchlite.pandas.splitter as tsplitter
 
 
 def to_csv(test_file, output_file, identifier_field, predicted_field,
@@ -259,7 +261,7 @@ def main():
     y_range = (0, max_log_y * 1.2)
 
     # /!\ Uncomment this to get a real validation set
-    #train_df, val_df = esplitter.time_split(train_df, datetime.datetime(2014, 8, 1), datetime.datetime(2014, 9, 17))
+    #train_df, val_df = tsplitter.time_split(train_df, datetime.datetime(2014, 8, 1), datetime.datetime(2014, 9, 17))
     val_df = None
     # --
 
