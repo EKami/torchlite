@@ -80,10 +80,11 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         self._perform_fix_na(df)
 
         # Categorical columns
-        categ_cols = []
+        categ_cols = {}
         for col in self.categorical_vars:
             if col in df.columns:
-                categ_cols.append(col)
+                categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
+                categ_cols[col] = categs
         self.tfs_list["categ_cols"] = categ_cols
         self._perform_categ_transform(df)
 
@@ -172,12 +173,8 @@ class TreeEncoder(BaseEncoder):
             df[col + '_na'] = df[col].isnull()
 
     def _perform_categ_transform(self, df):
-        for col in self.tfs_list["categ_cols"]:
-            df[col] = df[col].astype('category').cat.as_ordered()
-
-        for name, col in df.items():
-            if not is_numeric_dtype(col):  # If categorical
-                df[name] = col.cat.codes + 1
+        for col, vals in self.tfs_list["categ_cols"].items():
+            df[col] = df[col].astype(pd.api.types.CategoricalDtype(categories=vals)).cat.codes + 1
 
 
 class LinearEncoder(BaseEncoder):

@@ -223,11 +223,8 @@ def create_features(train_df, test_df):
 
     train_df = train_df.set_index("Date")
     test_df = test_df.set_index("Date")
-    # Get the categorical fields cardinality before turning them all to float32
+    # Get the categorical fields cardinality
     card_cat_features = {c: len(train_df[c].astype('category').cat.categories) + 1 for c in cat_vars}
-
-    for v in cat_vars:
-        train_df[v] = train_df[v].astype('category').cat.as_ordered()
 
     enc = TreeEncoder(num_vars, cat_vars, fix_missing=True, numeric_scaler=StandardScaler())
     train_df = enc.fit_transform(train_df)
