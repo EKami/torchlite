@@ -25,7 +25,7 @@ from torchlite.data.fetcher import WebFetcher
 import torchlite.torch.shortcuts as shortcuts
 import torchlite.pandas.date as edate
 from torchlite.torch.train_callbacks import CosineAnnealingCallback
-from torchlite.pandas.structured_encoder import TreeEncoder
+from torchlite.pandas.tabular_encoder import TreeEncoder
 import torchlite.pandas.merger as tmerger
 import torchlite.pandas.splitter as tsplitter
 

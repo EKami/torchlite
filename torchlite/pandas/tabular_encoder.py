@@ -93,7 +93,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         self.tfs_list["num_cols"] = num_cols
         if self.numeric_scaler is not None:
             # Turning all the columns to the same dtype before scaling is important
-            self.numeric_scaler.fit(df[num_cols].astype(np.float32).values)
+            self.numeric_scaler.fit(df[num_cols].astype(np.float64).values)
 
         self.tfs_list["cols"] = df.columns
         self.tfs_list["y"] = y
@@ -127,7 +127,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         if self.numeric_scaler is not None:
             num_cols = self.tfs_list["num_cols"]
             # Turning all the columns to the same dtype before scaling is important
-            df[num_cols] = self.numeric_scaler.transform(df[num_cols].astype(np.float32).values)
+            df[num_cols] = self.numeric_scaler.transform(df[num_cols].astype(np.float64).values)
             print("List of scaled columns: {}".format(num_cols))
 
         # Print stats
