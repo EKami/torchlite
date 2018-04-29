@@ -4,6 +4,7 @@ A structured data encoder based on sklearn API
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import OneHotEncoder
 from pandas.api.types import is_numeric_dtype
 
 
@@ -164,19 +165,19 @@ class TreeEncoder(BaseEncoder):
         super().__init__(numeric_vars, categorical_vars, fix_missing, numeric_scaler)
 
     def _perform_na_fit(self, df, y):
-        missing = []
+        missing = {}
         all_feat = self.categorical_vars + self.numeric_vars
         for feat in all_feat:
             if is_numeric_dtype(df[feat]):
                 if pd.isnull(df[feat]).sum():
-                    missing.append(feat)
+                    median = df[feat].median()
+                    missing[feat] = median
         self.tfs_list["missing"] = missing
 
     def _perform_na_transform(self, df):
-        for col in self.tfs_list["missing"]:
-            med = df[col].median()
-            df[col].fillna(med, inplace=True)
+        for col, median in self.tfs_list["missing"].items():
             df[col + '_na'] = df[col].isnull()
+            df[col].fillna(median, inplace=True)
 
     def _perform_categ_fit(self, df, y):
         categ_cols = {}
