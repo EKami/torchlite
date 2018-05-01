@@ -193,6 +193,27 @@ class TreeEncoder(BaseEncoder):
 
 
 class LinearEncoder(BaseEncoder):
+    def __init__(self, numeric_vars, categorical_vars, fix_missing, numeric_scaler=None):
+        """
+            An encoder used for linear based models (Linear/Logistic regression) as well
+            as deep neural networks without embeddings.
+        Args:
+            numeric_vars (list): The list of variables to encode as numeric values.
+            categorical_vars (list): The list of variables to encode as categorical.
+            fix_missing (bool): True to fix the missing values (will add a new feature `is_missing` and replace
+                the missing value by its median). For some models like Xgboost you may want to set this value to False.
+            numeric_scaler (None, Scaler): None or a scaler from sklearn.preprocessing.data for scaling numeric features
+                All features types will be encoded as float32.
+                An sklearn StandardScaler() will fit most common cases.
+                For a more robust scaling with outliers take a look at RankGauss:
+                    https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629
+                and rankdata:
+                    https://docs.scipy.org/doc/scipy-0.16.0/reference/generated/scipy.stats.rankdata.html
+
+            Reference -> http://scikit-learn.org/stable/auto_examples/preprocessing/plot_all_scaling.html
+        """
+        super().__init__(numeric_vars, categorical_vars, fix_missing, numeric_scaler)
+
     def _perform_na_fit(self, df, y):
         missing = []
         all_feat = self.categorical_vars + self.numeric_vars
@@ -204,12 +225,10 @@ class LinearEncoder(BaseEncoder):
 
     def _perform_na_transform(self, df):
         for col in self.tfs_list["missing"]:
-            df[col].fillna(-9999, inplace=True)
+            df[col].fillna(-999999, inplace=True)
 
     def _perform_categ_fit(self, df, y):
-        pass
-
-    def _perform_categ_transform(self, df):
+        categ_cols = {}
         for col in self.tfs_list["categ_cols"]:
             # https://github.com/scikit-learn-contrib/categorical-encoding
             # TODO:
@@ -233,13 +252,26 @@ class LinearEncoder(BaseEncoder):
             # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
             # https://medium.com/open-machine-learning-course/open-machine-learning-course-topic-8-vowpal-wabbit-fast-learning-with-gigabytes-of-data-60f750086237
             if df[col].nunique() < 10:
-                onehot = pd.get_dummies(df[col], prefix=col)
-                df = pd.concat([df.drop(col, axis=1), onehot], axis=1)
+                # If cardinality < 10, use OneHot
+                enc = OneHotEncoder()
+                enc.fit(df[col].values)
+                categ_cols[col] = {"Onehot": enc}
             else:
-                # TODO BE CAREFUL TRAIN/VAL SPLIT SHOULD ALREADY BE DONE HERE!!
-                # TODO on the test set the means of the train is used
-                # Mean/target/likelihood encoding
+                # Otherwise use Mean/target/likelihood encoding
                 cumsum = df.groupby(col)[self.tfs_list["y"]].cumsum() - df[self.tfs_list["y"]]
                 cumcnt = df.groupby(col)[self.tfs_list["y"]].cumcount()
                 means = cumsum / cumcnt
-                df_val[col + "_mean_target"] = df[col].map(means)
+                categ_cols[col] = {"TargMean": means}
+        self.tfs_list["categ_cols"] = categ_cols
+
+    def _perform_categ_transform(self, df):
+        for col, item in self.tfs_list["categ_cols"].items():
+            method, enc = item.keys(), item.values()
+            if method == "Onehot":
+                onehot = enc.transform(df[col].values)
+                df = pd.concat([df.drop(col, axis=1), onehot[:, 1:]], axis=1)
+            elif method == "TargMean":
+                # TODO BE CAREFUL TRAIN/VAL SPLIT SHOULD ALREADY BE DONE HERE!!
+                # TODO on the test set the means of the train is used
+                # Mean/target/likelihood encoding
+                df[col + "_mean_target"] = df[col].map(enc)
