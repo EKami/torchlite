@@ -67,14 +67,17 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
             X (pd.DataFrame): Array of DataFrame of shape = [n_samples, n_features]
                 Training vectors, where n_samples is the number of samples
                 and n_features is the number of features.
-            y (pd.Series): array-like, shape = [n_samples]
-                Target values.
+            y (str): Column name of the target value of X. The column must be contained in X.
         Returns:
             self : encoder
                 Returns self.
         """
         all_feat = self.categorical_vars + self.numeric_vars
         df = X[[feat for feat in all_feat if feat in X.columns]].copy()
+        self.tfs_list["y"] = y
+        if self.tfs_list["y"] is not None:
+            df[self.tfs_list["y"]] = X[self.tfs_list["y"]].copy()
+        self.tfs_list["cols"] = df.columns
 
         # Missing values
         self._perform_na_fit(df, y)
@@ -91,8 +94,6 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
             # Turning all the columns to the same dtype before scaling is important
             self.numeric_scaler.fit(df[num_cols].astype(np.float32).values)
 
-        self.tfs_list["cols"] = df.columns
-        self.tfs_list["y"] = y
         del df
         return self
 
@@ -183,6 +184,7 @@ class TreeEncoder(BaseEncoder):
         categ_cols = {}
         for col in self.categorical_vars:
             if col in df.columns:
+                # TODO Use pd.factorize() instead
                 categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
                 categ_cols[col] = categs
         self.tfs_list["categ_cols"] = categ_cols
@@ -229,7 +231,7 @@ class LinearEncoder(BaseEncoder):
 
     def _perform_categ_fit(self, df, y):
         categ_cols = {}
-        for col in self.tfs_list["categ_cols"]:
+        for col in self.categorical_vars:
             # https://github.com/scikit-learn-contrib/categorical-encoding
             # TODO:
             #  - Ordinal
@@ -257,11 +259,13 @@ class LinearEncoder(BaseEncoder):
                 enc.fit(df[col].values)
                 categ_cols[col] = {"Onehot": enc}
             else:
+                if self.tfs_list["y"] is None:
+                    raise Exception("You have to pass your target variable to the fit() function for target encoding")
                 # Otherwise use Mean/target/likelihood encoding
                 cumsum = df.groupby(col)[self.tfs_list["y"]].cumsum() - df[self.tfs_list["y"]]
                 cumcnt = df.groupby(col)[self.tfs_list["y"]].cumcount()
                 means = cumsum / cumcnt
-                categ_cols[col] = {"TargMean": means}
+                categ_cols[col] = {"target_mean": means}
         self.tfs_list["categ_cols"] = categ_cols
 
     def _perform_categ_transform(self, df):
@@ -270,7 +274,7 @@ class LinearEncoder(BaseEncoder):
             if method == "Onehot":
                 onehot = enc.transform(df[col].values)
                 df = pd.concat([df.drop(col, axis=1), onehot[:, 1:]], axis=1)
-            elif method == "TargMean":
+            elif method == "target_mean":
                 # TODO BE CAREFUL TRAIN/VAL SPLIT SHOULD ALREADY BE DONE HERE!!
                 # TODO on the test set the means of the train is used
                 # Mean/target/likelihood encoding

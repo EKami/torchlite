@@ -5,6 +5,7 @@ import torch
 import copy
 import numpy as np
 import torchlite.torch.tools.ssim as ssim
+import torch.nn.functional as F
 
 
 class Metric:
@@ -167,3 +168,18 @@ class PSNR(Metric):
         mse = ((targets - logits) ** 2).mean()
         psnr = 10 * np.log10(1 / mse)
         return psnr
+
+
+class RMSE(Metric):
+    def __init__(self):
+        """
+        Calculates the RMSE
+        """
+
+    @property
+    def get_name(self):
+        return "rmse"
+
+    def __call__(self, logits, targets):
+        error = torch.sqrt(F.mse_loss(logits, targets))
+        return error

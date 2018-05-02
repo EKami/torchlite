@@ -119,9 +119,9 @@ class ClassifierCore(BaseCore):
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
-                self.logs.update({"epoch_logs": {"train loss": self.avg_meter.debias_loss}})
+                self.logs.update({"epoch_logs": {"train loss": self.avg_meter.avg}})
             else:
-                self.logs.update({"epoch_logs": {"valid loss": self.avg_meter.debias_loss}})
+                self.logs.update({"epoch_logs": {"valid loss": self.avg_meter.avg}})
         return logits
 
 

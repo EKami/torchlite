@@ -13,8 +13,6 @@ class AverageMeter(object):
         self.val = 0
         self.sum = 0
         self.count = 0
-        self.avg_mom = 0.98
-        self.avg_loss_mom = 0.
 
     def reset(self):
         self.__init__()
@@ -23,16 +21,10 @@ class AverageMeter(object):
         self.val = val
         self.count += 1
         self.sum += val
-        self.avg_loss_mom = self.avg_loss_mom * self.avg_mom + val * (1 - self.avg_mom)
 
     @property
     def avg(self):
         return self.sum / self.count
-
-    @property
-    def debias_loss(self):
-        # More info: https://youtu.be/J99NV9Cr75I?t=2h4m
-        return self.avg_loss_mom / (1 - self.avg_mom ** self.count)
 
 
 def to_np(v):
