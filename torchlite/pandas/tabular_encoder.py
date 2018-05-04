@@ -33,7 +33,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
 
         diff = list(set(self.tfs_list["cols"]) ^ set(df.columns))
         if len(diff) > 0:
-            raise Exception("Columns in EncoderBlueprint and DataFrame do not match: {}".format(diff))
+            raise Exception("Columns in fitted and transformed DataFrame do not match: {}".format(diff))
 
         if list(self.tfs_list["cols"]) == list(df.columns):
             return True
@@ -77,7 +77,6 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         self.tfs_list["y"] = y
         if self.tfs_list["y"] is not None:
             df[self.tfs_list["y"]] = X[self.tfs_list["y"]].copy()
-        self.tfs_list["cols"] = df.columns
 
         # Missing values
         self._perform_na_fit(df, y)
@@ -94,6 +93,7 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
             # Turning all the columns to the same dtype before scaling is important
             self.numeric_scaler.fit(df[num_cols].astype(np.float32).values)
 
+        self.tfs_list["cols"] = df.columns
         del df
         return self
 
@@ -254,7 +254,7 @@ class LinearEncoder(BaseEncoder):
             # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
             # https://medium.com/open-machine-learning-course/open-machine-learning-course-topic-8-vowpal-wabbit-fast-learning-with-gigabytes-of-data-60f750086237
             if df[col].nunique() < 10:
-                # If cardinality < 10, use OneHot
+                # If cardinality < 10, use OneHot (or create a sparse matrix with scipy.sparse.csc_matrix ?)
                 enc = OneHotEncoder()
                 enc.fit(df[col].values)
                 categ_cols[col] = {"Onehot": enc}
