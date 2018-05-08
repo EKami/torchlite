@@ -80,11 +80,11 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
 
         # Missing values
         # TODO for ordered data (e.g. time series), take the adjacent value — next or previous
-        self._perform_na_fit(df, y)
-        self._perform_na_transform(df)
+        if self.fix_missing:
+            self._perform_na_fit(df, y)
+            self._perform_na_transform(df)
 
         # Categorical columns
-        # TODO add an "n/a" category for every categorical feature
         self._perform_categ_fit(df, y)
         self._perform_categ_transform(df)
 
@@ -113,11 +113,12 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         missing_col = [col for col in X.columns if col not in all_feat]
         df = X[[feat for feat in all_feat if feat in X.columns]].copy()
 
-        print("Warning: Missing columns: {}, dropping them...".format(missing_col))
-        print("--- Fixing NA values ({}) ---".format(len(self.tfs_list["missing"])))
-        self._perform_na_transform(df)
-        print("List of NA columns fixed: {}".format(list(self.tfs_list["missing"])))
-        print("Categorizing features {}".format(self.categorical_vars))
+        if self.fix_missing:
+            print("Warning: Missing columns: {}, dropping them...".format(missing_col))
+            print("--- Fixing NA values ({}) ---".format(len(self.tfs_list["missing"])))
+            self._perform_na_transform(df)
+            print("List of NA columns fixed: {}".format(list(self.tfs_list["missing"])))
+            print("Categorizing features {}".format(self.categorical_vars))
 
         # Categorical columns
         self._perform_categ_transform(df)
@@ -136,8 +137,10 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         print("------- Dataframe of len {} summary -------\n".format(len(df.columns)))
         for col, nan, dtype in zip(df.columns, nan_ratio.values, df.dtypes.values):
             print("Column {:<30}:\t dtype: {:<10}\t NaN ratio: {}".format(col, str(dtype), nan))
-        if len(non_num_cols) > 0 and nan_ratio > 0:
-            raise Exception("Not all columns are numeric or NaN has been found: {}.".format(non_num_cols))
+        if len(non_num_cols) > 0:
+            raise Exception("Not all columns are numeric: {}.".format(non_num_cols))
+        if self.fix_missing and nan_ratio > 0:
+            raise Exception("NaN has been found!")
 
         self._check_integrity(df)
         print("---------- Preprocessing done -----------")
@@ -187,6 +190,7 @@ class TreeEncoder(BaseEncoder):
         for col in self.categorical_vars:
             if col in df.columns:
                 # TODO Use pd.factorize() instead
+                # TODO add an "n/a" category for every categorical feature
                 categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
                 categ_cols[col] = categs
         self.tfs_list["categ_cols"] = categ_cols
