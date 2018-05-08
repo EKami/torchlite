@@ -79,10 +79,12 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
             df[self.tfs_list["y"]] = X[self.tfs_list["y"]].copy()
 
         # Missing values
+        # TODO for ordered data (e.g. time series), take the adjacent value — next or previous
         self._perform_na_fit(df, y)
         self._perform_na_transform(df)
 
         # Categorical columns
+        # TODO add an "n/a" category for every categorical feature
         self._perform_categ_fit(df, y)
         self._perform_categ_transform(df)
 
