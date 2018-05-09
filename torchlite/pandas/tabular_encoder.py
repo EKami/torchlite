@@ -199,7 +199,7 @@ class TreeEncoder(BaseEncoder):
 
 
 class LinearEncoder(BaseEncoder):
-    def __init__(self, numeric_vars, categorical_vars, fix_missing, numeric_scaler=None, categ_enc_method="hashing"):
+    def __init__(self, numeric_vars, categorical_vars, fix_missing, numeric_scaler=None, categ_enc_method="target"):
         """
             An encoder used for linear based models (Linear/Logistic regression) as well
             as deep neural networks without embeddings.
@@ -264,7 +264,7 @@ class LinearEncoder(BaseEncoder):
             if df[col].nunique() < 10:
                 lenc = LabelEncoder()  # Will automatically remove 1 category
                 enc = OneHotEncoder()  # Create an internal sparse matrix
-                df[col] = lenc.fit_transform(df[col].values)
+                df[col] = lenc.fit_transform(df[col].values) + 1
                 enc.fit(df[[col]].values)
                 categ_cols[col] = {"onehot": (enc, lenc.classes_)}
             else:
@@ -298,8 +298,8 @@ class LinearEncoder(BaseEncoder):
                 # TODO on the test set the means of the train is used
                 df[col + "_mean_target"] = df[col].map(enc)
             elif method == "hashing":
-                categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
+                categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.codes
                 str_hashs = [col + "=" + str(val) for val in categs]
                 hashs = [hash(h) % self.hash_space for h in str_hashs]
-                # for s, h in zip(str_hashs, hashs):
-                #     df[s] = h
+                df[col] = hashs
+
