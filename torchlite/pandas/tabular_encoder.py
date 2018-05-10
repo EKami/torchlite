@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from category_encoders.one_hot import OneHotEncoder as CategOneHot
 from pandas.api.types import is_numeric_dtype
 
 
@@ -81,12 +82,12 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         # TODO for ordered data (e.g. time series), take the adjacent value — next or previous
         if self.fix_missing:
             self._perform_na_fit(df, y)
-            self._perform_na_transform(df)
+            df = self._perform_na_transform(df)
 
         # Categorical columns
         # http://contrib.scikit-learn.org/categorical-encoding/
         self._perform_categ_fit(df, y)
-        self._perform_categ_transform(df)
+        df = self._perform_categ_transform(df)
 
         # Scaling
         num_cols = [n for n in df.columns if is_numeric_dtype(df[n]) and n in self.numeric_vars]
@@ -116,12 +117,12 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         if self.fix_missing:
             print("Warning: Missing columns: {}, dropping them...".format(missing_col))
             print("--- Fixing NA values ({}) ---".format(len(self.tfs_list["missing"])))
-            self._perform_na_transform(df)
+            df = self._perform_na_transform(df)
             print("List of NA columns fixed: {}".format(list(self.tfs_list["missing"])))
             print("Categorizing features {}".format(self.categorical_vars))
 
         # Categorical columns
-        self._perform_categ_transform(df)
+        df = self._perform_categ_transform(df)
 
         # Scaling
         if self.numeric_scaler is not None:
@@ -184,6 +185,7 @@ class TreeEncoder(BaseEncoder):
         for col, median in self.tfs_list["missing"].items():
             df[col + '_na'] = df[col].isnull()
             df[col].fillna(median, inplace=True)
+        return df
 
     def _perform_categ_fit(self, df, y):
         categ_cols = {}
@@ -197,10 +199,12 @@ class TreeEncoder(BaseEncoder):
         for col, vals in self.tfs_list["categ_cols"].items():
             # "n/a" category will be encoded as 0
             df[col] = df[col].astype(pd.api.types.CategoricalDtype(categories=vals, ordered=True)).cat.codes + 1
+        return df
 
 
 class LinearEncoder(BaseEncoder):
-    def __init__(self, numeric_vars, categorical_vars, fix_missing, numeric_scaler=None, categ_enc_method=None):
+    def __init__(self, numeric_vars, categorical_vars, fix_missing, numeric_scaler=None,
+                 categ_enc_method="force-onehot"):
         """
             An encoder used for linear based models (Linear/Logistic regression) as well
             as deep neural networks without embeddings.
@@ -218,7 +222,7 @@ class LinearEncoder(BaseEncoder):
                     https://docs.scipy.org/doc/scipy-0.16.0/reference/generated/scipy.stats.rankdata.html
 
             Reference -> http://scikit-learn.org/stable/auto_examples/preprocessing/plot_all_scaling.html
-            categ_enc_method (str): If a given categorical column cardinality is < 10 then one hot encoding
+            categ_enc_method (str, None): If a given categorical column cardinality is < 10 then one hot encoding
             will be used. For cardinality >= 10 one of the following methods can be used:
                 - "hashing": Better known as the "hashing trick"
                 - "target": Also known as Mean encoding/Target encoding/Likelihood encoding.
@@ -226,9 +230,10 @@ class LinearEncoder(BaseEncoder):
                 - "force-onehot": Force onehot encoding for large cardinality features.
                     Consider using one_hot_encode_sparse() instead to get a sparse matrix with lower
                     memory footprint.
+                - None: No encoding on categorical variables will be used
         """
         super().__init__(numeric_vars, categorical_vars, fix_missing, numeric_scaler)
-        self.categ_enc_method = categ_enc_method.lower()
+        self.categ_enc_method = categ_enc_method.lower() if categ_enc_method is not None else categ_enc_method
         self.hash_space = 25
 
     def _perform_na_fit(self, df, y):
@@ -243,29 +248,27 @@ class LinearEncoder(BaseEncoder):
     def _perform_na_transform(self, df):
         for col in self.tfs_list["missing"]:
             df[col].fillna(-999999, inplace=True)
+        return df
 
     def _perform_categ_fit(self, df, y):
         # https://github.com/scikit-learn-contrib/categorical-encoding
         # https://tech.yandex.com/catboost/doc/dg/concepts/algorithm-main-stages_cat-to-numberic-docpage/
         # https://en.wikipedia.org/wiki/Feature_hashing#Feature_vectorization_using_the_hashing_trick
         categ_cols = {}
+        onehot_cols = []
         for col in self.categorical_vars:
             categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
-            if df[col].nunique() < 10 or self.categ_enc_method == "force-onehot":
-                lenc = LabelEncoder()
-                df[col] = lenc.fit_transform(df[col].values) + 1
-                # Create an internal sparse matrix
-                enc = OneHotEncoder(n_values=len(lenc.classes_) + 1)  # +1 to handle missing values
-                enc.fit(df[[col]].values)
-                if len(lenc.classes_) > 10:
-                    print("Warning, cardinality of {} = {}".format(col, len(lenc.classes_)))
-                categ_cols[col] = {"onehot": (enc, lenc.classes_)}
+            card = df[col].nunique()
+            if card < 10 or self.categ_enc_method == "force-onehot":
+                if card > 10:
+                    print("Warning, cardinality of {} = {}".format(col, card))
+                onehot_cols.append(col)
             else:
                 if self.categ_enc_method == "target":
                     if self.tfs_list["y"] is None:
                         raise Exception("You have to pass your target variable to the fit() "
                                         "function for target encoding")
-                    # Otherwise use Mean/target/likelihood encoding
+                    # Mean/target/likelihood encoding
                     df[self.tfs_list["y"].name] = self.tfs_list["y"]
                     cumsum = df.groupby(col)[self.tfs_list["y"].name].cumsum() - df[self.tfs_list["y"].name]
                     cumcnt = df.groupby(col)[self.tfs_list["y"].name].cumcount()
@@ -273,31 +276,25 @@ class LinearEncoder(BaseEncoder):
                     means.rename('mean_enc', inplace=True)
                     concat = pd.concat([means, self.tfs_list["y"]], axis=1)
                     categ_cols[col] = {"target": concat}
-                    raise NotImplementedError("This encoding is not yet implemented")
+                    raise NotImplementedError("This encoding implementation is not yet finished")
                 elif self.categ_enc_method == "hashing":
                     str_hashs = [col + "=" + str(val) for val in categs]
                     hashs = [hash(h) % self.hash_space for h in str_hashs]
                     categ_cols[col] = {"hashing": hashs}
-                else:
-                    categ_cols[col] = {"none": None}
-
+        if len(onehot_cols) > 0:
+            enc = CategOneHot(cols=onehot_cols, handle_unknown='impute')
+            enc.fit(df)
+            self.tfs_list["onehot"] = enc
         self.tfs_list["categ_cols"] = categ_cols
 
     def _perform_categ_transform(self, df):
+        if self.categ_enc_method is None:
+            print("Warning, no encoding set for features {}".format(self.tfs_list["categ_cols"].keys()))
+            return df
         for col, item in self.tfs_list["categ_cols"].items():
             method = next(iter(item.keys()))
-            if method == "none":
-                print("Warning, no encoding set for feature {}".format(col))
-            elif method == "onehot":
-                enc = list(item.values())[0][0]
-                classes = list(item.values())[0][1]
-                # onehot[:, 1:]] to avoid collinearity
-                onehot = enc.transform(df[[col]].values)[:, 1:].toarray()
-                columns = [col + "_unknown"] + [col + "_" + str(c) for c in classes[1:]]
-                res = pd.DataFrame(data=onehot, columns=columns)
-                df = pd.concat([df.drop(col, axis=1), res], axis=1)
-            elif method == "target":
-                # TODO BE CAREFUL of the following points:
+            if method == "target":
+                # BE CAREFUL of the following points:
                 # • Local experiments:
                 #   ‒ Estimate encodings on X_train
                 #   ‒ Map them to X_train and X_val
@@ -316,11 +313,59 @@ class LinearEncoder(BaseEncoder):
                 hashs = [hash(h) % self.hash_space for h in str_hashs]
                 df[col] = hashs
 
+        if self.tfs_list.get("onehot") is not None:
+            enc = self.tfs_list["onehot"]
+            # TODO check to avoid collinearity
+            df = enc.transform(df)
+        return df
 
-def one_hot_encode_sparse(df, target_cols):
-    """
-    One-hot encode the given columns and return a sparse
-    matrix
-    Returns:
-        DataFrame: The original DataFrame + Onehot encoded values
-    """
+
+class SparseOneHotEncoder:
+    def __init__(self, numeric_vars, categorical_vars):
+        """
+            One-hot encode the given categorical_vars and return a sparse matrix.
+            Features neither in numeric_vars nor in categorical_vars won't be considered
+            in the resulting sparse matrix.
+        Args:
+            numeric_vars (list): The list of variables to encode as numeric values.
+            categorical_vars (list): List of categorical vars to transform to onehot
+        """
+        self.numeric_vars = numeric_vars
+        self.categorical_vars = categorical_vars
+
+    def fit_transform(self, df_list):
+        """
+        Perform the transformation. You should pass your train/valid/test sets to df_list if
+        you have them.
+        Args:
+            df_list (list): A list of pandas DataFrame
+
+        Returns:
+            list: List of sparse matrix in the same order as the passed df
+        """
+        # Concatenate
+        df = pd.concat(df_list)
+        df = df[self.numeric_vars + self.categorical_vars]
+        lenc = LabelEncoder()
+        inds = [0] + [df.shape[0] for df in df_list]
+        categs_inds = []
+
+        for categ_var in self.categorical_vars:
+            categs_inds.append(df.columns.get_loc(categ_var))
+            df[categ_var] = lenc.fit_transform(df[categ_var].values) + 1
+            if len(lenc.classes_) > 10:
+                print("Warning, cardinality of {} = {}".format(categ_var, len(lenc.classes_)))
+
+        # Create an internal sparse matrix
+        enc = OneHotEncoder(categorical_features=categs_inds)
+        enc.fit(df.values)
+        # Separate back the DataFrames with the right columns
+        all_df = [df.iloc[inds[i]:ind + inds[i]] for i, ind in enumerate(inds[1:])]
+
+        # Turn them into sparse matrix
+        res = []
+        for sep_df in all_df:
+            # TODO check to avoid collinearity
+            res.append(enc.transform(sep_df.values))
+        return res
+
