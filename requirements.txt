@@ -14,6 +14,7 @@ typing>=3.6
 PyYAML>=3.12
 fuzzywuzzy>=0.16
 python-Levenshtein
+category_encoders
 torch>=0.4.0
 torchvision
 tensorflow-gpu
