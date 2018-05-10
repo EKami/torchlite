@@ -74,7 +74,8 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
         """
         all_feat = self.categorical_vars + self.numeric_vars
         df = X[[feat for feat in all_feat if feat in X.columns]].copy()
-        self.tfs_list["y"] = y
+        if y is not None:
+            self.tfs_list["y"] = X[y]
 
         # Missing values
         # TODO for ordered data (e.g. time series), take the adjacent value — next or previous
@@ -187,15 +188,14 @@ class TreeEncoder(BaseEncoder):
         categ_cols = {}
         for col in self.categorical_vars:
             if col in df.columns:
-                # TODO Use pd.factorize() instead
-                # TODO add an "n/a" category for every categorical feature
-                categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
+                categs = pd.factorize(df[col], na_sentinel=0, order=True)[1]
                 categ_cols[col] = categs
         self.tfs_list["categ_cols"] = categ_cols
 
     def _perform_categ_transform(self, df):
         for col, vals in self.tfs_list["categ_cols"].items():
-            df[col] = df[col].astype(pd.api.types.CategoricalDtype(categories=vals)).cat.codes + 1
+            # "n/a" category will be encoded as 0
+            df[col] = df[col].astype(pd.api.types.CategoricalDtype(categories=vals, ordered=True)).cat.codes + 1
 
 
 class LinearEncoder(BaseEncoder):
@@ -273,8 +273,9 @@ class LinearEncoder(BaseEncoder):
                         raise Exception("You have to pass your target variable to the fit() "
                                         "function for target encoding")
                     # Otherwise use Mean/target/likelihood encoding
-                    cumsum = df.groupby(col)[self.tfs_list["y"]].cumsum() - df[self.tfs_list["y"]]
-                    cumcnt = df.groupby(col)[self.tfs_list["y"]].cumcount()
+                    df[self.tfs_list["y"].name] = self.tfs_list["y"]
+                    cumsum = df.groupby(col)[self.tfs_list["y"].name].cumsum() - df[self.tfs_list["y"].name]
+                    cumcnt = df.groupby(col)[self.tfs_list["y"].name].cumcount()
                     means = cumsum / cumcnt
                     categ_cols[col] = {"target": means}
                 elif self.categ_enc_method == "hashing":
