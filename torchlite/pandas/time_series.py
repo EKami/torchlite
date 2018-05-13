@@ -273,11 +273,16 @@ class HoltWinters:
             season.append(seasonals[i % self.slen])
         return self.result
 
-    def plotHoltWinters(self, series, plot_intervals=False, plot_anomalies=False):
+    def plot_holt_winters(self, series, plot_intervals=False, plot_anomalies=False):
         """
-            series - dataset with timeseries
-            plot_intervals - show confidence intervals
-            plot_anomalies - show anomalies
+        Plot holt winters
+        Args:
+            series (pd.Series): initial time series
+            plot_intervals (bool): Show confidence intervals
+            plot_anomalies (bool): show anomalies
+
+        Returns:
+            None
         """
 
         plt.figure(figsize=(20, 10))
