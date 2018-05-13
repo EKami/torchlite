@@ -227,6 +227,9 @@ class HoltWinters:
         season = []
         trend = []
         predicted_deviation = []
+        self.result = []
+        self.upper_bond = []
+        self.lower_bond = []
 
         seasonals = self._initial_seasonal_components()
 
