@@ -1,6 +1,8 @@
 # TODO include https://github.com/blue-yonder/tsfresh
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_squared_log_error
+from scipy.optimize import minimize
 import numpy as np
 import pandas as pd
 
@@ -18,11 +20,12 @@ class MovingAverage:
         """
         self.series = series
 
-    def get_moving_average(self, window, show_plot=False, *args, **kwargs):
+    def get_simple_moving_average(self, window, show_plot=False, *args, **kwargs):
         """
-            Returns a simple moving average
+            Returns a simple moving average (SMA)
             Moving average is based on the assumption: "Tomorrow will be the same as today".
-            So to predict for next month m for example, take the moving average at m - 1
+            So to predict for next month m for example, take the moving average at m - 1.
+            Most common moving averages are 15, 20, 30, 50, 100 and 200 days.
         Args:
             window (int): The number of entries by which to apply the smoothing factor
             show_plot (bool): If set to True will show moving average plot.
@@ -36,14 +39,14 @@ class MovingAverage:
         """
         rolling_mean = self.series.rolling(window=window).mean()
         if show_plot:
-            self._plotMovingAverage(self.series, rolling_mean, window, *args, **kwargs)
+            self._plot_simple_moving_average(self.series, rolling_mean, window, *args, **kwargs)
         return rolling_mean
 
-    def _plotMovingAverage(self, series, rolling_mean, window, plot_intervals=False,
-                           conf_interval=1.96, plot_anomalies=False,
-                           title_prefix=""):
+    def _plot_simple_moving_average(self, series, rolling_mean, window, plot_intervals=False,
+                                    conf_interval=1.96, plot_anomalies=False,
+                                    title_prefix=""):
         """
-        Plot moving average over a given pandas Series
+        Plot moving average (SMA) over a given pandas Series
         Args:
             series (pd.Series): A pandas Series with date index
             rolling_mean (pd.Series): A pandas series
@@ -69,7 +72,7 @@ class MovingAverage:
         if plot_intervals:
             mae = mean_absolute_error(series[window:], rolling_mean[window:])
             deviation = np.std(series[window:] - rolling_mean[window:])
-            print(f"MAE: {mae}, Deviation: {deviation}")
+            print("MAE: {}, Deviation: {}".format(mae, deviation))
             # z = 1.96 is the 95% confidence interval
             lower_bond = rolling_mean - (mae + z[conf_interval] * deviation)
             upper_bond = rolling_mean + (mae + z[conf_interval] * deviation)
@@ -88,32 +91,33 @@ class MovingAverage:
         plt.grid(True)
         plt.show()
 
-    def get_exponential_smoothing(self, alpha):
+    def get_exponential_moving_average(self, window):
         """
-        Exponential smoothing with a smoothing factor alpha
+        Exponential moving average (EMA) with a smoothing factor alpha.
         Args:
-            alpha (float): Smoothing parameter, float which value is between [0.0, 1.0]
+            window (int): Rolling window size
         Returns:
             pd.Series: The smoothed values
         """
+        alpha = 2 / (1 + window)
         result = [self.series[0]]  # first value is same as series
         for n in range(1, len(self.series)):
             result.append(alpha * self.series[n] + (1 - alpha) * result[n - 1])
         return result
 
-    def plot_exponential_smoothing(self, alphas):
+    def plot_exponential_moving_average(self, windows):
         """
-        Plots exponential smoothing with different alphas
+        Plots exponential moving average (EMA) with different window size
         Args:
-            alphas (list): Smoothing parameter for level, list of floats which value are between [0.0, 1.0]
+            windows (list): List of rolling window size
 
         Returns:
             None
         """
         with plt.style.context('seaborn-white'):
             plt.figure(figsize=(15, 7))
-            for alpha in alphas:
-                plt.plot(self.get_exponential_smoothing(alpha), label="Alpha {}".format(alpha))
+            for w in windows:
+                plt.plot(self.get_exponential_moving_average(w), label="Window size {}".format(w))
             plt.plot(self.series.values, "c", label="Actual")
             plt.legend(loc="best")
             plt.axis('tight')
@@ -121,9 +125,9 @@ class MovingAverage:
             plt.grid(True)
             plt.show()
 
-    def get_double_exponential_smoothing(self, alpha, beta):
+    def get_double_exponential_moving_average(self, alpha, beta):
         """
-        Double exponential smoothing with a smoothing level alpha and a trend beta.
+        Double exponential moving average (DEMA) with a smoothing level alpha and a trend beta.
         Alpha is responsible for the series smoothing around the trend, Beta for the smoothing of the trend itself
         The larger the values, the more weight the most recent observations will have and the
         less smoothed the model series will be.
@@ -147,9 +151,9 @@ class MovingAverage:
             result.append(level + trend)
         return result
 
-    def plot_double_exponential_smoothing(self, alphas, betas):
+    def plot_double_exponential_moving_average(self, alphas, betas):
         """
-        Plots double exponential smoothing with different alphas and betas
+        Plots double exponential moving average with different alphas and betas
         Args:
             alphas (list): Smoothing parameter for level, list of floats which value are between [0.0, 1.0]
             betas (list): Smoothing parameter for trend, list of floats which value are between [0.0, 1.0]
@@ -162,7 +166,7 @@ class MovingAverage:
             plt.figure(figsize=(20, 8))
             for alpha in alphas:
                 for beta in betas:
-                    plt.plot(self.get_double_exponential_smoothing(alpha, beta),
+                    plt.plot(self.get_double_exponential_moving_average(alpha, beta),
                              label="Alpha {}, beta {}".format(alpha, beta))
             plt.plot(self.series.values, label="Actual")
             plt.legend(loc="best")
@@ -222,10 +226,58 @@ class HoltWinters:
             seasonals[i] = sum_of_vals_over_avg / n_seasons
         return seasonals
 
-    def triple_exponential_smoothing(self):
-        smooth = []
-        season = []
-        trend = []
+    def _plot_holt_winters(self, plot_intervals=False, plot_anomalies=False):
+        """
+        Plot holt winters
+        Args:
+            plot_intervals (bool): Show confidence intervals
+            plot_anomalies (bool): show anomalies
+
+        Returns:
+            None
+        """
+
+        plt.figure(figsize=(20, 10))
+        plt.plot(self.result, label="Model")
+        plt.plot(self.series.values, label="Actual")
+        error = mean_absolute_percentage_error(self.series.values, self.result[:len(self.series)])
+        plt.title("Mean Absolute Percentage Error: {0:.2f}%".format(error))
+
+        if plot_anomalies:
+            anomalies = np.array([np.NaN] * len(self.series))
+            anomalies[self.series.values < self.lower_bond[:len(self.series)]] = \
+                self.series.values[self.series.values < self.lower_bond[:len(self.series)]]
+            anomalies[self.series.values > self.upper_bond[:len(self.series)]] = \
+                self.series.values[self.series.values > self.upper_bond[:len(self.series)]]
+            plt.plot(anomalies, "o", markersize=10, label="Anomalies")
+
+        if plot_intervals:
+            plt.plot(self.upper_bond, "r--", alpha=0.5, label="Up/Low confidence")
+            plt.plot(self.lower_bond, "r--", alpha=0.5)
+            plt.fill_between(x=range(0, len(self.result)), y1=self.upper_bond,
+                             y2=self.lower_bond, alpha=0.2, color="grey")
+
+        plt.vlines(len(self.series), ymin=min(self.lower_bond), ymax=max(self.upper_bond), linestyles='dashed')
+        plt.axvspan(len(self.series) - 20, len(self.result), alpha=0.3, color='lightgrey')
+        plt.grid(True)
+        plt.axis('tight')
+        plt.legend(loc="best", fontsize=13)
+        plt.show()
+
+    def triple_exponential_smoothing(self, plot_results=False, *args, **kwargs):
+        """
+        Returns the triple exponential smoothing results
+        Args:
+            plot_results (bool): If True the results will be plotted
+            *args (list): Arguments to pass to _plot_holt_winters()
+            **kwargs (dict): Arguments to pass to _plot_holt_winters()
+
+        Returns:
+            list: Triple exponential smoothing results
+        """
+        smooth_l = []
+        season_l = []
+        trend_l = []
         predicted_deviation = []
         self.result = []
         self.upper_bond = []
@@ -238,9 +290,9 @@ class HoltWinters:
                 smooth = self.series[0]
                 trend = self._initial_trend()
                 self.result.append(self.series[0])
-                smooth.append(smooth)
-                trend.append(trend)
-                season.append(seasonals[i % self.slen])
+                smooth_l.append(smooth)
+                trend_l.append(trend)
+                season_l.append(seasonals[i % self.slen])
 
                 predicted_deviation.append(0)
 
@@ -271,46 +323,74 @@ class HoltWinters:
             self.upper_bond.append(self.result[-1] + self.scaling_factor * predicted_deviation[-1])
             self.lower_bond.append(self.result[-1] - self.scaling_factor * predicted_deviation[-1])
 
-            smooth.append(smooth)
-            trend.append(trend)
-            season.append(seasonals[i % self.slen])
+            smooth_l.append(smooth)
+            trend_l.append(trend)
+            season_l.append(seasonals[i % self.slen])
+
+        if plot_results:
+            self._plot_holt_winters(*args, **kwargs)
         return self.result
 
-    def plot_holt_winters(self, series, plot_intervals=False, plot_anomalies=False):
+    def get_best_parameters(self, inplace=True, loss_function=mean_squared_log_error, n_folds=3):
         """
-        Plot holt winters
+        Optimize for getting the best alpha, beta and gamma parameters
+        on cross validation time series split.
         Args:
-            series (pd.Series): initial time series
-            plot_intervals (bool): Show confidence intervals
-            plot_anomalies (bool): show anomalies
-
+            inplace (bool): If True the internal Alpha, Beta, Gamma of this class will be replaced
+                by the optimal ones
+            n_folds (int): Number of folds for cross validation
+            loss_function (function): Sklearn metric loss function
         Returns:
-            None
+            tuple: Alpha, Beta, Gamma
         """
+        # initializing model parameters alpha, beta and gamma
+        x = np.array([0, 0, 0])
 
-        plt.figure(figsize=(20, 10))
-        plt.plot(self.result, label="Model")
-        plt.plot(series.values, label="Actual")
-        error = mean_absolute_percentage_error(series.values, self.result[:len(series)])
-        plt.title("Mean Absolute Percentage Error: {0:.2f}%".format(error))
+        # Minimizing the loss function
+        opt = minimize(time_series_cv_score, x0=x, args=(self.series, loss_function, self.slen, n_folds),
+                       method="TNC", bounds=((0, 1), (0, 1), (0, 1)))
 
-        if plot_anomalies:
-            anomalies = np.array([np.NaN] * len(series))
-            anomalies[series.values < self.lower_bond[:len(series)]] = \
-                series.values[series.values < self.lower_bond[:len(series)]]
-            anomalies[series.values > self.upper_bond[:len(series)]] = \
-                series.values[series.values > self.upper_bond[:len(series)]]
-            plt.plot(anomalies, "o", markersize=10, label="Anomalies")
+        # Take optimal values...
+        alpha, beta, gamma = opt.x
+        print("Alpha: {}, Beta: {}, Gamma: {}".format(alpha, beta, gamma))
+        if inplace:
+            self.alpha = alpha
+            self.beta = beta
+            self.gamma = gamma
 
-        if plot_intervals:
-            plt.plot(self.upper_bond, "r--", alpha=0.5, label="Up/Low confidence")
-            plt.plot(self.lower_bond, "r--", alpha=0.5)
-            plt.fill_between(x=range(0, len(self.result)), y1=self.upper_bond,
-                             y2=self.lower_bond, alpha=0.2, color="grey")
+        return alpha, beta, gamma
 
-        plt.vlines(len(series), ymin=min(self.lower_bond), ymax=max(self.upper_bond), linestyles='dashed')
-        plt.axvspan(len(series) - 20, len(self.result), alpha=0.3, color='lightgrey')
-        plt.grid(True)
-        plt.axis('tight')
-        plt.legend(loc="best", fontsize=13)
-        plt.show()
+
+def time_series_cv_score(params, series, loss_function, slen, n_folds=3):
+    """
+    Returns error on Cross validation for time series
+    Args:
+        params (list): Vector of parameters for optimization
+        series (pd.Series): dataset with timeseries
+        loss_function (function): Sklearn metric loss function
+        slen (int): length of a season
+        n_folds (int): Number of folds for cross validation
+    Returns:
+        float: Error
+    """
+    # errors array
+    errors = []
+
+    values = series.values
+    alpha, beta, gamma = params
+
+    # set the number of folds for cross-validation
+    tscv = TimeSeriesSplit(n_splits=n_folds)
+
+    # iterating over folds, train model on each, forecast and calculate error
+    for train, test in tscv.split(values):
+        model = HoltWinters(series=values[train], slen=slen,
+                            alpha=alpha, beta=beta, gamma=gamma, n_preds=len(test))
+        model.triple_exponential_smoothing()
+
+        predictions = model.result[-len(test):]
+        actual = values[test]
+        error = loss_function(predictions, actual)
+        errors.append(error)
+
+    return np.mean(np.array(errors))
