@@ -1,14 +1,111 @@
 # TODO include https://github.com/blue-yonder/tsfresh
 import matplotlib.pyplot as plt
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_squared_log_error
+from sklearn.metrics import mean_absolute_error, mean_squared_log_error
 from scipy.optimize import minimize
+from tqdm import tqdm
+import statsmodels.tsa.api as smt
+import statsmodels.api as sm
 import numpy as np
 import pandas as pd
 
 
 def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+
+class SARIMAX:
+    def __init__(self, series, d, D, s):
+        """
+        SARIMA model
+        Args:
+            series (pd.Series): The pandas series to work on
+            d (int): integration order in ARIMA model
+            D (int): seasonal integration order
+            s (int): length of season
+        """
+        self.s = s
+        self.D = D
+        self.d = d
+        self.series = series
+
+    def optimize(self, parameters_list, freq='H'):
+        """
+            Return DataFrame with parameters and corresponding AIC
+        Args:
+            parameters_list (list): list with (p, q, P, Q) tuples
+            freq (str): Frequency
+
+        Returns:
+            model: The model with the best parameters
+        """
+
+        results = []
+        best_aic = float("inf")
+
+        for param in tqdm(parameters_list):
+            # we need try-except because on some combinations model fails to converge
+            try:
+                model = sm.tsa.statespace.SARIMAX(self.series, order=(param[0], self.d, param[1]),
+                                                  seasonal_order=(param[3], self.D, param[3], self.s),
+                                                  freq=freq).fit(disp=-1)
+            except:
+                continue
+            aic = model.aic
+            # saving best model, AIC and parameters
+            if aic < best_aic:
+                best_aic = aic
+            results.append([param, model.aic])
+
+        result_table = pd.DataFrame(results)
+        result_table.columns = ['parameters', 'aic']
+        # sorting in ascending order, the lower AIC is - the better
+        result_table = result_table.sort_values(by='aic', ascending=True).reset_index(drop=True)
+
+        p, q, P, Q = result_table.parameters[0]
+
+        # Fit the best model
+        best_model = sm.tsa.statespace.SARIMAX(self.series, order=(p, self.d, q),
+                                               seasonal_order=(P, self.D, Q, self.s)).fit(disp=-1)
+
+        return best_model
+
+    def plot(self, model, n_steps):
+        """
+        Plots model vs predicted values
+
+            series - dataset with timeseries
+            model - fitted SARIMA model
+            n_steps - number of steps to predict in the future
+        Args:
+            model (statsmodels.tsa.statespace.sarimax.SARIMAXResultsWrapper): The model to plot
+            n_steps (int): t steps
+
+        Returns:
+            None
+        """
+        # adding model values
+        data = pd.DataFrame(self.series)
+        data.columns = ['actual']
+        data['arima_model'] = model.fittedvalues
+        # making a shift on s+d steps, because these values were unobserved by the model
+        # due to the differentiating
+        data.loc[:self.s + self.d, 'arima_model'] = np.NaN
+
+        # forecasting on n_steps forward
+        forecast = model.predict(start=data.shape[0], end=data.shape[0] + n_steps)
+        forecast = data.arima_model.append(forecast)
+        # calculate error, again having shifted on s+d steps from the beginning
+        error = mean_absolute_percentage_error(data['actual'][self.s + self.d:], data['arima_model'][self.s + self.d:])
+
+        plt.figure(figsize=(15, 7))
+        plt.title("Mean Absolute Percentage Error: {0:.2f}%".format(error))
+        plt.plot(forecast, color='r', label="model")
+        plt.axvspan(data.index[-1], forecast.index[-1], alpha=0.5, color='lightgrey')
+        plt.plot(data.actual, label="actual")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
 
 class MovingAverage:
@@ -394,3 +491,49 @@ def time_series_cv_score(params, series, loss_function, slen, n_folds=3):
         errors.append(error)
 
     return np.mean(np.array(errors))
+
+
+def test_stationary(y, show_plots=True, lags=None, figsize=(12, 7), style='bmh'):
+    """
+    Plot time series, its ACF (Autocorrelation function) and PACF (Partial autocorrelation function),
+    calculate Augmented Dickey–Fuller test.
+    Used to check if a time series is stationary or not.
+
+        - p-value > 0.05: Accept the null hypothesis (H0), the data has a unit root and is non-stationary.
+        - p-value <= 0.05: Reject the null hypothesis (H0), the data does not have a unit root and is stationary.
+
+    Args:
+        y (pd.Series, list): Time series pandas series
+        show_plots (bool): True to show the TS/ACF/PACF plots
+        lags (int): How many lags to include in ACF, PACF plot calculation
+        figsize (tuple): Size of plot
+        style (str): Style of plot
+
+    Returns:
+        tuple: (p-value, is_stationary)
+    """
+    if not isinstance(y, pd.Series):
+        y = pd.Series(y)
+
+    p_value = sm.tsa.stattools.adfuller(y)[1]
+    is_stationary = False
+
+    if show_plots:
+        with plt.style.context(style):
+            plt.figure(figsize=figsize)
+            layout = (2, 2)
+            ts_ax = plt.subplot2grid(layout, (0, 0), colspan=2)
+            acf_ax = plt.subplot2grid(layout, (1, 0))
+            pacf_ax = plt.subplot2grid(layout, (1, 1))
+
+            y.plot(ax=ts_ax)
+            ts_ax.set_title('Time Series Analysis Plots\n Dickey-Fuller: p={0:.5f}'.format(p_value))
+            smt.graphics.plot_acf(y, lags=lags, ax=acf_ax)
+            smt.graphics.plot_pacf(y, lags=lags, ax=pacf_ax)
+            plt.tight_layout()
+            plt.show()
+
+    if p_value <= 0.05:
+        is_stationary = True
+
+    return p_value, is_stationary
