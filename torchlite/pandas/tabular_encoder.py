@@ -273,11 +273,10 @@ class LinearEncoder(BaseEncoder):
                     cumcnt = df.groupby(col)[self.tfs_list["y"].name].cumcount()
                     means = cumsum / cumcnt
                     means.rename('mean_enc', inplace=True)
-                    concat = pd.concat([means, self.tfs_list["y"]], axis=1)
 
-                    # TODO create a map {target: mean}
-                    categ_cols[col] = {"target": concat}
-                    raise NotImplementedError("This encoding implementation is not yet finished")
+                    mean_enc = pd.Series(means, index=self.tfs_list["y"]).to_dict()
+                    global_mean = self.tfs_list["y"].mean()
+                    categ_cols[col] = {"target": (global_mean, mean_enc)}
                 elif self.categ_enc_method == "hashing":
                     str_hashs = [col + "=" + str(val) for val in categs]
                     hashs = [hash(h) % self.hash_space for h in str_hashs]
@@ -289,6 +288,11 @@ class LinearEncoder(BaseEncoder):
         self.tfs_list["categ_cols"] = categ_cols
 
     def _perform_categ_transform(self, df):
+        if self.tfs_list.get("onehot") is not None:
+            enc = self.tfs_list["onehot"]
+            # TODO check to avoid collinearity
+            df = enc.transform(df)
+
         if self.categ_enc_method is None:
             print("Warning, no encoding set for features {}".format(self.tfs_list["categ_cols"].keys()))
             return df
@@ -306,18 +310,14 @@ class LinearEncoder(BaseEncoder):
                 #   ‒ Map them to Train and Test
                 #   ‒ Regularize on Train
                 #   ‒ Fit on Train
-                enc = list(item.values())[0]
-                df[col + "_mean_target"] = df[col].map(enc)
+                global_mean, mean_enc = list(item.values())[0]
+                df[col + "_mean_target"] = df[col].map(mean_enc)
+                df[col + "_mean_target"] = df[col + "_mean_target"].fillna(global_mean)
             elif method == "hashing":
                 categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.codes
                 str_hashs = [col + "=" + str(val) for val in categs]
                 hashs = [hash(h) % self.hash_space for h in str_hashs]
                 df[col] = hashs
-
-        if self.tfs_list.get("onehot") is not None:
-            enc = self.tfs_list["onehot"]
-            # TODO check to avoid collinearity
-            df = enc.transform(df)
         return df
 
 
