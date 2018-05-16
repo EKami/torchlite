@@ -203,7 +203,7 @@ class TreeEncoder(BaseEncoder):
 
 class LinearEncoder(BaseEncoder):
     def __init__(self, numeric_vars, categorical_vars, fix_missing, numeric_scaler=None,
-                 categ_enc_method="force-onehot"):
+                 categ_enc_method="target"):
         """
             An encoder used for linear based models (Linear/Logistic regression) as well
             as deep neural networks without embeddings.
@@ -221,14 +221,13 @@ class LinearEncoder(BaseEncoder):
                     https://docs.scipy.org/doc/scipy-0.16.0/reference/generated/scipy.stats.rankdata.html
 
             Reference -> http://scikit-learn.org/stable/auto_examples/preprocessing/plot_all_scaling.html
-            categ_enc_method (str, None): If a given categorical column cardinality is < 10 then one hot encoding
-            will be used. For cardinality >= 10 one of the following methods can be used:
+            categ_enc_method (str, None): One of the following methods can be used:
                 - "hashing": Better known as the "hashing trick"
                 - "target": Also known as Mean encoding/Target encoding/Likelihood encoding.
                     The implementation is based on the Expanding mean scheme
-                - "force-onehot": Force onehot encoding for large cardinality features.
+                - "onehot": Onehot encoding.
                     Consider using one_hot_encode_sparse() instead to get a sparse matrix with lower
-                    memory footprint.
+                    memory footprint if your categorical variable have high cardinality.
                 - None: No encoding on categorical variables will be used
         """
         super().__init__(numeric_vars, categorical_vars, fix_missing, numeric_scaler)
@@ -257,30 +256,31 @@ class LinearEncoder(BaseEncoder):
         onehot_cols = []
         for col in self.categorical_vars:
             categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.categories
-            card = df[col].nunique()
-            if card < 10 or self.categ_enc_method == "force-onehot":
+            if self.categ_enc_method == "onehot":
+                card = df[col].nunique()
                 if card > 10:
                     print("Warning, cardinality of {} = {}".format(col, card))
                 onehot_cols.append(col)
-            else:
-                if self.categ_enc_method == "target":
-                    if self.tfs_list["y"] is None:
-                        raise Exception("You have to pass your target variable to the fit() "
-                                        "function for target encoding")
-                    # Mean/target/likelihood encoding
-                    df[self.tfs_list["y"].name] = self.tfs_list["y"]
-                    cumsum = df.groupby(col)[self.tfs_list["y"].name].cumsum() - df[self.tfs_list["y"].name]
-                    cumcnt = df.groupby(col)[self.tfs_list["y"].name].cumcount()
-                    means = cumsum / cumcnt
-                    means.rename('mean_enc', inplace=True)
+            elif self.categ_enc_method == "target":
+                if self.tfs_list["y"] is None:
+                    raise Exception("You have to pass your target variable to the fit() "
+                                    "function for target encoding")
+                # Mean/target/likelihood encoding
+                target_col_name = self.tfs_list["y"].name
+                df_enc = df.copy()
+                df_enc[target_col_name] = self.tfs_list["y"]
+                cumsum = df_enc.groupby(col)[target_col_name].cumsum() - df_enc[target_col_name]
+                cumcnt = df_enc.groupby(col)[target_col_name].cumcount()
+                means = cumsum / cumcnt
+                means.rename('mean_enc', inplace=True)
 
-                    mean_enc = pd.Series(means, index=self.tfs_list["y"]).to_dict()
-                    global_mean = self.tfs_list["y"].mean()
-                    categ_cols[col] = {"target": (global_mean, mean_enc)}
-                elif self.categ_enc_method == "hashing":
-                    str_hashs = [col + "=" + str(val) for val in categs]
-                    hashs = [hash(h) % self.hash_space for h in str_hashs]
-                    categ_cols[col] = {"hashing": hashs}
+                mean_enc = pd.Series(means, index=self.tfs_list["y"]).to_dict()
+                global_mean = self.tfs_list["y"].mean()
+                categ_cols[col] = {"target": (global_mean, mean_enc)}
+            elif self.categ_enc_method == "hashing":
+                str_hashs = [col + "=" + str(val) for val in categs]
+                hashs = [hash(h) % self.hash_space for h in str_hashs]
+                categ_cols[col] = {"hashing": hashs}
         if len(onehot_cols) > 0:
             enc = CategOneHot(cols=onehot_cols, handle_unknown='impute')
             enc.fit(df)
@@ -313,6 +313,7 @@ class LinearEncoder(BaseEncoder):
                 global_mean, mean_enc = list(item.values())[0]
                 df[col + "_mean_target"] = df[col].map(mean_enc)
                 df[col + "_mean_target"] = df[col + "_mean_target"].fillna(global_mean)
+                df.drop(col, axis=1, inplace=True)
             elif method == "hashing":
                 categs = df[col].astype(pd.api.types.CategoricalDtype()).cat.codes
                 str_hashs = [col + "=" + str(val) for val in categs]
@@ -369,4 +370,3 @@ class SparseOneHotEncoder:
             # TODO check to avoid collinearity
             res.append(enc.transform(sep_df.values))
         return res
-
