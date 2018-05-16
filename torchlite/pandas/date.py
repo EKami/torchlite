@@ -82,3 +82,22 @@ def get_elapsed(df, date_field, from_date=np.datetime64('1970-01-01'), prefix='E
 
     df[prefix + ts_type] = res
     return df
+
+
+def get_lagged_values(df, col_name, lag_list, by=None):
+    """
+    Return a DataFrame with lagged values on col_names
+    with t lags from lag_list
+    Args:
+        df (pd.DataFrame): The pandas DataFrame
+        col_name (str): Columns on which to apply lags
+        lag_list (list): List of int containing lagged values
+        by (list): list of columns to group by while considering the lag
+    Returns:
+        pd.DataFrame: Return the pandas DataFrame with lagged values
+    """
+    df = df.copy()
+
+    for lag in lag_list:
+        df["lag_{}_{}".format(lag, col_name)] = df[col_name].shift(lag)
+    return df

@@ -79,7 +79,6 @@ class BaseEncoder(BaseEstimator, TransformerMixin):
             self.tfs_list["y"] = X[y]
 
         # Missing values
-        # TODO for ordered data (e.g. time series), take the adjacent value — next or previous
         if self.fix_missing:
             self._perform_na_fit(df, y)
             df = self._perform_na_transform(df)
@@ -275,6 +274,8 @@ class LinearEncoder(BaseEncoder):
                     means = cumsum / cumcnt
                     means.rename('mean_enc', inplace=True)
                     concat = pd.concat([means, self.tfs_list["y"]], axis=1)
+
+                    # TODO create a map {target: mean}
                     categ_cols[col] = {"target": concat}
                     raise NotImplementedError("This encoding implementation is not yet finished")
                 elif self.categ_enc_method == "hashing":
