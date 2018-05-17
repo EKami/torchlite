@@ -340,7 +340,9 @@ class SparseOneHotEncoder:
         Perform the transformation. You should pass your train/valid/test sets to df_list if
         you have them.
         Args:
-            df_list (list): A list of pandas DataFrame
+            df_list (list): A list of pandas DataFrame. The OneHot categories will be created
+            from all the DataFrames of this list so they must have the same columns.
+            Usually you will pass the train/valid/test sets to this list.
 
         Returns:
             list: List of sparse matrix in the same order as the passed df
