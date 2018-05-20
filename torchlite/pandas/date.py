@@ -84,20 +84,41 @@ def get_elapsed(df, date_field, from_date=np.datetime64('1970-01-01'), prefix='E
     return df
 
 
-def get_lagged_values(df, col_name, lag_list, by=None):
+def add_lag(df_list, column, by=None, t=1):
     """
-    Return a DataFrame with lagged values on col_names
-    with t lags from lag_list
+    Add lag values to the df in df_list
     Args:
-        df (pd.DataFrame): The pandas DataFrame
-        col_name (str): Columns on which to apply lags
-        lag_list (list): List of int containing lagged values
-        by (list): list of columns to group by while considering the lag
-    Returns:
-        pd.DataFrame: Return the pandas DataFrame with lagged values
-    """
-    df = df.copy()
+        df_list (list): A list of pandas DataFrame. The DataFrames must
+            have matching columns as they will be concatenated together to
+            calculate the lags and then split back.
+            /!\ Pass the DataFrame in order, for instance: [train_df, val_df, test_df]
+        column (str): The column on which to apply the lag
+        by (list, str, None): List of columns to group by before applying the lag
+        t (int): Lag steps
 
-    for lag in lag_list:
-        df["lag_{}_{}".format(lag, col_name)] = df[col_name].shift(lag)
-    return df
+    Returns:
+        list: List of pandas DataFrames similar to the one passed in parameter
+        with lag values.
+    """
+    df_col_count = np.array([0] + [df.shape[0] for df in df_list]).cumsum()
+    df_col_names = [list(df.columns) for df in df_list]
+
+    df = pd.DataFrame()
+    for df_c in df_list:
+        df = pd.concat([df, df_c], axis=0)
+
+    if by is not None:
+        if type(by) == str:
+            by = [by]
+        shifted_col = df.groupby(by)[column].shift(t)
+        shifted_col.rename(column + '_BY[' + '_'.join(by) + "]_lag_" + str(t), inplace=True)
+    else:
+        shifted_col = df[column].shift(t)
+        shifted_col.rename(column + "_lag_" + str(t), inplace=True)
+    df = pd.concat([df, shifted_col], axis=1)
+
+    # Restore DataFrames
+    df_list = [df.iloc[df_col_count[i]:df_col_count[i + 1]] for i in range(len(df_col_count) - 1)]
+    df_list = [df[cols + [shifted_col.name]] for df, cols in zip(df_list, df_col_names)]
+
+    return df_list
