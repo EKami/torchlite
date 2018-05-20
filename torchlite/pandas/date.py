@@ -101,7 +101,7 @@ def add_lag(df_list, column, by=None, t=1):
         with lag values.
     """
     df_col_count = np.array([0] + [df.shape[0] for df in df_list]).cumsum()
-    df_col_names = [list(df.columns) for df in df_list]
+    df_col_names = [(list(df.columns), list(df.dtypes)) for df in df_list]
 
     df = pd.DataFrame()
     for df_c in df_list:
@@ -119,6 +119,7 @@ def add_lag(df_list, column, by=None, t=1):
 
     # Restore DataFrames
     df_list = [df.iloc[df_col_count[i]:df_col_count[i + 1]] for i in range(len(df_col_count) - 1)]
-    df_list = [df[cols + [shifted_col.name]] for df, cols in zip(df_list, df_col_names)]
+    df_list = [df[cols + [shifted_col.name]].astype(dict(zip(cols, dtypes))) for df, (cols, dtypes) in
+               zip(df_list, df_col_names)]
 
     return df_list
