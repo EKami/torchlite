@@ -12,7 +12,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import torchlite.data.files as tfiles
 from torchlite.data.datasets import ColumnarDataset, ImageClassificationDataset
-from torchlite.torch.models import MixedInputModel, FinetunedConvModel
+from torchlite.torch.models import TabularModel, FinetunedConvModel
 from torchlite.torch.tools import tensor_tools
 
 
@@ -106,8 +106,8 @@ class ColumnarShortcut(BaseLoader):
         embedding_sizes = [(count, min(max_embedding_size, (count + 1) // 2)) for _, count in
                            card_cat_features.items()]
 
-        return MixedInputModel(embedding_sizes, n_cont, emb_drop, output_size,
-                               hidden_sizes, hidden_dropouts, y_range, use_bn)
+        return TabularModel(embedding_sizes, n_cont, emb_drop, output_size,
+                            hidden_sizes, hidden_dropouts, y_range, use_bn)
 
 
 class ImageClassifierShortcut(BaseLoader):

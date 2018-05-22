@@ -37,7 +37,7 @@ class FinetunedConvModel(nn.Module):
         return x
 
 
-class MixedInputModel(nn.Module):
+class TabularModel(nn.Module):
     def __init__(self, embedding_sizes, n_continuous, emb_drop, output_sizes, hidden_sizes,
                  hidden_dropouts, y_range=None, use_bn=False):
         super().__init__()
@@ -78,15 +78,6 @@ class MixedInputModel(nn.Module):
             x = x * (self.y_range[1] - self.y_range[0])
             x = x + self.y_range[0]
         return x
-
-
-class StructuredModel:
-    def __init__(self, model, name='unnamed'):
-        self.model, self.name = model, name
-
-    def get_layer_groups(self):
-        m = self.model
-        return [m.embs, tensor_tools.children(m.lins) + tensor_tools.children(m.bns), m.outp]
 
 
 class Flatten(nn.Module):
