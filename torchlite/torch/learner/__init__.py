@@ -38,8 +38,9 @@ class Learner:
         logs = {"step": step, "batch_size": batch_size}
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs=logs)
-            inputs = [i.to(self.device) for i in inputs]
-            targets = targets.to(self.device)
+            
+            inputs = [i.to(self.device) if isinstance(i, torch.Tensor) else i for i in inputs]
+            targets = targets.to(self.device) if isinstance(targets, torch.Tensor) else targets
 
             # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
             logits = self.learner_core.on_forward_batch(step, inputs, targets).detach()
