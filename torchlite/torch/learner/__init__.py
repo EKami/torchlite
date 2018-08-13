@@ -31,6 +31,26 @@ class Learner:
                 print("/!\ Warning: Cuda set but not available, using CPU...")
             self.device = torch.device(device)
 
+    @classmethod
+    def convert_data_structure(cls, structure, device):
+        """
+        This method should recursively iterate over data structure and move all Tensors to the selected device
+
+        :param structure:
+        :param device:
+        :return:
+        """
+
+        if isinstance(structure, torch.Tensor):
+            return structure.to(device)
+        elif isinstance(structure, (list, tuple)):
+            return [cls.convert_data_structure(x, device) for x in structure]
+        elif isinstance(structure, dict):
+            return dict((k, cls.convert_data_structure(v, device)) for k,v in structure.items())
+        else:
+            return structure  # can't deal with anything else
+
+
     def _run_batch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
         batch_size = loader.batch_size
@@ -38,9 +58,9 @@ class Learner:
         logs = {"step": step, "batch_size": batch_size}
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs=logs)
-            
-            inputs = [i.to(self.device) if isinstance(i, torch.Tensor) else i for i in inputs]
-            targets = targets.to(self.device) if isinstance(targets, torch.Tensor) else targets
+
+            inputs = self.convert_data_structure(inputs, self.device)
+            targets = self.convert_data_structure(targets, self.device)
 
             # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
             logits = self.learner_core.on_forward_batch(step, inputs, targets).detach()
