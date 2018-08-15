@@ -43,6 +43,8 @@ class Learner:
 
         if isinstance(structure, torch.Tensor):
             return structure.to(device)
+        elif isinstance(structure, np.ndarray):
+            return torch.from_numpy(structure).to(device)
         elif isinstance(structure, (list, tuple)):
             return [cls.convert_data_structure(x, device) for x in structure]
         elif isinstance(structure, dict):
