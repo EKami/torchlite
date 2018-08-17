@@ -32,26 +32,25 @@ class Learner:
             self.device = torch.device(device)
 
     @classmethod
-    def convert_data_structure(cls, structure, device):
+    def convert_data_structure(cls, structure, action):
         """
         This method should recursively iterate over data structure and move all Tensors to the selected device
 
         :param structure:
-        :param device:
+        :param action: action to do with tensor
         :return:
         """
 
         if isinstance(structure, torch.Tensor):
-            return structure.to(device)
+            return action(structure)
         elif isinstance(structure, np.ndarray):
-            return torch.from_numpy(structure).to(device)
+            return action(torch.from_numpy(structure))
         elif isinstance(structure, (list, tuple)):
-            return [cls.convert_data_structure(x, device) for x in structure]
+            return [cls.convert_data_structure(x) for x in structure]
         elif isinstance(structure, dict):
-            return dict((k, cls.convert_data_structure(v, device)) for k,v in structure.items())
+            return dict((k, cls.convert_data_structure(v)) for k, v in structure.items())
         else:
             return structure  # can't deal with anything else
-
 
     def _run_batch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
@@ -61,11 +60,13 @@ class Learner:
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs=logs)
 
-            inputs = self.convert_data_structure(inputs, self.device)
-            targets = self.convert_data_structure(targets, self.device)
+            inputs = self.convert_data_structure(inputs, action=lambda x: x.to(self.device))
+            targets = self.convert_data_structure(targets, action=lambda x: x.to(self.device))
 
             # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
-            logits = self.learner_core.on_forward_batch(step, inputs, targets).detach()
+            logits = self.learner_core.on_forward_batch(step, inputs, targets)
+            logits = self.convert_data_structure(logits, action=lambda x: x.detach())
+
             metrics_list.acc_batch(step, logits, targets)
 
             logs.update(self.learner_core.get_logs)
