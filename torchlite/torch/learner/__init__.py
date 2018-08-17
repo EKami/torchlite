@@ -46,9 +46,9 @@ class Learner:
         elif isinstance(structure, np.ndarray):
             return action(torch.from_numpy(structure))
         elif isinstance(structure, (list, tuple)):
-            return [cls.convert_data_structure(x) for x in structure]
+            return [cls.convert_data_structure(x, action) for x in structure]
         elif isinstance(structure, dict):
-            return dict((k, cls.convert_data_structure(v)) for k, v in structure.items())
+            return dict((k, cls.convert_data_structure(v, action)) for k, v in structure.items())
         else:
             return structure  # can't deal with anything else
 
