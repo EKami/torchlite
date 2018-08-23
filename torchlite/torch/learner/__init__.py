@@ -31,6 +31,27 @@ class Learner:
                 print("/!\ Warning: Cuda set but not available, using CPU...")
             self.device = torch.device(device)
 
+    @classmethod
+    def convert_data_structure(cls, structure, action):
+        """
+        This method should recursively iterate over data structure and move all Tensors to the selected device
+
+        :param structure:
+        :param action: action to do with tensor
+        :return:
+        """
+
+        if isinstance(structure, torch.Tensor):
+            return action(structure)
+        elif isinstance(structure, np.ndarray):
+            return action(torch.from_numpy(structure))
+        elif isinstance(structure, (list, tuple)):
+            return [cls.convert_data_structure(x, action) for x in structure]
+        elif isinstance(structure, dict):
+            return dict((k, cls.convert_data_structure(v, action)) for k, v in structure.items())
+        else:
+            return structure  # can't deal with anything else
+
     def _run_batch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
         batch_size = loader.batch_size
@@ -38,11 +59,14 @@ class Learner:
         logs = {"step": step, "batch_size": batch_size}
         for ind, (*inputs, targets) in enumerate(loader):
             callback_list.on_batch_begin(ind, logs=logs)
-            inputs = [i.to(self.device) for i in inputs]
-            targets = targets.to(self.device)
+
+            inputs = self.convert_data_structure(inputs, action=lambda x: x.to(self.device))
+            targets = self.convert_data_structure(targets, action=lambda x: x.to(self.device))
 
             # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
-            logits = self.learner_core.on_forward_batch(step, inputs, targets).detach()
+            logits = self.learner_core.on_forward_batch(step, inputs, targets)
+            logits = self.convert_data_structure(logits, action=lambda x: x.detach())
+
             metrics_list.acc_batch(step, logits, targets)
 
             logs.update(self.learner_core.get_logs)
