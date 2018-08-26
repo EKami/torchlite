@@ -39,7 +39,8 @@ def main():
     batch_size = 512
     epochs = 2
     root_dir = "/tmp"
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/dogscats.zip",
+    # TODO in the future use https://quiltdata.com/
+    fetcher.WebFetcher.download_dataset("https://f002.backblazeb2.com/file/torchlite-data/dogscats.zip",
                                         root_dir, True)
     root_dir = "/tmp/dogscats"
     root_dir = Path(root_dir)

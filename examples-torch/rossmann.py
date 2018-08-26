@@ -240,7 +240,7 @@ def main():
 
     preprocessed_train_path = os.path.join(output_path, 'joined.feather')
     preprocessed_test_path = os.path.join(output_path, 'joined_test.feather')
-    WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/rossmann.tgz", output_path, True)
+    WebFetcher.download_dataset("https://f002.backblazeb2.com/file/torchlite-data/rossmann.tgz", output_path, True)
     if os.path.exists(preprocessed_train_path) and os.path.exists(preprocessed_test_path):
         train_df = pd.read_feather(preprocessed_train_path, nthreads=cpu_count())
         test_df = pd.read_feather(preprocessed_test_path, nthreads=cpu_count())

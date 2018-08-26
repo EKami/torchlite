@@ -29,7 +29,7 @@ saved_model_dir = efiles.create_dir_if_not_exists(os.path.join(cur_path, "checkp
 def get_loaders(args, num_workers):
     # TODO this dataset consider something else than bicubic interpolation: https://superresolution.tf.fau.de/
     ds_path = Path("/tmp")
-    fetcher.WebFetcher.download_dataset("https://s3-eu-west-1.amazonaws.com/torchlite-datasets/DIV2K.zip",
+    fetcher.WebFetcher.download_dataset("https://f002.backblazeb2.com/file/torchlite-data/DIV2K.zip",
                                         ds_path.absolute(), True)
     ds_path = ds_path / "DIV2K"
     if args.hr_dir == "@default" and args.lr_dir == "@default":
