@@ -15,7 +15,8 @@ from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
 from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlite.data.datasets.srpgan import TrainDataset
 from torchlite.learner import Learner
-from torchlite.learner.cores import ClassifierCore, SRPGanCore
+from torchlite.learner.cores import ClassifierCore
+from srpgan.core import SRPGanCore
 from torchlite.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
 from torchlite.torch.metrics import SSIM, PSNR
 from torchlite import eval

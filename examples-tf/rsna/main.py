@@ -11,7 +11,10 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from kaggle.api_client import ApiClient
 import logging
 
+from rsna.data import Dataset
+from rsna.models.cores import RsnaCore
 from rsna.models.simple_cnn import SimpleCnn
+from torchlite.learner import Learner
 
 
 # Enable eager execution
@@ -65,7 +68,12 @@ def main():
 
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
     retrieve_dataset()
-    net = SimpleCnn(logger, 2)
+
+    ds = Dataset(logger)
+    core = RsnaCore()
+    model = SimpleCnn(logger, 2)
+
+    learner = Learner(logger, core)
 
     print("Done!")
 
