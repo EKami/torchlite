@@ -9,7 +9,7 @@ import torchlite.torch.test_callbacks as test_callbacks
 from torch.utils.data import DataLoader
 
 from torchlite.torch.metrics import MetricsList
-from torchlite.torch.learner.cores import BaseCore
+from torchlite.learner.cores import BaseCore
 
 
 class Learner:
