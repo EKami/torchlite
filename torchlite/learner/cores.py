@@ -2,9 +2,8 @@
 This class contains different cores to pass to the learner class.
 Most of the time you'll make use of ClassifierCore.
 """
-import torch
-import torch.nn as nn
-from torchlite.torch.tools import tensor_tools
+# TODO remove torch methods
+from torchlite.tools import tensor_tools
 
 
 class BaseCore:
@@ -26,7 +25,7 @@ class BaseCore:
         Move the model onto the GPU
 
         Args:
-            device (torch.device): Pytorch device object
+            device (torch.device, str): Pytorch device object or a string for TF
         """
         raise NotImplementedError()
 
@@ -66,6 +65,7 @@ class BaseCore:
         raise NotImplementedError()
 
 
+# TODO adapt to TF
 class ClassifierCore(BaseCore):
     def __init__(self, model, optimizer, criterion):
         """

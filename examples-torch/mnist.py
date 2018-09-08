@@ -1,3 +1,6 @@
+import torchlite
+torchlite.set_backend("torch")
+
 from torchvision import datasets, transforms
 import torch.nn as nn
 import torch.optim as optim

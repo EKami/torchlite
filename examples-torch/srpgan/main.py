@@ -2,6 +2,9 @@
 This script implements SRPGAN, a neural network to enhance images:
  - http://arxiv.org/abs/1712.05927
 """
+import torchlite
+torchlite.set_backend("torch")
+
 import os
 import argparse
 from pathlib import Path
@@ -12,7 +15,7 @@ import torchlite.data.fetcher as fetcher
 import torchlite.data.files as efiles
 import torchlite.torch.tools.image_tools as image_tools
 from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
-from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
+from torchlite.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlite.data.datasets.srpgan import TrainDataset
 from torchlite.learner import Learner
 from torchlite.learner.cores import ClassifierCore

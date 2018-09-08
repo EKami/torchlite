@@ -1,11 +1,12 @@
 """
 This class contains a generalized learner which works across all kind of models
 """
+import torchlite
+import importlib
 from datetime import datetime
-import torch
 import numpy as np
-import torchlite.torch.train_callbacks as train_callbacks
-import torchlite.torch.test_callbacks as test_callbacks
+import torchlite.train_callbacks as train_callbacks
+import torchlite.test_callbacks as test_callbacks
 from torch.utils.data import DataLoader
 
 from torchlite.torch.metrics import MetricsList
@@ -13,46 +14,60 @@ from torchlite.learner.cores import BaseCore
 
 
 class Learner:
-    def __init__(self, logger, learner_core: BaseCore, use_cuda=True):
+    def __init__(self, logger, learner_core: BaseCore, use_gpu=True):
         """
         The learner class used to train deep neural network
         Args:
             logger (Logger): A python logger
             learner_core (BaseCore): The learner core
-            use_cuda (bool): If True moves the model onto the GPU
+            use_gpu (bool): If True moves the model onto the GPU
         """
         self.logger = logger
         self.learner_core = learner_core
         self.epoch_id = 1
-        self.device = torch.device("cpu")
-        if use_cuda:
-            if torch.cuda.is_available():
-                device = "cuda:0"
+
+        if torchlite.backend == "torch":
+            torch = importlib.import_module("torch")
+            self.device = torch.device("cpu")
+            if use_gpu:
+                if torch.cuda.is_available():
+                    device = "cuda:0"
+                else:
+                    device = "cpu"
+                    logger.info("/!\ Warning: Cuda set but not available, using CPU...")
+                self.device = torch.device(device)
+        else:
+            if use_gpu:
+                self.device = "/device:GPU:0"
             else:
-                device = "cpu"
-                logger.info("/!\ Warning: Cuda set but not available, using CPU...")
-            self.device = torch.device(device)
+                self.device = "/cpu:0"
 
     @classmethod
     def convert_data_structure(cls, structure, action):
         """
         This method should recursively iterate over data structure and move all Tensors to the selected device
+        Args:
+            structure (Any): A structure like a Tensor
+            action (callable): Action to do with the Tensor
 
-        :param structure:
-        :param action: action to do with tensor
-        :return:
+        Returns:
+            structure, action
         """
 
-        if isinstance(structure, torch.Tensor):
-            return action(structure)
-        elif isinstance(structure, np.ndarray):
-            return action(torch.from_numpy(structure))
-        elif isinstance(structure, (list, tuple)):
-            return [cls.convert_data_structure(x, action) for x in structure]
-        elif isinstance(structure, dict):
-            return dict((k, cls.convert_data_structure(v, action)) for k, v in structure.items())
+        if torchlite.backend == "torch":
+            torch = importlib.import_module("torch")
+            if isinstance(structure, torch.Tensor):
+                return action(structure)
+            elif isinstance(structure, np.ndarray):
+                return action(torch.from_numpy(structure))
+            elif isinstance(structure, (list, tuple)):
+                return [cls.convert_data_structure(x, action) for x in structure]
+            elif isinstance(structure, dict):
+                return dict((k, cls.convert_data_structure(v, action)) for k, v in structure.items())
+            else:
+                return structure  # can't deal with anything else
         else:
-            return structure  # can't deal with anything else
+            return structure
 
     def _run_batch(self, step, loader, metrics_list, callback_list):
         # Total training files count / batch_size
@@ -145,6 +160,19 @@ class Learner:
         callback_list.on_train_end()
         self.logger.info('Total train time (hh:mm:ss.ms) {}\n'.format(datetime.now() - train_start_time))
 
+    def _pred_loop(self, test_loader, callback_list, batch_size):
+        ret_logits = []
+
+        for ind, (*inputs, _) in enumerate(test_loader):
+            callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
+            inputs = [i.to(self.device) for i in inputs]
+
+            # Need to detach and move to CPU otherwise the Tensor and gradients will accumulate in GPU memory
+            logits = self.learner_core.on_forward_batch("prediction", inputs).cpu().detach()
+            ret_logits.append(logits)
+            callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
+        return ret_logits
+
     def predict(self, test_loader: DataLoader, callbacks=None, flatten_predictions=True):
         """
             Launch the prediction on the given loader and pass
@@ -171,17 +199,14 @@ class Learner:
         callback_list = test_callbacks.TestCallbackList(callbacks)
         callback_list.on_test_begin({'loader': test_loader})
 
-        ret_logits = []
-        batch_size = test_loader.batch_size
-        with torch.no_grad():
-            for ind, (*inputs, _) in enumerate(test_loader):
-                callback_list.on_batch_begin(ind, logs={"batch_size": batch_size})
-                inputs = [i.to(self.device) for i in inputs]
-
-                # Need to detach and move to CPU otherwise the Tensor and gradients will accumulate in GPU memory
-                logits = self.learner_core.on_forward_batch("prediction", inputs).cpu().detach()
-                ret_logits.append(logits)
-                callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
+        if torchlite.backend == "torch":
+            torch = importlib.import_module("torch")
+            with torch.no_grad():
+                batch_size = test_loader.batch_size
+                ret_logits = self._pred_loop(test_loader, callback_list, batch_size)
+        else:
+            # TODO finish with Tensorflow
+            ret_logits = []
 
         if flatten_predictions:
             ret_logits = np.array([pred.view(-1).cpu().numpy() for sublist in ret_logits for pred in sublist])

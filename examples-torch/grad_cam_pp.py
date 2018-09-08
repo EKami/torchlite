@@ -16,6 +16,9 @@ Resources:
 
 Another interesting paper for interpretability: https://distill.pub/2018/building-blocks/
 """
+import torchlite
+torchlite.set_backend("torch")
+
 import torchvision.transforms as transforms
 from pathlib import Path
 import torch.optim as optim
@@ -25,7 +28,7 @@ from torchlite.torch.shortcuts import ImageClassifierShortcut
 from torchlite.learner import Learner
 from torchlite.learner.cores import ClassifierCore
 from torchlite.torch.metrics import CategoricalAccuracy
-from torchlite.torch.test_callbacks import ActivationMapVisualizerCallback
+from torchlite.test_callbacks import ActivationMapVisualizerCallback
 import torchlite.matplotlib.utils as mat_utils
 import numpy as np
 

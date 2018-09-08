@@ -1,6 +1,7 @@
 """
 This module contains callbacks used during training/validation phases.
 """
+# TODO remove torch imports
 import os
 import torch
 import torch.optim.lr_scheduler as lr_scheduler

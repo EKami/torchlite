@@ -2,6 +2,9 @@
 This file is the main file to run the rsna project which can be found @
 https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
 """
+import torchlite
+torchlite.set_backend("tensorflow")
+
 import sys
 import os
 import zipfile
@@ -57,6 +60,7 @@ def retrieve_dataset():
         print("Dataset downloaded!")
     else:
         print("Dataset already present in input dir, skipping...")
+    return out_dir
 
 
 def main():
@@ -67,9 +71,10 @@ def main():
     logger = getLogger()
 
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
-    retrieve_dataset()
+    ds_dir = retrieve_dataset()
 
-    ds = Dataset(logger)
+    ds = Dataset(logger, ds_dir)
+    train_ds, val_ds, lookup_table = ds.get_dataset()
     core = RsnaCore()
     model = SimpleCnn(logger, 2)
 

@@ -7,6 +7,9 @@
   https://www.kaggle.com/c/rossmann-store-sales
   The private leaderboard is the one to watch for the scoring
 """
+import torchlite
+torchlite.set_backend("torch")
+
 import os
 import pandas as pd
 from multiprocessing import cpu_count
@@ -23,7 +26,7 @@ import torchlite.torch.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.torch.shortcuts as shortcuts
 import torchlite.pandas.date as edate
-from torchlite.torch.train_callbacks import CosineAnnealingCallback
+from torchlite.train_callbacks import CosineAnnealingCallback
 from torchlite.pandas.tabular_encoder import TreeEncoder
 import torchlite.pandas.merger as tmerger
 
