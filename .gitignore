@@ -1,3 +1,7 @@
+# Custom
+examples-tf/input/
+examples-torch/input/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
