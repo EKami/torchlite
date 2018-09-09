@@ -50,7 +50,7 @@ def retrieve_dataset():
         os.mkdir(out_dir)
         api = KaggleApi(ApiClient())
         api.authenticate()
-        api.competition_download_files("rsna-pneumonia-detection-challenge", out_dir, quiet=False)
+        api.competition_download_files("rsna-pneumonia-detection-challenge", out_dir, force=True, quiet=False)
         print("Extracting files...")
         for file in zip_files:
             zip_ref = zipfile.ZipFile(out_dir / file, 'r')
@@ -73,11 +73,13 @@ def main():
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
     ds_dir = retrieve_dataset()
 
-    ds = Dataset(logger, ds_dir)
-    train_ds, val_ds, lookup_table = ds.get_dataset()
+    ds = Dataset(logger, ds_dir, batch_size)
+    train_ds, val_ds = ds.get_dataset()
     core = RsnaCore()
-    model = SimpleCnn(logger, 2)
+    model = SimpleCnn(logger, num_classes)
 
+    for batch in train_ds.make_one_shot_iterator():
+        d = 0
     learner = Learner(logger, core)
 
     print("Done!")
