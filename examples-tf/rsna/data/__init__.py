@@ -17,10 +17,9 @@ class Dataset:
             for i, patient in df.iterrows():
                 lung_class = np.zeros((len(lung_class_count),), dtype=np.bool)
                 lung_class[patient["class"]] = 1
-                yield (tf.constant(patient["patientId"]), tf.constant(patient["x"]),
-                       tf.constant(patient["y"]), tf.constant(patient["width"]),
-                       tf.constant(patient["height"]), tf.constant(lung_class),
-                       tf.constant(patient["Target"], dtype=bool))
+                yield (tf.constant(patient["patientId"]),
+                       tf.constant([patient["x"], patient["y"], patient["width"], patient["height"]]),
+                       tf.constant(lung_class), tf.constant(patient["Target"], dtype=bool))
 
         return yield_tensors
 
@@ -34,7 +33,7 @@ class Dataset:
         df["class"], lung_class_ltable = pd.factorize(df["class"], sort=True)
         return df, lung_class_ltable
 
-    def _extract_img(self, patient_id, pos_x, pos_y, width, height):
+    def _extract_img(self, patient_id, bbox_pos):
         patient_id = patient_id.decode("utf-8")
         d = pydicom.read_file(str((self.input_dir / (patient_id + ".dcm")).resolve()))
 
@@ -50,18 +49,14 @@ class Dataset:
 
     def _get_ds_pipeline(self, df, lung_class_ltable):
         ds = tf.data.Dataset.from_generator(self._get_tensors(df, lung_class_ltable),
-                                            output_types=(tf.string, tf.int32, tf.int32, tf.int32, tf.int32,
-                                                          tf.bool, tf.bool),
+                                            output_types=(tf.string, tf.int32, tf.bool, tf.bool),
                                             output_shapes=(tf.TensorShape(()),
-                                                           tf.TensorShape(()),
-                                                           tf.TensorShape(()),
-                                                           tf.TensorShape(()),
-                                                           tf.TensorShape(()),
+                                                           tf.TensorShape((4,)),
                                                            tf.TensorShape((len(lung_class_ltable),)),
                                                            tf.TensorShape(()))
                                             )
-        ds = ds.map(lambda patient_id, pos_x, pos_y, width, height, lung_class, target:
-                    (patient_id, tf.py_func(self._extract_img, inp=[patient_id, pos_x, pos_y, width, height],
+        ds = ds.map(lambda patient_id, bbox_pos, lung_class, target:
+                    (patient_id, tf.py_func(self._extract_img, inp=[patient_id, bbox_pos],
                                             Tout=tf.uint8), lung_class, target),
                     num_parallel_calls=None)
         ds = ds.map(lambda patient_id, img, lung_class, target: (patient_id,  # Normalize
