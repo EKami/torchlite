@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import tensorflow as tf
-import pydicom
 
 
 class Dataset:
@@ -12,33 +11,19 @@ class Dataset:
         self.input_dir = input_dir
         self.logger = logger
 
-    def _get_tensors(self, df, lung_class_count):
+    def _get_tensors(self, df):
         def yield_tensors():
-            for i, patient in df.iterrows():
-                lung_class = np.zeros((len(lung_class_count),), dtype=np.bool)
-                lung_class[patient["class"]] = 1
+            for i, row in df.iterrows():
+                d = 0
+                rle_mask = rle_mask.split(" ")
                 yield (tf.constant(patient["patientId"]),
                        tf.constant([patient["x"], patient["y"], patient["width"], patient["height"]]),
                        tf.constant(lung_class), tf.constant(patient["Target"], dtype=bool))
 
         return yield_tensors
 
-    def read_training_data(self):
-        labels_train_df = pd.read_csv(self.input_dir / "stage_1_train_labels.csv", )
-        class_info_train_df = pd.read_csv(self.input_dir / "stage_1_detailed_class_info.csv")
-        df = pd.merge(labels_train_df, class_info_train_df, on="patientId")
-        df = df.fillna(-1)
-        df = df.astype(dtype={'patientId': str, 'x': np.int32, 'y': np.int32, 'width': np.int32,
-                              'height': np.int32, 'Target': np.int32, 'class': 'category'})
-        df["class"], lung_class_ltable = pd.factorize(df["class"], sort=True)
-        return df, lung_class_ltable
-
-    def _extract_img(self, patient_id, bbox_pos):
-        patient_id = patient_id.decode("utf-8")
-        d = pydicom.read_file(str((self.input_dir / (patient_id + ".dcm")).resolve()))
-
-        # Greyscale image (appends 1 dim to array)
-        im = d.pixel_array[:, :, None].shape
+    def _extract_img(self, id, bbox_pos):
+        im = None
         return tf.constant(im, dtype=tf.uint8)
 
     def _get_train_val_split(self, df):
@@ -47,12 +32,12 @@ class Dataset:
         val_df = df[-val_size:]
         return train_df, val_df
 
-    def _get_ds_pipeline(self, df, lung_class_ltable):
-        ds = tf.data.Dataset.from_generator(self._get_tensors(df, lung_class_ltable),
+    def _get_ds_pipeline(self, df):
+        ds = tf.data.Dataset.from_generator(self._get_tensors(df),
                                             output_types=(tf.string, tf.int32, tf.bool, tf.bool),
                                             output_shapes=(tf.TensorShape(()),
                                                            tf.TensorShape((4,)),
-                                                           tf.TensorShape((len(lung_class_ltable),)),
+                                                           tf.TensorShape(()),
                                                            tf.TensorShape(()))
                                             )
         ds = ds.map(lambda patient_id, bbox_pos, lung_class, target:
@@ -65,6 +50,13 @@ class Dataset:
         ds = ds.batch(self.batch_size)
         return ds
 
+    def _read_data(self):
+        train_df = pd.read_csv(self.input_dir / "train.csv", index_col="id")
+        depths_df = pd.read_csv(self.input_dir / "depths.csv", index_col="id")
+        train_df = train_df.merge(depths_df, on="id")
+        test_df = depths_df[~depths_df.index.isin(train_df.index)]
+        return train_df, test_df
+
     def get_dataset(self):
         """
         Returns a tf.data.Dataset pipeline
@@ -75,12 +67,12 @@ class Dataset:
         Returns:
             tf.Dataset
         """
-        df, lung_class_ltable = self.read_training_data()
+        train_df, test_df = self._read_data()
         if self.train_val_split > 0:
-            df_train, df_val = self._get_train_val_split(df)
-            train_ds = self._get_ds_pipeline(df_train, lung_class_ltable)
-            val_ds = self._get_ds_pipeline(df_val, lung_class_ltable)
+            df_train, df_val = self._get_train_val_split(train_df)
+            train_ds = self._get_ds_pipeline(df_train)
+            val_ds = self._get_ds_pipeline(df_val)
         else:
-            train_ds = self._get_ds_pipeline(df, lung_class_ltable)
+            train_ds = self._get_ds_pipeline(train_df)
             val_ds = None
         return train_ds, val_ds

@@ -1,5 +1,5 @@
 from tensorflow import keras
-from rsna.models.base_model import BaseModel
+from tsg.models.base_model import BaseModel
 
 
 class SimpleCnn(BaseModel):

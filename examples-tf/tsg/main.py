@@ -1,6 +1,6 @@
 """
-This file is the main file to run the rsna project which can be found @
-https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
+This file is the main file to run the tsg project which can be found @
+https://www.kaggle.com/c/tgs-salt-identification-challenge
 """
 import torchlite
 torchlite.set_backend("tensorflow")
@@ -14,9 +14,9 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from kaggle.api_client import ApiClient
 import logging
 
-from rsna.data import Dataset
-from rsna.models.cores import RsnaCore
-from rsna.models.simple_cnn import SimpleCnn
+from tsg.data import Dataset
+from tsg.models.cores import RsnaCore
+from tsg.models.simple_cnn import SimpleCnn
 from torchlite.learner import Learner
 
 
@@ -43,14 +43,13 @@ def getLogger():
 
 
 def retrieve_dataset():
-    zip_files = ["stage_1_detailed_class_info.csv.zip", "stage_1_train_labels.csv.zip",
-                 "stage_1_test_images.zip", "stage_1_train_images.zip"]
-    out_dir = script_dir / ".." / "input" / "rsna-pneumonia-detection-challenge"
+    zip_files = ["train.zip", "test.zip"]
+    out_dir = script_dir / ".." / "input" / "tgs-salt-identification-challenge"
     if not out_dir.exists():
         os.mkdir(out_dir)
         api = KaggleApi(ApiClient())
         api.authenticate()
-        api.competition_download_files("rsna-pneumonia-detection-challenge", out_dir, force=True, quiet=False)
+        api.competition_download_files("tgs-salt-identification-challenge", out_dir, force=True, quiet=False)
         print("Extracting files...")
         for file in zip_files:
             zip_ref = zipfile.ZipFile(out_dir / file, 'r')
