@@ -34,8 +34,9 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=["isoweek", "tqdm", "bcolz", "kaggle_data", "opencv_python", "torch", "torchvision",
                       "tensorflow-gpu", "scikit_image", "setuptools", "numpy", "matplotlib", "scipy", "Pillow",
-                      "scikit_learn", "tensorboardX", "typing", "PyYAML", "Augmentor", "feather-format",
-                      "fuzzywuzzy", "python-Levenshtein", "category_encoders", "kaggle",
+                      "scikit_learn", "tensorboardX", "typing", "PyYAML", "Augmentor", "fuzzywuzzy",
+                      "python-Levenshtein", "kaggle",
+                      "category_encoders", "feather-format",  # These 2 don't work on py3.7
                       find_packages(exclude=["*.tests", "*.tests.*", "tests.*",
                                              "tests", "torchlite.*", "torchvision.*"])],
 )

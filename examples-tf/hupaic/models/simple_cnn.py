@@ -1,5 +1,5 @@
 from tensorflow import keras
-from tsg.models.base_model import BaseModel
+from hupaic.models.base_model import BaseModel
 
 
 class SimpleCnn(BaseModel):

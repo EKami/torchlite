@@ -1,6 +1,6 @@
 """
-This file is the main file to run the tsg project which can be found @
-https://www.kaggle.com/c/tgs-salt-identification-challenge
+This file is the main file to run the hupaic project which can be found @
+https://www.kaggle.com/c/human-protein-atlas-image-classification
 """
 import torchlite
 torchlite.set_backend("tensorflow")
@@ -14,12 +14,13 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from kaggle.api_client import ApiClient
 import logging
 
-from tsg.data import Dataset
-from tsg.models.cores import RsnaCore
-from tsg.models.simple_cnn import SimpleCnn
+from hupaic.data import Dataset
+from hupaic.models.cores import RsnaCore
+from hupaic.models.simple_cnn import SimpleCnn
 from torchlite.learner import Learner
 
 
+# TODO remove on TF 2.0
 # Enable eager execution
 config = tf.ConfigProto(inter_op_parallelism_threads=8,
                         intra_op_parallelism_threads=8,
@@ -44,12 +45,12 @@ def getLogger():
 
 def retrieve_dataset():
     zip_files = ["train.zip", "test.zip"]
-    out_dir = script_dir / ".." / "input" / "tgs-salt-identification-challenge"
+    out_dir = script_dir / ".." / "input" / "human-protein-atlas-image-classification"
     if not out_dir.exists():
         os.mkdir(out_dir)
         api = KaggleApi(ApiClient())
         api.authenticate()
-        api.competition_download_files("tgs-salt-identification-challenge", out_dir, force=True, quiet=False)
+        api.competition_download_files("human-protein-atlas-image-classification", out_dir, force=True, quiet=False)
         print("Extracting files...")
         for file in zip_files:
             zip_ref = zipfile.ZipFile(out_dir / file, 'r')
