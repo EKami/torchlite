@@ -53,7 +53,10 @@ def retrieve_dataset():
         api.competition_download_files("human-protein-atlas-image-classification", out_dir, force=True, quiet=False)
         print("Extracting files...")
         for file in zip_files:
-            zip_ref = zipfile.ZipFile(out_dir / file, 'r')
+            pth = out_dir / file.split(".")[0] / file
+            if not pth.exists():
+                os.mkdir(pth)
+            zip_ref = zipfile.ZipFile(pth, 'r')
             zip_ref.extractall(out_dir)
             zip_ref.close()
             os.remove(out_dir / file)

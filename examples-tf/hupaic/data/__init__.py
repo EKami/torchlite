@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import tensorflow as tf
+from typing import Union
 import cv2
 
 
@@ -15,7 +16,8 @@ class Dataset:
         self.input_dir = input_dir
         self.logger = logger
 
-    def _extract_img(self, id: tf.Tensor, filter_color="green"):
+    @staticmethod
+    def extract_img(input_dir, id: Union[tf.Tensor, str], filter_color="green"):
         """
         Quote from the competition notes:
             All image samples are represented by four filters (stored as individual files),
@@ -29,7 +31,9 @@ class Dataset:
         Returns:
 
         """
-        file = self.input_dir / (id.decode("UTF-8") + "_" + filter_color + ".png")
+        if type(id) == tf.Tensor:
+            id = id.decode("UTF-8")
+        file = input_dir / (id + "_" + filter_color + ".png")
         image = cv2.imread(str(file.resolve()))
         return image
 
@@ -60,7 +64,8 @@ class Dataset:
 
         # This could actually result in poor performances due to the GIL
         ds = ds.map(lambda file_id, labels:
-                    (file_id, tf.py_func(self._extract_img, inp=[file_id], Tout=tf.uint8), labels),
+                    (file_id, tf.py_func(self.input_dir, self.extract_img,
+                                         inp=[file_id], Tout=tf.uint8), labels),
                     num_parallel_calls=self.num_process)
         ds = ds.map(lambda file_id, img, labels: (file_id,  # Normalize
                                                   tf.cast(img, tf.float32) * (1. / 255), labels))
