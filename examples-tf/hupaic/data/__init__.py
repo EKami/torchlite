@@ -3,21 +3,30 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import tensorflow as tf
-from typing import Union
+from sklearn.model_selection import RepeatedKFold
 import cv2
 
 
 class Dataset:
-    def __init__(self, logger, input_dir: Path, batch_size: int = 32,
-                 train_val_split: float = 0.2, num_process=os.cpu_count()):
+    def __init__(self, logger, input_dir: Path, batch_size: int,
+                 train_val_split: float, mode, num_process):
+        self.mode = mode
         self.num_process = num_process
         self.batch_size = batch_size
         self.train_val_split = train_val_split
         self.input_dir = input_dir
         self.logger = logger
 
+    @classmethod
+    def construct_for_training(cls, logger, input_dir: Path, batch_size: int = 32,
+                               train_val_split: float = 0.2, num_process=os.cpu_count()):
+        return cls(logger, input_dir, batch_size, train_val_split, "train", num_process)
+
+    def _get_image_pth(self, id, filter_color="green"):
+        return str(self.input_dir) + "/" + (id + "_" + filter_color + ".png")
+
     @staticmethod
-    def extract_img(input_dir, id: Union[tf.Tensor, str], filter_color="green"):
+    def extract_img(input_dir: tf.Tensor, id: tf.Tensor, filter_color: tf.Tensor):
         """
         Quote from the competition notes:
             All image samples are represented by four filters (stored as individual files),
@@ -25,19 +34,22 @@ class Dataset:
             microtubules (red), endoplasmic reticulum (yellow). The green filter should
             hence be used to predict the label, and the other filters are used as references.
         Args:
-            id (str): The file id
-            filter_color (str): red/green/blue/yellow Default: green
+            input_dir (Path): The input dir
+            id (tf.Tensor): The file id
+            filter_color (tf.Tensor): red/green/blue/yellow Default: green
 
         Returns:
-
+            np.array: The image
         """
-        if type(id) == tf.Tensor:
-            id = id.decode("UTF-8")
-        file = input_dir / (id + "_" + filter_color + ".png")
+        id = id.decode("UTF-8")
+        input_dir = input_dir.decode("UTF-8")
+        filter_color = filter_color.decode("UTF-8")
+        file = Path(input_dir) / (id + "_" + filter_color + ".png")
         image = cv2.imread(str(file.resolve()))
         return image
 
-    def _get_tensors(self, df, unique_lbl):
+    @staticmethod
+    def _get_tensors(df, unique_lbl):
         def yield_tensors():
             for id, row in df.iterrows():
                 labels_indexes = [int(label) for label in row[0].split()]
@@ -48,14 +60,18 @@ class Dataset:
 
         return yield_tensors
 
-    def _get_train_val_split(self, df):
-        val_size = np.ceil(len(df) * self.train_val_split).astype(np.int32)
+    @staticmethod
+    def _get_train_val_split(df, train_val_split):
+        # Add repeated K-fold
+        # splitter = RepeatedKFold(n_splits=3, n_repeats=2, random_state=0)
+        val_size = np.ceil(len(df) * train_val_split).astype(np.int32)
         train_df = df.iloc[:-val_size]
         val_df = df[-val_size:]
         return train_df, val_df
 
-    def _get_ds_pipeline(self, df, unique_lbl):
-        ds = tf.data.Dataset.from_generator(self._get_tensors(df, unique_lbl),
+    @staticmethod
+    def _get_ds_pipeline(df, input_dir, mode, unique_lbl, batch_size):
+        ds = tf.data.Dataset.from_generator(Dataset._get_tensors(df, unique_lbl),
                                             output_types=(tf.string, tf.int32),
                                             output_shapes=(tf.TensorShape(()),
                                                            tf.TensorShape(len(unique_lbl))
@@ -63,13 +79,12 @@ class Dataset:
                                             )
 
         # This could actually result in poor performances due to the GIL
-        ds = ds.map(lambda file_id, labels:
-                    (file_id, tf.py_func(self.input_dir, self.extract_img,
-                                         inp=[file_id], Tout=tf.uint8), labels),
-                    num_parallel_calls=self.num_process)
+        ds = ds.map(lambda file_id, labels: (file_id, tf.py_func(Dataset.extract_img,
+                                                                 inp=[str(input_dir / mode), file_id, "green"],
+                                                                 Tout=tf.uint8), labels))
         ds = ds.map(lambda file_id, img, labels: (file_id,  # Normalize
                                                   tf.cast(img, tf.float32) * (1. / 255), labels))
-        ds = ds.batch(self.batch_size)
+        ds = ds.batch(batch_size)
         return ds
 
     def _read_data(self):
@@ -90,10 +105,10 @@ class Dataset:
         """
         train_df, unique_lbl = self._read_data()
         if self.train_val_split > 0:
-            df_train, df_val = self._get_train_val_split(train_df)
-            train_ds = self._get_ds_pipeline(df_train, unique_lbl)
-            val_ds = self._get_ds_pipeline(df_val, unique_lbl)
+            df_train, df_val = Dataset._get_train_val_split(train_df, self.train_val_split)
+            train_ds = self._get_ds_pipeline(df_train, self.input_dir, self.mode, unique_lbl, self.batch_size)
+            val_ds = self._get_ds_pipeline(df_val, self.input_dir, self.mode, unique_lbl, self.batch_size)
         else:
-            train_ds = self._get_ds_pipeline(train_df, unique_lbl)
+            train_ds = self._get_ds_pipeline(train_df, self.input_dir, self.mode, unique_lbl, self.batch_size)
             val_ds = None
         return train_ds, val_ds

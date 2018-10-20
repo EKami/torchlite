@@ -1,7 +1,7 @@
 from torchlite.learner.cores import BaseCore
 
 
-class RsnaCore(BaseCore):
+class HupaicCore(BaseCore):
     def on_train_mode(self):
         pass
 

@@ -15,7 +15,7 @@ from kaggle.api_client import ApiClient
 import logging
 
 from hupaic.data import Dataset
-from hupaic.models.cores import RsnaCore
+from hupaic.models.cores import HupaicCore
 from hupaic.models.simple_cnn import SimpleCnn
 from torchlite.learner import Learner
 
@@ -53,11 +53,11 @@ def retrieve_dataset():
         api.competition_download_files("human-protein-atlas-image-classification", out_dir, force=True, quiet=False)
         print("Extracting files...")
         for file in zip_files:
-            pth = out_dir / file.split(".")[0] / file
+            pth = out_dir / file.split(".")[0]
             if not pth.exists():
                 os.mkdir(pth)
-            zip_ref = zipfile.ZipFile(pth, 'r')
-            zip_ref.extractall(out_dir)
+            zip_ref = zipfile.ZipFile(out_dir / file, 'r')
+            zip_ref.extractall(pth)
             zip_ref.close()
             os.remove(out_dir / file)
         print("Dataset downloaded!")
@@ -76,12 +76,12 @@ def main():
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
     ds_dir = retrieve_dataset()
 
-    ds = Dataset(logger, ds_dir, batch_size)
+    ds = Dataset.construct_for_training(logger, ds_dir, batch_size)
     train_ds, val_ds = ds.get_dataset()
-    core = RsnaCore()
+    core = HupaicCore()
     model = SimpleCnn(logger, num_classes)
 
-    for batch in train_ds.make_one_shot_iterator():
+    for batch in train_ds:
         d = 0
     learner = Learner(logger, core)
 
