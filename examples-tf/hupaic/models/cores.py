@@ -43,4 +43,5 @@ class HupaicCore(BaseCore):
         return self.logs
 
     def on_forward_batch(self, step, inputs, targets=None):
+        # TODO finish
         d = 0
