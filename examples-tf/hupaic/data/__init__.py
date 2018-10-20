@@ -101,14 +101,19 @@ class Dataset:
         Interesting optimization:
             https://stackoverflow.com/a/40985375/1334473
         Returns:
-            tf.Dataset
+            tf.Dataset, int, Union[tf.Dataset, None], int
         """
         train_df, unique_lbl = self._read_data()
         if self.train_val_split > 0:
             df_train, df_val = Dataset._get_train_val_split(train_df, self.train_val_split)
+            train_steps = len(df_train) // self.batch_size
+            val_steps = len(df_val) // self.batch_size
             train_ds = self._get_ds_pipeline(df_train, self.input_dir, self.mode, unique_lbl, self.batch_size)
             val_ds = self._get_ds_pipeline(df_val, self.input_dir, self.mode, unique_lbl, self.batch_size)
         else:
             train_ds = self._get_ds_pipeline(train_df, self.input_dir, self.mode, unique_lbl, self.batch_size)
             val_ds = None
-        return train_ds, val_ds
+            train_steps = len(train_df) // self.batch_size
+            val_steps = None
+
+        return train_ds, train_steps, val_ds, val_steps

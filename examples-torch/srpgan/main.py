@@ -3,9 +3,11 @@ This script implements SRPGAN, a neural network to enhance images:
  - http://arxiv.org/abs/1712.05927
 """
 import torchlite
-torchlite.set_backend("torch")
+
+torchlite.set_backend(torchlite.TORCH)
 
 import os
+import sys
 import argparse
 from pathlib import Path
 import torch.nn as nn
@@ -22,12 +24,26 @@ from torchlite.learner.cores import ClassifierCore
 from srpgan.core import SRPGanCore
 from torchlite.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
 from torchlite.torch.metrics import SSIM, PSNR
+from torchlite.data.datasets import DatasetWrapper
 from torchlite import eval
 from PIL import Image
+import logging
 
 cur_path = os.path.dirname(os.path.abspath(__file__))
 tensorboard_dir = efiles.del_dir_if_exists(os.path.join(cur_path, "tensorboard"))
 saved_model_dir = efiles.create_dir_if_not_exists(os.path.join(cur_path, "checkpoints"))
+
+
+def getLogger():
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+    ch.setFormatter(formatter)
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
+    return logger
 
 
 def get_loaders(args, num_workers):
@@ -101,7 +117,7 @@ def train(args):
             callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
             loss = nn.MSELoss()
             learner = Learner(ClassifierCore(netG, optimizer_g, loss))
-            learner.train(args.gen_epochs, None, train_loader, None, callbacks)
+            learner.train(args.gen_epochs, None, train_loader, len(train_loader), None, -1, callbacks)
 
     print("----------------- Adversarial (SRPGAN) training -----------------")
     callbacks = [model_saver, ReduceLROnPlateau(optimizer_g, loss_step="valid"),
@@ -109,8 +125,9 @@ def train(args):
 
     g_loss = GeneratorLoss()
     d_loss = DiscriminatorLoss()
-    learner = Learner(SRPGanCore(netG, netD, optimizer_g, optimizer_d, g_loss, d_loss))
-    learner.train(args.adv_epochs, [SSIM(), PSNR()], train_loader, valid_loader, callbacks)
+    learner = Learner(getLogger(), SRPGanCore(netG, netD, optimizer_g, optimizer_d, g_loss, d_loss))
+    learner.train(args.adv_epochs, [SSIM(), PSNR()], DatasetWrapper.wrap_torch_dataloader(train_loader),
+                  DatasetWrapper.wrap_torch_dataloader(valid_loader), callbacks)
 
 
 def main():

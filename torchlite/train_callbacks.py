@@ -117,18 +117,18 @@ class TQDM(TrainCallback):
         self.train_pbar = None
         self.val_pbar = None
         self.total_epochs = 0
-        self.train_loader_len = 0
-        self.val_loader_len = 0
+        self.train_dataset_len = 0
+        self.val_dataset_len = 0
 
     def on_epoch_begin(self, epoch, logs=None):
         step = logs["step"]
         if step == 'training':
-            self.train_pbar = tqdm(total=self.train_loader_len,
+            self.train_pbar = tqdm(total=self.train_dataset_len,
                                    desc="Epochs {}/{}".format(epoch, self.total_epochs),
                                    bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{remaining}{postfix}]'
                                    )
         elif step == 'validation':
-            self.val_pbar = tqdm(total=self.val_loader_len, desc="Validating", leave=False)
+            self.val_pbar = tqdm(total=self.val_dataset_len, desc="Validating", leave=False)
 
     def on_epoch_end(self, epoch, logs=None):
         step = logs["step"]
@@ -179,8 +179,8 @@ class TQDM(TrainCallback):
 
     def on_train_begin(self, logs=None):
         self.total_epochs = logs["total_epochs"]
-        self.train_loader_len = len(logs["train_loader"])
-        self.val_loader_len = len(logs["val_loader"]) if logs["val_loader"] else None
+        self.train_dataset_len = logs["train_steps"]
+        self.val_dataset_len = logs["val_steps"] if logs["val_steps"] else None
 
 
 class ReduceLROnPlateau(TrainCallback):

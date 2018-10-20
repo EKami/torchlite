@@ -2,6 +2,8 @@ __version__ = '0.3.0.0'
 
 # Either "tensorflow" or "torch"
 backend = "tensorflow"
+TF = "tensorflow"
+TORCH = "torch"
 
 
 def set_backend(backend_engine):

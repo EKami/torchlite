@@ -3,7 +3,8 @@ This file is the main file to run the hupaic project which can be found @
 https://www.kaggle.com/c/human-protein-atlas-image-classification
 """
 import torchlite
-torchlite.set_backend("tensorflow")
+
+torchlite.set_backend(torchlite.TF)
 
 import sys
 import os
@@ -16,9 +17,9 @@ import logging
 
 from hupaic.data import Dataset
 from hupaic.models.cores import HupaicCore
-from hupaic.models.simple_cnn import SimpleCnn
+from hupaic.models import SimpleCnn
 from torchlite.learner import Learner
-
+from torchlite.data.datasets import DatasetWrapper
 
 # TODO remove on TF 2.0
 # Enable eager execution
@@ -70,6 +71,8 @@ def main():
     batch_size = 32
     epochs = 1
     num_classes = 2
+    metrics = None
+    callbacks = []
 
     logger = getLogger()
 
@@ -77,14 +80,16 @@ def main():
     ds_dir = retrieve_dataset()
 
     ds = Dataset.construct_for_training(logger, ds_dir, batch_size)
-    train_ds, val_ds = ds.get_dataset()
-    core = HupaicCore()
+    train_ds, train_steps, val_ds, val_steps = ds.get_dataset()
     model = SimpleCnn(logger, num_classes)
-
-    for batch in train_ds:
-        d = 0
+    core = HupaicCore(
+        model=model,
+        loss_function=tf.keras.losses.binary_crossentropy,
+        optimizer=tf.train.GradientDescentOptimizer(0.0001),
+        data_ind=(1, 2))
     learner = Learner(logger, core)
-
+    learner.train(epochs, metrics, DatasetWrapper.wrap_tf_dataset(train_ds, train_steps, batch_size),
+                  DatasetWrapper.wrap_tf_dataset(val_ds, val_steps, batch_size), callbacks)
     print("Done!")
 
 

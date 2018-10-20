@@ -5,12 +5,13 @@ import torchlite
 import importlib
 from datetime import datetime
 import numpy as np
+from typing import Union
 import torchlite.train_callbacks as train_callbacks
 import torchlite.test_callbacks as test_callbacks
-from torch.utils.data import DataLoader
 
 from torchlite.torch.metrics import MetricsList
 from torchlite.learner.cores import BaseCore
+from torchlite.data.datasets import DatasetWrapper
 
 
 class Learner:
@@ -54,7 +55,7 @@ class Learner:
             structure, action
         """
 
-        if torchlite.backend == "torch":
+        if torchlite.backend == torchlite.TORCH:
             torch = importlib.import_module("torch")
             if isinstance(structure, torch.Tensor):
                 return action(structure)
@@ -69,12 +70,12 @@ class Learner:
         else:
             return structure
 
-    def _run_batch(self, step, loader, metrics_list, callback_list):
+    def _run_batch(self, step, dataset, metrics_list, callback_list):
         # Total training files count / batch_size
-        batch_size = loader.batch_size
+        batch_size = dataset.get_batch_size
         # We can have multiple inputs
         logs = {"step": step, "batch_size": batch_size}
-        for ind, (*inputs, targets) in enumerate(loader):
+        for ind, (*inputs, targets) in enumerate(dataset):
             callback_list.on_batch_begin(ind, logs=logs)
 
             inputs = self.convert_data_structure(inputs, action=lambda x: x.to(self.device))
@@ -91,7 +92,7 @@ class Learner:
             callback_list.on_batch_end(ind, logs=logs)
         return logs
 
-    def _run_epoch(self, train_loader, valid_loader, metrics, callback_list):
+    def _run_epoch(self, train_ds, valid_ds, metrics, callback_list):
 
         # switch to train mode
         self.learner_core.on_train_mode()
@@ -103,7 +104,7 @@ class Learner:
         callback_list.on_epoch_begin(self.epoch_id, logs)
 
         metric_list = MetricsList(metrics)
-        train_logs = self._run_batch(step, train_loader, metric_list, callback_list)
+        train_logs = self._run_batch(step, train_ds, metric_list, callback_list)
 
         train_logs.update(logs)
         train_logs.update({"metrics_logs": metric_list.avg(step)})
@@ -114,21 +115,21 @@ class Learner:
         self.learner_core.on_eval_mode()
 
         # Run the validation pass
-        if valid_loader:
+        if valid_ds:
             step = "validation"
             logs = {"step": step, "epoch_id": self.epoch_id}
             self.learner_core.on_new_epoch()
             callback_list.on_epoch_begin(self.epoch_id, logs)
 
             metric_list = MetricsList(metrics)
-            val_logs = self._run_batch(step, valid_loader, metric_list, callback_list)
+            val_logs = self._run_batch(step, valid_ds, metric_list, callback_list)
 
             val_logs.update(logs)
             val_logs.update({"metrics_logs": metric_list.avg(step)})
             val_logs.update({"models": self.learner_core.get_models})
             callback_list.on_epoch_end(self.epoch_id, val_logs)
 
-    def train(self, epochs, metrics, train_loader: DataLoader, valid_loader: DataLoader = None, callbacks=None):
+    def train(self, epochs, metrics, train_ds: DatasetWrapper, valid_ds: DatasetWrapper = None, callbacks=None):
         """
             Trains the neural net
         Args:
@@ -136,8 +137,8 @@ class Learner:
             metrics (list, None): Metrics to be evaluated by the model
                         during training and testing.
                         Typically you will use `metrics=['accuracy']`.
-            train_loader (DataLoader): The Dataloader for training
-            valid_loader (DataLoader, optional): The Dataloader for validation
+            train_ds (DatasetWrapper): A DatasetWrapper object for training
+            valid_ds (DatasetWrapper, optional): A DatasetWrapper object for validation
             callbacks (list, None): List of train callbacks functions
         """
         train_start_time = datetime.now()
@@ -149,12 +150,12 @@ class Learner:
 
         callback_list = train_callbacks.TrainCallbackList(callbacks)
         callback_list.on_train_begin({'total_epochs': epochs,
-                                      'train_loader': train_loader,
-                                      'val_loader': valid_loader})
+                                      'train_steps': len(train_ds),
+                                      'val_steps': len(valid_ds)})
 
         for _ in range(epochs):
             epoch_start_time = datetime.now()
-            self._run_epoch(train_loader, valid_loader, metrics, callback_list)
+            self._run_epoch(train_ds, valid_ds, metrics, callback_list)
             self.logger.info('Epoch time (hh:mm:ss.ms) {}\n'.format(datetime.now() - epoch_start_time))
             self.epoch_id += 1
         callback_list.on_train_end()
@@ -173,12 +174,12 @@ class Learner:
             callback_list.on_batch_end(ind, logs={"batch_size": batch_size})
         return ret_logits
 
-    def predict(self, test_loader: DataLoader, callbacks=None, flatten_predictions=True):
+    def predict(self, test_ds, callbacks=None, flatten_predictions=True):
         """
             Launch the prediction on the given loader and pass
             each predictions to the given callbacks.
         Args:
-            test_loader (DataLoader): The loader containing the test dataset.
+            test_ds (torch.utils.data.DataLoader, tf.data.Dataset): The loader/dataset containing the test dataset.
                 This loader is expected to returns items with the same shape
                 as the train_loader passed in train() with the difference that
                 the targets will be ignored.
@@ -197,19 +198,19 @@ class Learner:
         callbacks.insert(0, test_callbacks.TQDM())
 
         callback_list = test_callbacks.TestCallbackList(callbacks)
-        callback_list.on_test_begin({'loader': test_loader})
+        callback_list.on_test_begin({'loader': test_ds})
 
         if torchlite.backend == "torch":
             torch = importlib.import_module("torch")
             with torch.no_grad():
-                batch_size = test_loader.batch_size
-                ret_logits = self._pred_loop(test_loader, callback_list, batch_size)
+                batch_size = test_ds.batch_size
+                ret_logits = self._pred_loop(test_ds, callback_list, batch_size)
         else:
             # TODO finish with Tensorflow
             ret_logits = []
 
         if flatten_predictions:
             ret_logits = np.array([pred.view(-1).cpu().numpy() for sublist in ret_logits for pred in sublist])
-        callback_list.on_test_end({'loader': test_loader})
+        callback_list.on_test_end({'loader': test_ds})
         self.logger.info('Total prediction time (hh:mm:ss.ms) {}\n'.format(datetime.now() - test_start_time))
         return ret_logits
