@@ -21,7 +21,7 @@ from tqdm import tqdm
 
 from sklearn.preprocessing import StandardScaler
 from torchlite.learner import Learner
-from torchlite.learner.cores import ClassifierCore
+from torchlite.learner.cores import TorchClassifierCore
 import torchlite.torch.metrics as metrics
 from torchlite.data.fetcher import WebFetcher
 import torchlite.torch.shortcuts as shortcuts
@@ -269,7 +269,7 @@ def main():
                                           output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                           hidden_dropouts=[0.001, 0.01], y_range=y_range)
     optimizer = optim.Adam(model.parameters())
-    learner = Learner(ClassifierCore(model, optimizer, F.mse_loss))
+    learner = Learner(TorchClassifierCore(model, optimizer, F.mse_loss))
     learner.train(epochs, [metrics.RMSPE(to_exp=True)], shortcut.get_train_loader, shortcut.get_val_loader,
                   callbacks=[CosineAnnealingCallback(optimizer, T_max=epochs)])
     test_pred = learner.predict(shortcut.get_test_loader)

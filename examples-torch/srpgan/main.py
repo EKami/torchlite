@@ -20,7 +20,7 @@ from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
 from torchlite.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from torchlite.data.datasets.srpgan import TrainDataset
 from torchlite.learner import Learner
-from torchlite.learner.cores import ClassifierCore
+from torchlite.learner.cores import TorchClassifierCore
 from srpgan.core import SRPGanCore
 from torchlite.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
 from torchlite.torch.metrics import SSIM, PSNR
@@ -116,7 +116,7 @@ def train(args):
             print("---------------------- Generator training ----------------------")
             callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
             loss = nn.MSELoss()
-            learner = Learner(ClassifierCore(netG, optimizer_g, loss))
+            learner = Learner(TorchClassifierCore(netG, optimizer_g, loss))
             learner.train(args.gen_epochs, None, train_loader, len(train_loader), None, -1, callbacks)
 
     print("----------------- Adversarial (SRPGAN) training -----------------")

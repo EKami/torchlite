@@ -16,10 +16,10 @@ from kaggle.api_client import ApiClient
 import logging
 
 from hupaic.data import Dataset
-from hupaic.models.cores import HupaicCore
 from hupaic.models import SimpleCnn
 from torchlite.learner import Learner
 from torchlite.data.datasets import DatasetWrapper
+from torchlite.learner.cores import TFClassifierCore
 
 # TODO remove on TF 2.0
 # Enable eager execution
@@ -68,9 +68,8 @@ def retrieve_dataset():
 
 
 def main():
-    batch_size = 32
+    batch_size = 2
     epochs = 1
-    num_classes = 2
     metrics = None
     callbacks = []
 
@@ -79,14 +78,14 @@ def main():
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
     ds_dir = retrieve_dataset()
 
-    ds = Dataset.construct_for_training(logger, ds_dir, batch_size)
-    train_ds, train_steps, val_ds, val_steps = ds.get_dataset()
-    model = SimpleCnn(logger, num_classes)
-    core = HupaicCore(
-        model=model,
-        loss_function=tf.keras.losses.binary_crossentropy,
-        optimizer=tf.train.GradientDescentOptimizer(0.0001),
-        data_ind=(1, 2))
+    # Add resize otherwise the images are too big to fit in GPU memory
+    ds = Dataset.construct_for_training(logger, ds_dir, batch_size, resize_imgs=(224, 224))
+    train_ds, train_steps, val_ds, val_steps, unique_lbls = ds.get_dataset()
+    model = SimpleCnn(logger, num_classes=len(unique_lbls))
+    core = TFClassifierCore(model,
+                            loss_function=tf.keras.losses.binary_crossentropy,
+                            optimizer=tf.train.GradientDescentOptimizer(0.0001),
+                            input_index=1)
     learner = Learner(logger, core)
     learner.train(epochs, metrics, DatasetWrapper.wrap_tf_dataset(train_ds, train_steps, batch_size),
                   DatasetWrapper.wrap_tf_dataset(val_ds, val_steps, batch_size), callbacks)
