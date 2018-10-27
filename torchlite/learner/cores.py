@@ -180,9 +180,9 @@ class TFClassifierCore(BaseCore):
             y_pred = self.model(inputs[self.input_index])
             loss = self.loss_function(targets, y_pred)
 
-        # TODO create a loss accumulator?
-        self.avg_meter.update(loss)
-        self.logs.update({"batch_logs": {"loss": tf.reduce_mean(loss).numpy()}})
+        loss_np = tf.reduce_mean(loss).numpy()
+        self.avg_meter.update(loss_np)
+        self.logs.update({"batch_logs": {"loss": loss_np}})
 
         if step == "training":
             grads = tape.gradient(loss, self.model.trainable_variables)

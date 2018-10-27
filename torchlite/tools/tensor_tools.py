@@ -2,7 +2,6 @@ class AverageMeter(object):
     """Computes and stores the average and current value"""
 
     def __init__(self):
-        self.val = 0
         self.sum = 0
         self.count = 0
 
@@ -10,7 +9,6 @@ class AverageMeter(object):
         self.__init__()
 
     def update(self, val):
-        self.val = val
         self.count += 1
         self.sum += val
 
