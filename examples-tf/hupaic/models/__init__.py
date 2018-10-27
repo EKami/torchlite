@@ -31,10 +31,8 @@ class SimpleCnn(BaseModel):
         super(BaseModel, self).__init__(logger, 'simple_cnn', num_classes)
         self.conv_1 = keras.layers.Conv2D(filters=32, kernel_size=(5, 5),
                                           padding='Same', activation='relu')
-        self.bn_1 = keras.layers.BatchNormalization()
         self.conv_2 = keras.layers.Conv2D(filters=64, kernel_size=(5, 5), padding='Same',
                                           activation='relu')
-        self.bn_2 = keras.layers.BatchNormalization()
         self.max_pool_1 = keras.layers.MaxPool2D(pool_size=(2, 2))
 
         self.flatten1 = keras.layers.Flatten()
@@ -43,9 +41,7 @@ class SimpleCnn(BaseModel):
 
     def call(self, inputs, **kwargs):
         x = self.conv_1(inputs)
-        x = self.bn_1(x)
         x = self.conv_2(x)
-        x = self.bn_2(x)
         x = self.max_pool_1(x)
 
         x = self.flatten1(x)
