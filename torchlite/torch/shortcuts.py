@@ -10,8 +10,8 @@ from typing import Union
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 
-import torchlite.data.files as tfiles
-from torchlite.data.datasets import ColumnarDataset, ImageClassificationDataset
+import torchlite.common.data.files as tfiles
+from torchlite.torch.datasets import ColumnarDataset, ImageClassificationDataset
 from torchlite.torch.models import TabularModel, FinetunedConvModel
 from torchlite.torch.tools import tensor_tools
 

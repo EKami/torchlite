@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torchlite.learner import Learner
-from torchlite.learner.cores import TorchClassifierCore
+from torchlite.torch.learner.cores import ClassifierCore
 from torchlite.torch.metrics import CategoricalAccuracy
 import os
 
@@ -51,7 +51,7 @@ def main():
     optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
     loss = F.nll_loss
 
-    learner = Learner(TorchClassifierCore(net, optimizer, loss))
+    learner = Learner(ClassifierCore(net, optimizer, loss))
     metrics = [CategoricalAccuracy()]
 
     learner.train(epochs, metrics, train_loader, test_loader, callbacks=None)

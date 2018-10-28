@@ -23,12 +23,12 @@ import torchvision.transforms as transforms
 from pathlib import Path
 import torch.optim as optim
 import torch.nn.functional as F
-import torchlite.data.fetcher as fetcher
+import torchlite.common.data.fetcher as fetcher
 from torchlite.torch.shortcuts import ImageClassifierShortcut
 from torchlite.learner import Learner
-from torchlite.learner.cores import TorchClassifierCore
+from torchlite.torch.learner.cores import ClassifierCore
 from torchlite.torch.metrics import CategoricalAccuracy
-from torchlite.test_callbacks import ActivationMapVisualizerCallback
+from torchlite.torch.test_callbacks import ActivationMapVisualizerCallback
 import torchlite.matplotlib.utils as mat_utils
 import numpy as np
 
@@ -71,7 +71,7 @@ def main():
     metrics = [CategoricalAccuracy()]
     grad_cam_callback = ActivationMapVisualizerCallback(test_image_name)  # TODO finish grad_cam++ here
 
-    learner = Learner(TorchClassifierCore(net, optimizer, loss))
+    learner = Learner(ClassifierCore(net, optimizer, loss))
     learner.train(epochs, metrics, shortcut.get_train_loader, shortcut.get_val_loader)
 
     y_mapping = shortcut.get_y_mapping

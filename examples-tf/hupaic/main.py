@@ -18,8 +18,9 @@ import logging
 from hupaic.data import Dataset
 from hupaic.models import SimpleCnn
 from torchlite.learner import Learner
-from torchlite.data.datasets import DatasetWrapper
-from torchlite.learner.cores import TFClassifierCore
+from torchlite.common.data.datasets import DatasetWrapper
+from torchlite.tf.learner.cores import ClassifierCore
+from torchlite.tf.metrics import FBetaScore
 
 # TODO remove on TF 2.0
 # Enable eager execution
@@ -68,13 +69,13 @@ def retrieve_dataset():
 
 
 def main():
+    logger = getLogger()
     batch_size = 2
     epochs = 1
-    metrics = None
+    metrics = [FBetaScore(logger, beta=1, average="macro", threshold=0.5)]
     callbacks = []
 
-    logger = getLogger()
-
+    # TODO the threshold on fbeta score should be calculated when the training is completely over
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
     ds_dir = retrieve_dataset()
 
@@ -82,14 +83,14 @@ def main():
     ds = Dataset.construct_for_training(logger, ds_dir, batch_size, resize_imgs=(224, 224))
     train_ds, train_steps, val_ds, val_steps, unique_lbls = ds.get_dataset()
     model = SimpleCnn(logger, num_classes=len(unique_lbls))
-    core = TFClassifierCore(model,
-                            loss_function=tf.keras.losses.binary_crossentropy,
-                            optimizer=tf.train.GradientDescentOptimizer(0.0001),
-                            input_index=1)
+    core = ClassifierCore(model,
+                          loss_function=tf.keras.losses.binary_crossentropy,
+                          optimizer=tf.train.GradientDescentOptimizer(0.0001),
+                          input_index=1)
     learner = Learner(logger, core)
     learner.train(epochs, metrics, DatasetWrapper.wrap_tf_dataset(train_ds, train_steps, batch_size),
                   DatasetWrapper.wrap_tf_dataset(val_ds, val_steps, batch_size), callbacks)
-    print("Done!")
+    logger.info("Done!")
 
 
 if __name__ == "__main__":

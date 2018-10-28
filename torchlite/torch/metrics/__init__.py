@@ -2,85 +2,15 @@
 This class contains generalized metrics which works across different models
 """
 import torch
-import copy
 import numpy as np
 import torchlite.torch.tools.ssim as ssim
 import torch.nn.functional as F
 
-
-class Metric:
-    def __call__(self, logits, targets):
-        raise NotImplementedError()
-
-    @property
-    def get_name(self):
-        raise NotImplementedError()
-
-
-class MetricsList:
-    def __init__(self, metrics):
-        if metrics:
-            self.metrics = [copy.deepcopy(m) for m in metrics]
-        else:
-            self.metrics = []
-
-        self.train_acc = {}
-        self.val_acc = {}
-        self.step_count = 0
-
-    def acc_batch(self, step, logits, targets):
-        """
-        Called on each batch prediction.
-        Will accumulate the metrics results.
-        Args:
-            step (str): Either "training" or "validation"
-            logits (Tensor): The output logits
-            targets (Tensor): The output targets
-        """
-
-        if step == "training":
-            for metric in self.metrics:
-                result = metric(logits, targets)
-                if metric.get_name in self.train_acc.keys():
-                    self.train_acc[metric.get_name] += result
-                else:
-                    self.train_acc[metric.get_name] = result
-        elif step == "validation":
-            for metric in self.metrics:
-                result = metric(logits, targets)
-                if metric.get_name in self.val_acc.keys():
-                    self.val_acc[metric.get_name] += result
-                else:
-                    self.val_acc[metric.get_name] = result
-
-        self.step_count += 1
-
-    def avg(self, step):
-        """
-        Will calculate and return the metrics average results
-        Args:
-            step (str): Either "training" or "validation"
-        Returns:
-            dict: A dictionary containing the average of each metric
-        """
-        logs = {}
-        if step == "training":
-            for name, total in self.train_acc.items():
-                logs[name] = total / self.step_count
-        elif step == "validation":
-            for name, total in self.val_acc.items():
-                logs[name] = total / self.step_count
-        return logs
-
-    def reset(self):
-        logs = {}
-        for metric in self.metrics:
-            metric.reset()
-        return logs
+from torchlite.common.metrics import Metric
 
 
 class CategoricalAccuracy(Metric):
-    def __call__(self, y_pred, y_true):
+    def __call__(self, y_true, y_pred):
         """
         Return the accuracy of the predictions across the whole batch
          Args:
@@ -95,8 +25,7 @@ class CategoricalAccuracy(Metric):
         sm = torch.sum(y_true == y_pred_dense).float()
         return 100. * sm / y_true.size()[0]
 
-    @property
-    def get_name(self):
+    def __repr__(self):
         return "accuracy"
 
 
@@ -111,12 +40,12 @@ class RMSPE(Metric):
         super().__init__()
         self.to_exp = to_exp
 
-    def __call__(self, y_pred, y_true):
+    def __call__(self, y_true, y_pred):
         """
         Root-mean-squared percent error
         Args:
-            y_pred (Tensor): One-hot encoded tensor
             y_true (Tensor): Tensor of predictions
+            y_pred (Tensor): One-hot encoded tensor
 
         Returns:
             The Root-mean-squared percent error
@@ -131,8 +60,7 @@ class RMSPE(Metric):
         res = torch.sqrt((pct_var ** 2).mean())
         return res
 
-    @property
-    def get_name(self):
+    def __repr__(self):
         return "rmspe"
 
 
@@ -144,13 +72,12 @@ class SSIM(Metric):
             step (str, None): Either "training", "validation" or None to run this metric on all steps
         """
 
-    @property
-    def get_name(self):
-        return "ssim"
-
-    def __call__(self, logits, targets):
-        res = ssim.ssim(logits, targets)
+    def __call__(self, y_true, y_pred):
+        res = ssim.ssim(y_pred, y_true)
         return res
+
+    def __repr__(self):
+        return "ssim"
 
 
 class PSNR(Metric):
@@ -159,15 +86,14 @@ class PSNR(Metric):
         Calculates the PSNR
         """
 
-    @property
-    def get_name(self):
-        return "psnr"
-
-    def __call__(self, logits, targets):
-        logits, targets = logits.cpu().detach().numpy(), targets.cpu().detach().numpy()
+    def __call__(self, y_true, y_pred):
+        logits, targets = y_pred.cpu().detach().numpy(), y_true.cpu().detach().numpy()
         mse = ((targets - logits) ** 2).mean()
         psnr = 10 * np.log10(1 / mse)
         return psnr
+
+    def __repr__(self):
+        return "psnr"
 
 
 class RMSE(Metric):
@@ -176,10 +102,9 @@ class RMSE(Metric):
         Calculates the RMSE
         """
 
-    @property
-    def get_name(self):
-        return "rmse"
-
-    def __call__(self, logits, targets):
-        error = torch.sqrt(F.mse_loss(logits, targets))
+    def __call__(self, y_true, y_pred):
+        error = torch.sqrt(F.mse_loss(y_pred, y_true))
         return error
+
+    def __repr__(self):
+        return "rmse"

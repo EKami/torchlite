@@ -13,19 +13,20 @@ from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import torchlite.data.fetcher as fetcher
-import torchlite.data.files as efiles
+import torchlite.common.data.fetcher as fetcher
+import torchlite.common.data.files as efiles
 import torchlite.torch.tools.image_tools as image_tools
 from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
-from torchlite.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
-from torchlite.data.datasets.srpgan import TrainDataset
+from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
+from torchlite.common.train_callbacks import TensorboardVisualizerCallback
+from srpgan.dataset import TrainDataset
 from torchlite.learner import Learner
-from torchlite.learner.cores import TorchClassifierCore
+from torchlite.torch.learner.cores import ClassifierCore
 from srpgan.core import SRPGanCore
 from torchlite.torch.losses.srpgan import GeneratorLoss, DiscriminatorLoss
 from torchlite.torch.metrics import SSIM, PSNR
-from torchlite.data.datasets import DatasetWrapper
-from torchlite import eval
+from torchlite.common.data import DatasetWrapper
+from srpgan import eval
 from PIL import Image
 import logging
 
@@ -116,7 +117,7 @@ def train(args):
             print("---------------------- Generator training ----------------------")
             callbacks = [ReduceLROnPlateau(optimizer_g, loss_step="train")]
             loss = nn.MSELoss()
-            learner = Learner(TorchClassifierCore(netG, optimizer_g, loss))
+            learner = Learner(ClassifierCore(netG, optimizer_g, loss))
             learner.train(args.gen_epochs, None, train_loader, len(train_loader), None, -1, callbacks)
 
     print("----------------- Adversarial (SRPGAN) training -----------------")

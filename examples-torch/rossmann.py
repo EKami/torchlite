@@ -21,12 +21,12 @@ from tqdm import tqdm
 
 from sklearn.preprocessing import StandardScaler
 from torchlite.learner import Learner
-from torchlite.learner.cores import TorchClassifierCore
+from torchlite.torch.learner.cores import ClassifierCore
 import torchlite.torch.metrics as metrics
-from torchlite.data.fetcher import WebFetcher
+from torchlite.common.data.fetcher import WebFetcher
 import torchlite.torch.shortcuts as shortcuts
 import torchlite.pandas.date as edate
-from torchlite.train_callbacks import CosineAnnealingCallback
+from torchlite.torch.train_callbacks import CosineAnnealingCallback
 from torchlite.pandas.tabular_encoder import TreeEncoder
 import torchlite.pandas.merger as tmerger
 
@@ -269,7 +269,7 @@ def main():
                                           output_size=1, emb_drop=0.04, hidden_sizes=[1000, 500],
                                           hidden_dropouts=[0.001, 0.01], y_range=y_range)
     optimizer = optim.Adam(model.parameters())
-    learner = Learner(TorchClassifierCore(model, optimizer, F.mse_loss))
+    learner = Learner(ClassifierCore(model, optimizer, F.mse_loss))
     learner.train(epochs, [metrics.RMSPE(to_exp=True)], shortcut.get_train_loader, shortcut.get_val_loader,
                   callbacks=[CosineAnnealingCallback(optimizer, T_max=epochs)])
     test_pred = learner.predict(shortcut.get_test_loader)

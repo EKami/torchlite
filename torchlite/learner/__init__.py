@@ -5,13 +5,13 @@ import torchlite
 import importlib
 from datetime import datetime
 import numpy as np
-from typing import Union
-import torchlite.train_callbacks as train_callbacks
-import torchlite.test_callbacks as test_callbacks
 
-from torchlite.torch.metrics import MetricsList
+import torchlite.common.test_callbacks
+import torchlite.common.train_callbacks
+
+from torchlite.common.metrics import MetricsList
 from torchlite.learner.cores import BaseCore
-from torchlite.data.datasets import DatasetWrapper
+from torchlite.common.data.datasets import DatasetWrapper
 
 
 class Learner:
@@ -75,17 +75,17 @@ class Learner:
         batch_size = dataset.get_batch_size
         # We can have multiple inputs
         logs = {"step": step, "batch_size": batch_size}
-        for ind, (*inputs, targets) in enumerate(dataset):
+        for ind, (*inputs, y_true) in enumerate(dataset):
             callback_list.on_batch_begin(ind, logs=logs)
 
             inputs = self.convert_data_structure(inputs, action=lambda x: x.to(self.device))
-            targets = self.convert_data_structure(targets, action=lambda x: x.to(self.device))
+            y_true = self.convert_data_structure(y_true, action=lambda x: x.to(self.device))
 
             # Need to detach otherwise the Tensor gradients will accumulate in GPU memory
-            logits = self.learner_core.on_forward_batch(step, inputs, targets)
-            logits = self.convert_data_structure(logits, action=lambda x: x.detach())
+            y_pred = self.learner_core.on_forward_batch(step, inputs, y_true)
+            y_pred = self.convert_data_structure(y_pred, action=lambda x: x.detach())
 
-            metrics_list.acc_batch(step, logits, targets)
+            metrics_list.acc_batch(step, y_true, y_pred)
 
             logs.update(self.learner_core.get_logs)
             logs.update({"models": self.learner_core.get_models})
@@ -134,9 +134,7 @@ class Learner:
             Trains the neural net
         Args:
             epochs (int): number of epochs
-            metrics (list, None): Metrics to be evaluated by the model
-                        during training and testing.
-                        Typically you will use `metrics=['accuracy']`.
+            metrics (list, None): Metrics to be evaluated by the model during training and validation
             train_ds (DatasetWrapper): A DatasetWrapper object for training
             valid_ds (DatasetWrapper, optional): A DatasetWrapper object for validation
             callbacks (list, None): List of train callbacks functions
@@ -146,9 +144,9 @@ class Learner:
 
         if not callbacks:
             callbacks = []
-        callbacks.insert(0, train_callbacks.TQDM())
+        callbacks.insert(0, torchlite.common.train_callbacks.TQDM())
 
-        callback_list = train_callbacks.TrainCallbackList(callbacks)
+        callback_list = torchlite.common.train_callbacks.TrainCallbackList(callbacks)
         callback_list.on_train_begin({'total_epochs': epochs,
                                       'train_steps': len(train_ds),
                                       'val_steps': len(valid_ds)})
@@ -195,9 +193,9 @@ class Learner:
 
         if not callbacks:
             callbacks = []
-        callbacks.insert(0, test_callbacks.TQDM())
+        callbacks.insert(0, torchlite.common.test_callbacks.TQDM())
 
-        callback_list = test_callbacks.TestCallbackList(callbacks)
+        callback_list = torchlite.common.test_callbacks.TestCallbackList(callbacks)
         callback_list.on_test_begin({'loader': test_ds})
 
         if torchlite.backend == "torch":
