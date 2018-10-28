@@ -10,7 +10,7 @@ import torchlite.common.test_callbacks
 import torchlite.common.train_callbacks
 
 from torchlite.common.metrics import MetricsList
-from torchlite.learner.cores import BaseCore
+from torchlite.common.learner.cores import BaseCore
 from torchlite.common.data.datasets import DatasetWrapper
 
 
@@ -87,7 +87,9 @@ class Learner:
 
             metrics_list.acc_batch(step, y_true, y_pred)
 
-            logs.update(self.learner_core.get_logs)
+            all_logs = self.learner_core.get_logs
+            all_logs["batch_logs"].update(metrics_list.avg(step=step))
+            logs.update(all_logs)
             logs.update({"models": self.learner_core.get_models})
             callback_list.on_batch_end(ind, logs=logs)
         return logs

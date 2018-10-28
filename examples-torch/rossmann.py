@@ -20,7 +20,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from sklearn.preprocessing import StandardScaler
-from torchlite.learner import Learner
+from torchlite.common.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
 import torchlite.torch.metrics as metrics
 from torchlite.common.data.fetcher import WebFetcher

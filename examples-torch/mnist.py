@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from torchlite.learner import Learner
+from torchlite.common.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
 from torchlite.torch.metrics import CategoricalAccuracy
 import os

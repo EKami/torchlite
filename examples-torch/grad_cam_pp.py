@@ -25,7 +25,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchlite.common.data.fetcher as fetcher
 from torchlite.torch.shortcuts import ImageClassifierShortcut
-from torchlite.learner import Learner
+from torchlite.common.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
 from torchlite.torch.metrics import CategoricalAccuracy
 from torchlite.torch.test_callbacks import ActivationMapVisualizerCallback

@@ -17,7 +17,7 @@ import logging
 
 from hupaic.data import Dataset
 from hupaic.models import SimpleCnn
-from torchlite.learner import Learner
+from torchlite.common.learner import Learner
 from torchlite.common.data.datasets import DatasetWrapper
 from torchlite.tf.learner.cores import ClassifierCore
 from torchlite.tf.metrics import FBetaScore

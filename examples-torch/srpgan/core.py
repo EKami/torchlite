@@ -1,5 +1,5 @@
 from torchlite.torch.tools import tensor_tools
-from torchlite.learner.cores import BaseCore
+from torchlite.common.learner import BaseCore
 from torchlite.torch.models.srpgan import Generator, Discriminator
 
 

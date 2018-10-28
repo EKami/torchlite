@@ -1,6 +1,6 @@
 from torchlite.common.data import EvalDataset
 from torchlite.torch.models.srpgan import Generator
-from torchlite.learner import Learner
+from torchlite.common.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
 from torchlite.torch.train_callbacks import ModelSaverCallback
 import os

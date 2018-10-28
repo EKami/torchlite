@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 
-from torchlite.learner import BaseCore
+from torchlite.common.learner import BaseCore
 from torchlite.common.tools import tensor_tools
 
 
