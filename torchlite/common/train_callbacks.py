@@ -1,6 +1,5 @@
 from collections.__init__ import OrderedDict
 
-from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
 
@@ -174,34 +173,3 @@ class TQDM(TrainCallback):
         self.total_epochs = logs["total_epochs"]
         self.train_dataset_len = logs["train_steps"]
         self.val_dataset_len = logs["val_steps"] if logs["val_steps"] else None
-
-
-class TensorboardVisualizerCallback(TrainCallback):
-    def __init__(self, to_dir):
-        """
-            Callback intended to be executed at each epoch
-            of the training which goal is to display the result
-            of the last validation batch in Tensorboard
-            # TODO add embeddings visualization
-        Args:
-            to_dir (str): The path where to store the log files
-        """
-        super().__init__()
-        self.to_dir = to_dir
-        self.writer = SummaryWriter(to_dir)
-
-    def on_epoch_end(self, epoch, logs=None):
-        step = logs['step']
-        epoch_id = logs['epoch_id']
-        epoch_logs = logs.get('epoch_logs')
-        metrics_logs = logs.get('metrics_logs')
-        if epoch_logs:
-            for k, v in epoch_logs.items():
-                self.writer.add_scalar('loss/' + step + '/' + k, v, epoch_id)
-        if metrics_logs:
-            for k, v in metrics_logs.items():
-                self.writer.add_scalar('metric/' + step + '/' + k, v, epoch_id)
-
-    def on_train_end(self, logs=None):
-        self.writer.close()
-        print("\n--- Tensorboard logs saved in {} ---".format(self.to_dir), end='\n\n')

@@ -65,6 +65,67 @@ class Dataset:
         return yield_tensors
 
     @staticmethod
+    def _get_new_size(size):
+        size = tf.cast(size, dtype=tf.float32)
+        new_size = tf.cast((size / 2) * (1 + tf.random_uniform(shape=(), minval=0, maxval=1)),
+                           tf.int32)
+        return new_size
+
+    @staticmethod
+    def _data_augmentation(img):
+        """
+        https://medium.com/ymedialabs-innovation/data-augmentation-techniques-in-cnn-using-tensorflow-371ae43d5be9
+        This method is only applied on the train data (not val nor test data).
+        We could transform to numpy and augment the data here, but doing this directly with TF
+        will yield much better performances
+        Returns:
+            tf.Tensor: The same tensor with transformations
+        """
+        # Based on: https://bit.ly/2IvKw11
+        # More available here: https://github.com/HasnainRaz/Tensorflow-input-pipeline/blob/master/dataloader.py
+        # Additional data augmentation here: https://arxiv.org/pdf/1806.03962.pdf
+
+        # Random flip
+        cond_flip1 = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        img = tf.cond(cond_flip1,
+                      lambda: tf.image.random_flip_up_down(img),
+                      lambda: tf.identity(img))
+        cond_flip2 = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        img = tf.cond(cond_flip2,
+                      lambda: tf.image.random_flip_left_right(img),
+                      lambda: tf.identity(img))
+
+        # Random rotation
+        cond_rot = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        img = tf.cond(cond_rot,
+                      lambda: tf.image.rot90(img, k=tf.random_uniform(shape=(), minval=0,
+                                                                      maxval=3, dtype=tf.int32)),
+                      lambda: tf.identity(img))
+
+        # Random cropping
+        origin_shape = tf.shape(img)
+        new_crop_size = [Dataset._get_new_size(origin_shape[0]),
+                         Dataset._get_new_size(origin_shape[1]),
+                         origin_shape[2]]
+        cond_crop = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        img = tf.cond(cond_crop,
+                      lambda: tf.random_crop(img, size=new_crop_size),
+                      lambda: tf.identity(img))
+        img = tf.image.resize_images(img, size=(origin_shape[0], origin_shape[1]))
+
+        # Gaussian noise
+        noise = tf.random_normal(shape=tf.shape(img), mean=0.0, stddev=1.0,
+                                 dtype=tf.float32)
+        cond_noise = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        img = tf.cond(cond_noise,
+                      lambda: tf.add(img, noise),
+                      lambda: tf.identity(img))
+
+        # Eventually add reflect or symmetric translation here
+
+        return img
+
+    @staticmethod
     def _get_train_val_split(df, train_val_split):
         # Add repeated K-fold
         # splitter = RepeatedKFold(n_splits=3, n_repeats=2, random_state=0)
@@ -89,13 +150,15 @@ class Dataset:
                                                                  Tout=tf.uint8), labels))
         ds = ds.map(lambda file_id, img, labels: (file_id,  # Normalize
                                                   tf.cast(img, tf.float32) * (1. / 255),
-                                                  tf.cast(labels, tf.float32)))
+                                                  tf.cast(labels, tf.float32)),
+                    num_parallel_calls=num_process)
         ds = ds.batch(batch_size)
         ds = ds.prefetch(1)
         return ds
 
-    def _read_data(self):
-        train_df = pd.read_csv(self.input_dir / "train.csv", index_col="Id")
+    @staticmethod
+    def _read_data(input_dir):
+        train_df = pd.read_csv(input_dir / "train.csv", index_col="Id")
         unique_lbl = list(set([int(label) for labels in train_df["Target"].iteritems()
                                for label in labels[1].split()]))
         return train_df, unique_lbl
@@ -110,7 +173,7 @@ class Dataset:
         Returns:
             tf.Dataset, int, Union[tf.Dataset, None], int
         """
-        train_df, unique_lbls = self._read_data()
+        train_df, unique_lbls = Dataset._read_data(self.input_dir)
         if self.train_val_split > 0:
             df_train, df_val = Dataset._get_train_val_split(train_df, self.train_val_split)
             train_steps = len(df_train) // self.batch_size

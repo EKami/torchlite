@@ -4,6 +4,7 @@ This module contains callbacks used during training/validation phases.
 import os
 import torch
 import torch.optim.lr_scheduler as lr_scheduler
+from tensorboardX import SummaryWriter
 
 from torchlite.common.train_callbacks import TrainCallback
 
@@ -174,3 +175,32 @@ class GradientClippingCallback(TrainCallback):
         super().__init__()
 
 
+class TensorboardVisualizerCallback(TrainCallback):
+    def __init__(self, to_dir):
+        """
+            Callback intended to be executed at each epoch
+            of the training which goal is to display the result
+            of the last validation batch in Tensorboard
+            # TODO add embeddings visualization
+        Args:
+            to_dir (str): The path where to store the log files
+        """
+        super().__init__()
+        self.to_dir = to_dir
+        self.writer = SummaryWriter(to_dir)
+
+    def on_epoch_end(self, epoch, logs=None):
+        step = logs['step']
+        epoch_id = logs['epoch_id']
+        epoch_logs = logs.get('epoch_logs')
+        metrics_logs = logs.get('metrics_logs')
+        if epoch_logs:
+            for k, v in epoch_logs.items():
+                self.writer.add_scalar('loss/' + step + '/' + k, v, epoch_id)
+        if metrics_logs:
+            for k, v in metrics_logs.items():
+                self.writer.add_scalar('metric/' + step + '/' + k, v, epoch_id)
+
+    def on_train_end(self, logs=None):
+        self.writer.close()
+        print("\n--- Tensorboard logs saved in {} ---".format(self.to_dir), end='\n\n')

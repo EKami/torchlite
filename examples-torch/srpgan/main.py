@@ -17,8 +17,7 @@ import torchlite.common.data.fetcher as fetcher
 import torchlite.common.data.files as efiles
 import torchlite.torch.tools.image_tools as image_tools
 from torchlite.torch.models.srpgan import Generator, Discriminator, weights_init
-from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau
-from torchlite.common.train_callbacks import TensorboardVisualizerCallback
+from torchlite.torch.train_callbacks import ModelSaverCallback, ReduceLROnPlateau, TensorboardVisualizerCallback
 from srpgan.dataset import TrainDataset
 from torchlite.common.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
