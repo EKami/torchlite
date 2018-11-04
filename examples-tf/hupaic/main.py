@@ -18,6 +18,7 @@ import argparse
 
 from hupaic.data import Dataset
 from hupaic import models
+from hupaic.utils import io
 from torchlite.common.learner import Learner
 from torchlite.common.data.datasets import DatasetWrapper
 from torchlite.tf.learner.cores import ClassifierCore
@@ -74,18 +75,21 @@ def retrieve_dataset(input_dir):
 
 def train(batch_size, epochs, resize_imgs, input_dir, output_dir, model_name):
     input_shape = (resize_imgs, resize_imgs)
+    output_dir = Path(output_dir)
     logger = getLogger()
     # Resize to half the original size
     metrics = [FBetaScore(logger, beta=1, average="macro", threshold=0.5)]
-    callbacks = [ModelSaverCallback(logger, output_dir)]
+    callbacks = [ModelSaverCallback(logger, output_dir / (model_name + "_weights"))]
 
     # TODO the threshold on fbeta score should be calculated when the training is completely over
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
     input_dir = retrieve_dataset(input_dir)
 
+    logger.info("Starting training...")
     ds = Dataset.construct_for_training(logger, input_dir, batch_size, resize_imgs=(*input_shape, 3))
     train_ds, train_steps, val_ds, val_steps, unique_lbls = ds.get_dataset()
     model_class_ = getattr(models, model_name)
+    io.create_model_meta(model_name, input_shape, unique_lbls, output_dir)
     model = model_class_(logger, num_classes=len(unique_lbls), input_shape=input_shape)
     core = ClassifierCore(model,
                           loss_function=tf.keras.losses.binary_crossentropy,
@@ -97,15 +101,32 @@ def train(batch_size, epochs, resize_imgs, input_dir, output_dir, model_name):
     logger.info("Done!")
 
 
-def eval():
-    pass
+def eval(input_dir, input_meta, batch_size, model_name):
+    logger = getLogger()
+    logger.info("Starting evaluation...")
+    input_dir = Path(input_dir)
+    input_meta = Path(input_meta)
+
+    # Get meta
+    try:
+        meta = io.get_model_meta(model_name, input_meta)
+        input_shape = tuple(meta["input_shape"])
+        unique_lbls = dict(meta["unique_lbls"])
+    except FileNotFoundError:
+        raise RuntimeError("No WSI meta file found. Did you train the model before evaluating?")
+
+    model_class_ = getattr(models, model_name)
+    model = model_class_(logger, num_classes=len(unique_lbls), input_shape=input_shape)
+    model.load_weights(str((input_dir / (model_name + "_weights")).resolve()))
+
+    ds = Dataset.construct_for_test(logger, input_dir, input_meta, batch_size, resize_imgs=input_shape)
 
 
 def main(args):
     if args.mode == "train":
         train(args.batch_size, args.epochs, args.resize, args.input, args.output, args.model)
     else:
-        eval()
+        eval(args.input, args.input_meta, args.batch_size, args.model)
 
 
 if __name__ == "__main__":
@@ -118,7 +139,7 @@ if __name__ == "__main__":
     # Train mode
     train_parser.add_argument("--input", default=str(script_dir / ".." / "input" /
                                                      "human-protein-atlas-image-classification"),
-                              help="The folder containing the input data "
+                              help="The folder where the dataset will be downloaded and extracted "
                                    "(defaults to ../input/human-protein-atlas-image-classification/)", type=str)
     train_parser.add_argument("--output", default=str(script_dir / ".." / "output" /
                                                       "human-protein-atlas-image-classification"),
@@ -134,7 +155,12 @@ if __name__ == "__main__":
 
     # Eval mode
     eval_parser.add_argument("--input", default=str(script_dir / ".." / "output" /
-                                                    "human-protein-atlas-image-classification"),
+                                                    "human-protein-atlas-image-classification" / "test"),
+                             help="The input folder where the data for test are located. "
+                                  "Defaults to ../output/human-protein-atlas-image-classification/test",
+                             type=str)
+    eval_parser.add_argument("--input_meta", default=str(script_dir / ".." / "output" /
+                                                         "human-protein-atlas-image-classification"),
                              help="The input folder where the model and the trained weights are located. "
                                   "This folder will also serve as an output folder to store the results. "
                                   "It's typically the output folder of the train mode and set to it by default.",

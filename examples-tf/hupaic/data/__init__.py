@@ -23,6 +23,12 @@ class Dataset:
                                train_val_split: float = 0.2, resize_imgs=None, num_process=os.cpu_count()):
         return cls(logger, input_dir, batch_size, train_val_split, "train", resize_imgs, num_process)
 
+    @classmethod
+    def construct_for_test(cls, logger, input_dir: Path, input_meta: Path, batch_size: int = 32,
+                        resize_imgs=None, num_process=os.cpu_count()):
+        # TODO finish
+        return cls(logger, input_dir, batch_size, input_meta, "eval", resize_imgs, num_process)
+
     def _get_image_pth(self, id, filter_color="green"):
         return str(self.input_dir) + "/" + (id + "_" + filter_color + ".png")
 
