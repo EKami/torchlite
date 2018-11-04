@@ -102,24 +102,25 @@ class Dataset:
                                                                       maxval=3, dtype=tf.int32)),
                       lambda: tf.identity(img))
 
+        # TODO fix ValueError('\'images\' contains no shape.')
         # Random cropping
-        origin_shape = tf.shape(img)
-        new_crop_size = [Dataset._get_new_size(origin_shape[0]),
-                         Dataset._get_new_size(origin_shape[1]),
-                         origin_shape[2]]
-        cond_crop = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
-        img = tf.cond(cond_crop,
-                      lambda: tf.random_crop(img, size=new_crop_size),
-                      lambda: tf.identity(img))
-        img = tf.image.resize_images(img, size=(origin_shape[0], origin_shape[1]))
+        # origin_shape = tf.shape(img)
+        # new_crop_size = [Dataset._get_new_size(origin_shape[0]),
+        #                  Dataset._get_new_size(origin_shape[1]),
+        #                  origin_shape[2]]
+        # cond_crop = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        # img = tf.cond(cond_crop,
+        #               lambda: tf.random_crop(img, size=new_crop_size),
+        #               lambda: tf.identity(img))
+        # img = tf.image.resize_images(img, size=(origin_shape[0], origin_shape[1]))
 
         # Gaussian noise
-        noise = tf.random_normal(shape=tf.shape(img), mean=0.0, stddev=1.0,
-                                 dtype=tf.float32)
-        cond_noise = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
-        img = tf.cond(cond_noise,
-                      lambda: tf.add(img, noise),
-                      lambda: tf.identity(img))
+        # noise = tf.random_normal(shape=tf.shape(img), mean=0.0, stddev=1.0,
+        #                          dtype=tf.float32)
+        # cond_noise = tf.cast(tf.random_uniform((), maxval=2, dtype=tf.int32), tf.bool)
+        # img = tf.cond(cond_noise,
+        #               lambda: tf.add(img, noise),
+        #               lambda: tf.identity(img))
 
         # Eventually add reflect or symmetric translation here
 
@@ -135,7 +136,7 @@ class Dataset:
         return train_df, val_df
 
     @staticmethod
-    def _get_ds_pipeline(df, input_dir, mode, unique_lbl, batch_size, num_process, resize_imgs):
+    def _get_ds_pipeline(step, df, input_dir, mode, unique_lbl, batch_size, num_process, resize_imgs):
         ds = tf.data.Dataset.from_generator(Dataset._get_tensors(df, unique_lbl),
                                             output_types=(tf.string, tf.int32),
                                             output_shapes=(tf.TensorShape(()),
@@ -148,6 +149,9 @@ class Dataset:
         ds = ds.map(lambda file_id, labels: (file_id, tf.py_func(Dataset.extract_img,
                                                                  inp=[step_input_dir, file_id, "green", resize_imgs],
                                                                  Tout=tf.uint8), labels))
+        if step == "train":
+            ds = ds.map(lambda file_id, img, labels: (file_id, Dataset._data_augmentation(img), labels),
+                        num_parallel_calls=num_process)
         ds = ds.map(lambda file_id, img, labels: (file_id,  # Normalize
                                                   tf.cast(img, tf.float32) * (1. / 255),
                                                   tf.cast(labels, tf.float32)),
@@ -178,14 +182,14 @@ class Dataset:
             df_train, df_val = Dataset._get_train_val_split(train_df, self.train_val_split)
             train_steps = len(df_train) // self.batch_size
             val_steps = len(df_val) // self.batch_size
-            train_ds = self._get_ds_pipeline(df_train, self.input_dir, self.mode,
+            train_ds = self._get_ds_pipeline("train", df_train, self.input_dir, self.mode,
                                              unique_lbls, self.batch_size, self.num_process,
                                              self.resize_imgs)
-            val_ds = self._get_ds_pipeline(df_val, self.input_dir, self.mode,
+            val_ds = self._get_ds_pipeline("valid", df_val, self.input_dir, self.mode,
                                            unique_lbls, self.batch_size, self.num_process,
                                            self.resize_imgs)
         else:
-            train_ds = self._get_ds_pipeline(train_df, self.input_dir, self.mode,
+            train_ds = self._get_ds_pipeline("train", train_df, self.input_dir, self.mode,
                                              unique_lbls, self.batch_size, self.num_process,
                                              self.resize_imgs)
             val_ds = None
