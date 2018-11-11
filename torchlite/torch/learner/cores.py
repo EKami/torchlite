@@ -1,4 +1,4 @@
-from torchlite.common.learner import BaseCore
+from torchlite.common.learner.cores import BaseCore
 from torchlite.common.tools import tensor_tools
 
 

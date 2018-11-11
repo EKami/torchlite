@@ -7,18 +7,16 @@ from torchlite.common.tools import stats
 
 
 class FBetaScore(Metric):
-    def __init__(self, logger, beta, average="binary", threshold=None):
+    def __init__(self, beta, average="binary", threshold=None):
         """
         Returns the FBeta score
         Args:
-            logger (Logger): Python logger
             beta (int): Beta for F score
             average (str): [None, ‘binary’ (default), ‘micro’, ‘macro’, ‘samples’, ‘weighted’]
             threshold (None, float): Threshold for y_pred. None to not use any.
         """
         super().__init__()
         self.threshold = threshold
-        self.logger = logger
         self.average = average
         self.beta = beta
 
@@ -28,7 +26,7 @@ class FBetaScore(Metric):
             y_pred = stats.get_thresholded_predictions(y_pred, threshold=threshold)
         return fbeta_score(y_true, y_pred, beta=beta, average=average)
 
-    def __call__(self, y_true, y_pred, *args, **kwargs):
+    def __call__(self, logger, y_true, y_pred, *args, **kwargs):
         return FBetaScore.calculate_f2(y_true.numpy(), y_pred.numpy(), self.beta, self.average, self.threshold)
 
     def __repr__(self):

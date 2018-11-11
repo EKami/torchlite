@@ -4,26 +4,26 @@ from tqdm import tqdm
 
 
 class TrainCallback:
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_begin(self, logger, epoch, logs=None):
         pass
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, logger, epoch, logs=None):
         pass
 
-    def on_batch_begin(self, batch, logs=None):
+    def on_batch_begin(self, logger, batch, logs=None):
         pass
 
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, logger, batch, logs=None):
         pass
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, logger, logs=None):
         pass
 
-    def on_train_end(self, logs=None):
+    def on_train_end(self, logger, logs=None):
         pass
 
 
-class TrainCallbackList(object):
+class TrainCallbackList:
     """Container abstracting a list of callbacks.
     Args:
         callbacks: List of `Callback` instances.
@@ -31,7 +31,8 @@ class TrainCallbackList(object):
             running statistics over callback execution time.
     """
 
-    def __init__(self, callbacks=None, queue_length=10):
+    def __init__(self, logger, callbacks=None, queue_length=10):
+        self.logger = logger
         callbacks = callbacks or []
         self.callbacks = [c for c in callbacks]
         self.queue_length = queue_length
@@ -49,7 +50,7 @@ class TrainCallbackList(object):
         """
         logs = logs or {}
         for callback in self.callbacks:
-            callback.on_epoch_begin(epoch, logs)
+            callback.on_epoch_begin(self.logger, epoch, logs)
 
     def on_epoch_end(self, epoch, logs=None):
         """Called at the end of an epoch.
@@ -59,7 +60,7 @@ class TrainCallbackList(object):
         """
         logs = logs or {}
         for callback in self.callbacks:
-            callback.on_epoch_end(epoch, logs)
+            callback.on_epoch_end(self.logger, epoch, logs)
 
     def on_batch_begin(self, batch, logs=None):
         """Called right before processing a batch.
@@ -69,7 +70,7 @@ class TrainCallbackList(object):
         """
         logs = logs or {}
         for callback in self.callbacks:
-            callback.on_batch_begin(batch, logs)
+            callback.on_batch_begin(self.logger, batch, logs)
 
     def on_batch_end(self, batch, logs=None):
         """Called at the end of a batch.
@@ -79,7 +80,7 @@ class TrainCallbackList(object):
         """
         logs = logs or {}
         for callback in self.callbacks:
-            callback.on_batch_end(batch, logs)
+            callback.on_batch_end(self.logger, batch, logs)
 
     def on_train_begin(self, logs=None):
         """Called at the beginning of training.
@@ -88,7 +89,7 @@ class TrainCallbackList(object):
         """
         logs = logs or {}
         for callback in self.callbacks:
-            callback.on_train_begin(logs)
+            callback.on_train_begin(self.logger, logs)
 
     def on_train_end(self, logs=None):
         """Called at the end of training.
@@ -97,7 +98,7 @@ class TrainCallbackList(object):
         """
         logs = logs or {}
         for callback in self.callbacks:
-            callback.on_train_end(logs)
+            callback.on_train_end(self.logger, logs)
 
     def __iter__(self):
         return iter(self.callbacks)
@@ -112,7 +113,7 @@ class TQDM(TrainCallback):
         self.train_dataset_len = 0
         self.val_dataset_len = 0
 
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_begin(self, logger, epoch, logs=None):
         step = logs["step"]
         if step == 'training':
             self.train_pbar = tqdm(total=self.train_dataset_len,
@@ -122,7 +123,7 @@ class TQDM(TrainCallback):
         elif step == 'validation':
             self.val_pbar = tqdm(total=self.val_dataset_len, desc="Validating", leave=False)
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, logger, epoch, logs=None):
         step = logs["step"]
 
         if step == 'training':
@@ -130,32 +131,28 @@ class TQDM(TrainCallback):
             train_logs = logs['epoch_logs']
             train_metrics = logs['metrics_logs']
             if len(train_logs) > 0:
-                print(*["{}={:03f}".format(k, v) for k, v in train_logs.items()], end=' ')
-                print()
+                logger.info(*["{}={:03f}".format(k, v) for k, v in train_logs.items()], end=' ')
 
             if len(train_metrics) > 0:
-                print("{:>14}".format("Train metrics:"), end=' ')
-                print(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
+                logger.info("{:>14}".format("Train metrics:"), end=' ')
+                logger.info(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
             else:
                 print()
         elif step == 'validation':
             self.val_pbar.close()
             val_logs = logs.get('epoch_logs')
             if val_logs and len(val_logs) > 0:
-                print(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
-                print()
+                logger.info(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
 
             val_metrics = logs.get('metrics_logs')
             if val_metrics and len(val_metrics) > 0:
-                print("{:>14}".format("Val metrics:"), end=' ')
-                print(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
-            else:
-                print()
+                logger.info("{:>14}".format("Val metrics:"), end=' ')
+                logger.info(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
 
-    def on_batch_begin(self, batch, logs=None):
+    def on_batch_begin(self, logger, batch, logs=None):
         pass
 
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, logger, batch, logs=None):
         step = logs["step"]
         batch_logs = logs.get("batch_logs")
 
@@ -169,7 +166,7 @@ class TQDM(TrainCallback):
         self.train_pbar.set_postfix(postfix)
         self.train_pbar.update(1)
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, logger, logs=None):
         self.total_epochs = logs["total_epochs"]
         self.train_dataset_len = logs["train_steps"]
         self.val_dataset_len = logs["val_steps"] if logs["val_steps"] else None

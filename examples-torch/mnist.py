@@ -1,6 +1,8 @@
 import torchlite
+
 torchlite.set_backend("torch")
 
+import logging
 from torchvision import datasets, transforms
 import torch.nn as nn
 import torch.optim as optim
@@ -9,7 +11,9 @@ import torch.nn.functional as F
 from torchlite.common.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
 from torchlite.torch.metrics import CategoricalAccuracy
+from torchlite.common.data.datasets import DatasetWrapper
 import os
+import sys
 
 
 class Net(nn.Module):
@@ -31,7 +35,20 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=-1)
 
 
+def getLogger():
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+    ch.setFormatter(formatter)
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
+    return logger
+
+
 def main():
+    logger = getLogger()
     batch_size = 128
     epochs = 20
     mnist_train_data = datasets.MNIST('/tmp/data', train=True, download=True,
@@ -39,19 +56,21 @@ def main():
                                           transforms.ToTensor(),
                                           transforms.Normalize((0.1307,), (0.3081,))
                                       ]))
-    train_loader = DataLoader(mnist_train_data, batch_size, shuffle=True, num_workers=os.cpu_count())
+    train_loader = DatasetWrapper.wrap_torch_dataloader(
+        DataLoader(mnist_train_data, batch_size, shuffle=True, num_workers=os.cpu_count()))
 
     mnist_test_data = datasets.MNIST('/tmp/data', train=False, transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ]))
-    test_loader = DataLoader(mnist_test_data, batch_size, shuffle=False, num_workers=os.cpu_count())
+    test_loader = DatasetWrapper.wrap_torch_dataloader(
+        DataLoader(mnist_test_data, batch_size, shuffle=False, num_workers=os.cpu_count()))
 
     net = Net()
     optimizer = optim.RMSprop(net.parameters(), lr=1e-3)
     loss = F.nll_loss
 
-    learner = Learner(ClassifierCore(net, optimizer, loss))
+    learner = Learner(logger, ClassifierCore(net, optimizer, loss))
     metrics = [CategoricalAccuracy()]
 
     learner.train(epochs, metrics, train_loader, test_loader, callbacks=None)

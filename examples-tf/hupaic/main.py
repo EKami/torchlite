@@ -75,11 +75,11 @@ def retrieve_dataset(input_dir):
 
 def train(batch_size, epochs, resize_imgs, input_dir, output_dir, model_name):
     input_shape = (resize_imgs, resize_imgs)
-    output_dir = Path(output_dir)
+    output_dir = Path(output_dir).resolve()
     logger = getLogger()
     # Resize to half the original size
-    metrics = [FBetaScore(logger, beta=1, average="macro", threshold=0.5)]
-    callbacks = [ModelSaverCallback(logger, output_dir / (model_name + "_weights"))]
+    metrics = [FBetaScore(beta=1, average="macro", threshold=0.5)]
+    callbacks = [ModelSaverCallback(output_dir / (model_name + "_weights"))]
 
     # TODO the threshold on fbeta score should be calculated when the training is completely over
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)

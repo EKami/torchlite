@@ -9,7 +9,8 @@ import cv2
 
 class Dataset:
     def __init__(self, logger, input_dir: Path, batch_size: int,
-                 train_val_split: float, mode, resize_imgs, num_process):
+                 train_val_split: float, mode, resize_imgs, input_meta, num_process):
+        self.input_meta = input_meta
         self.resize_imgs = resize_imgs if resize_imgs is not None else (-1, -1)
         self.mode = mode
         self.num_process = num_process
@@ -21,13 +22,14 @@ class Dataset:
     @classmethod
     def construct_for_training(cls, logger, input_dir: Path, batch_size: int = 32,
                                train_val_split: float = 0.2, resize_imgs=None, num_process=os.cpu_count()):
-        return cls(logger, input_dir, batch_size, train_val_split, "train", resize_imgs, num_process)
+        return cls(logger, input_dir, batch_size, train_val_split, "train", resize_imgs, None, num_process)
 
     @classmethod
     def construct_for_test(cls, logger, input_dir: Path, input_meta: Path, batch_size: int = 32,
-                        resize_imgs=None, num_process=os.cpu_count()):
+                           resize_imgs=None, num_process=os.cpu_count()):
         # TODO finish
-        return cls(logger, input_dir, batch_size, input_meta, "eval", resize_imgs, num_process)
+        return cls(logger, input_dir, batch_size, train_val_split=0, mode="eval", resize_imgs=resize_imgs,
+                   input_meta=input_meta, num_process=num_process)
 
     def _get_image_pth(self, id, filter_color="green"):
         return str(self.input_dir) + "/" + (id + "_" + filter_color + ".png")
@@ -134,7 +136,8 @@ class Dataset:
 
     @staticmethod
     def _get_train_val_split(df, train_val_split):
-        # Add repeated K-fold
+        # TODO create stratified split
+        # TODO Add repeated K-fold
         # splitter = RepeatedKFold(n_splits=3, n_repeats=2, random_state=0)
         val_size = np.ceil(len(df) * train_val_split).astype(np.int32)
         train_df = df.iloc[:-val_size]
@@ -151,7 +154,7 @@ class Dataset:
                                             )
 
         step_input_dir = str(input_dir / mode)
-        # This could actually result in poor performances due to the GIL
+        # Using multiple process here could actually result in poor performances due to the GIL
         ds = ds.map(lambda file_id, labels: (file_id, tf.py_func(Dataset.extract_img,
                                                                  inp=[step_input_dir, file_id, "green", resize_imgs],
                                                                  Tout=tf.uint8), labels))

@@ -8,7 +8,7 @@ from torchlite.common.train_callbacks import TrainCallback
 
 
 class ModelSaverCallback(TrainCallback):
-    def __init__(self, logger: Logger, weights_pth: Union[str, Path]):
+    def __init__(self, weights_pth: Union[str, Path]):
         """
         Save the Keras models of the learner at each epoch
         Args:
@@ -17,9 +17,8 @@ class ModelSaverCallback(TrainCallback):
         """
         super().__init__()
         self.weights_pth = Path(weights_pth)
-        self.logger = logger
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, logger, epoch, logs=None):
         if not os.path.exists(self.weights_pth):
             os.makedirs(self.weights_pth)
         for model_name, model in logs["models"].items():

@@ -2,7 +2,7 @@ import copy
 
 
 class Metric:
-    def __call__(self, y_true, y_pred):
+    def __call__(self, logger, y_true, y_pred):
         raise NotImplementedError()
 
     def __repr__(self):
@@ -10,7 +10,8 @@ class Metric:
 
 
 class MetricsList:
-    def __init__(self, metrics):
+    def __init__(self, logger, metrics):
+        self.logger = logger
         if metrics:
             self.metrics = [copy.copy(m) for m in metrics]
         else:
@@ -32,7 +33,7 @@ class MetricsList:
 
         if step == "training":
             for metric in self.metrics:
-                result = metric(y_true, y_pred)
+                result = metric(self.logger, y_true, y_pred)
                 if str(metric) in self.train_acc.keys():
                     self.train_acc[str(metric)] += result
                 else:

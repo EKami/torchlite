@@ -105,7 +105,7 @@ class Learner:
         self.learner_core.on_new_epoch()
         callback_list.on_epoch_begin(self.epoch_id, logs)
 
-        metric_list = MetricsList(metrics)
+        metric_list = MetricsList(self.logger, metrics)
         train_logs = self._run_batch(step, train_ds, metric_list, callback_list)
 
         train_logs.update(logs)
@@ -148,7 +148,7 @@ class Learner:
             callbacks = []
         callbacks.insert(0, torchlite.common.train_callbacks.TQDM())
 
-        callback_list = torchlite.common.train_callbacks.TrainCallbackList(callbacks)
+        callback_list = torchlite.common.train_callbacks.TrainCallbackList(self.logger, callbacks)
         callback_list.on_train_begin({'total_epochs': epochs,
                                       'train_steps': len(train_ds),
                                       'val_steps': len(valid_ds)})
