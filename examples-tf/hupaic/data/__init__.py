@@ -8,9 +8,10 @@ import cv2
 
 
 class Dataset:
-    def __init__(self, logger, input_dir: Path, batch_size: int,
-                 train_val_split: float, mode, resize_imgs, input_meta, num_process):
-        self.input_meta = input_meta
+    def __init__(self, logger, input_dir: Path, batch_size: int, train_val_split: float,
+                 mode, resize_imgs, meta, is_test, num_process):
+        self.is_test = is_test
+        self.meta = meta
         self.resize_imgs = resize_imgs if resize_imgs is not None else (-1, -1)
         self.mode = mode
         self.num_process = num_process
@@ -22,14 +23,14 @@ class Dataset:
     @classmethod
     def construct_for_training(cls, logger, input_dir: Path, batch_size: int = 32,
                                train_val_split: float = 0.2, resize_imgs=None, num_process=os.cpu_count()):
-        return cls(logger, input_dir, batch_size, train_val_split, "train", resize_imgs, None, num_process)
+        return cls(logger, input_dir, batch_size, train_val_split, "train", resize_imgs, None,
+                   False, num_process)
 
     @classmethod
-    def construct_for_test(cls, logger, input_dir: Path, input_meta: Path, batch_size: int = 32,
+    def construct_for_test(cls, logger, input_dir: Path, meta: dict, batch_size: int = 32,
                            resize_imgs=None, num_process=os.cpu_count()):
-        # TODO finish
         return cls(logger, input_dir, batch_size, train_val_split=0, mode="eval", resize_imgs=resize_imgs,
-                   input_meta=input_meta, num_process=num_process)
+                   meta=meta, is_test=True, num_process=num_process)
 
     def _get_image_pth(self, id, filter_color="green"):
         return str(self.input_dir) + "/" + (id + "_" + filter_color + ".png")
@@ -170,8 +171,8 @@ class Dataset:
         return ds
 
     @staticmethod
-    def _read_data(input_dir):
-        train_df = pd.read_csv(input_dir / "train.csv", index_col="Id")
+    def _read_data(input_file):
+        train_df = pd.read_csv(input_file, index_col="Id")
         unique_lbl = list(set([int(label) for labels in train_df["Target"].iteritems()
                                for label in labels[1].split()]))
         return train_df, unique_lbl
@@ -186,23 +187,32 @@ class Dataset:
         Returns:
             tf.Dataset, int, Union[tf.Dataset, None], int
         """
-        train_df, unique_lbls = Dataset._read_data(self.input_dir)
-        if self.train_val_split > 0:
-            df_train, df_val = Dataset._get_train_val_split(train_df, self.train_val_split)
-            train_steps = len(df_train) // self.batch_size
-            val_steps = len(df_val) // self.batch_size
-            train_ds = self._get_ds_pipeline("train", df_train, self.input_dir, self.mode,
-                                             unique_lbls, self.batch_size, self.num_process,
-                                             self.resize_imgs)
-            val_ds = self._get_ds_pipeline("valid", df_val, self.input_dir, self.mode,
-                                           unique_lbls, self.batch_size, self.num_process,
-                                           self.resize_imgs)
+        if not self.is_test:
+            train_df, unique_lbls = Dataset._read_data(self.input_dir / "train.csv")
+            if self.train_val_split > 0:
+                df_train, df_val = Dataset._get_train_val_split(train_df, self.train_val_split)
+                train_steps = len(df_train) // self.batch_size
+                val_steps = len(df_val) // self.batch_size
+                train_ds = self._get_ds_pipeline("train", df_train, self.input_dir, self.mode,
+                                                 unique_lbls, self.batch_size, self.num_process,
+                                                 self.resize_imgs)
+                val_ds = self._get_ds_pipeline("valid", df_val, self.input_dir, self.mode,
+                                               unique_lbls, self.batch_size, self.num_process,
+                                               self.resize_imgs)
+            else:
+                train_ds = self._get_ds_pipeline("train", train_df, self.input_dir, self.mode,
+                                                 unique_lbls, self.batch_size, self.num_process,
+                                                 self.resize_imgs)
+                val_ds = None
+                train_steps = len(train_df) // self.batch_size
+                val_steps = None
+            return train_ds, train_steps, val_ds, val_steps, unique_lbls
         else:
-            train_ds = self._get_ds_pipeline("train", train_df, self.input_dir, self.mode,
-                                             unique_lbls, self.batch_size, self.num_process,
-                                             self.resize_imgs)
-            val_ds = None
-            train_steps = len(train_df) // self.batch_size
-            val_steps = None
-
-        return train_ds, train_steps, val_ds, val_steps, unique_lbls
+            # TODO no test.csv, finish
+            test_df = Dataset._read_data(self.input_dir / "test.csv")
+            unique_lbls = self.meta["unique_lbls"]
+            test_steps = len(test_df) // self.batch_size
+            test_ds = self._get_ds_pipeline("train", test_df, self.input_dir, self.mode,
+                                            unique_lbls, self.batch_size, self.num_process,
+                                            self.resize_imgs)
+            return test_ds, test_steps

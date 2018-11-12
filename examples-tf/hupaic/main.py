@@ -79,7 +79,7 @@ def train(batch_size, epochs, resize_imgs, input_dir, output_dir, model_name):
     logger = getLogger()
     # Resize to half the original size
     metrics = [FBetaScore(beta=1, average="macro", threshold=0.5)]
-    callbacks = [ModelSaverCallback(output_dir / (model_name + "_weights"))]
+    callbacks = [ModelSaverCallback(output_dir / "weights")]
 
     # TODO the threshold on fbeta score should be calculated when the training is completely over
     # First retrieve the dataset (https://github.com/Kaggle/kaggle-api#api-credentials)
@@ -101,32 +101,34 @@ def train(batch_size, epochs, resize_imgs, input_dir, output_dir, model_name):
     logger.info("Done!")
 
 
-def eval(input_dir, input_meta, batch_size, model_name):
+def eval(input_dir, output_dir, batch_size, model_name):
     logger = getLogger()
     logger.info("Starting evaluation...")
     input_dir = Path(input_dir)
-    input_meta = Path(input_meta)
+    output_dir = Path(output_dir)
 
     # Get meta
     try:
-        meta = io.get_model_meta(model_name, input_meta)
+        meta = io.get_model_meta(model_name, output_dir)
         input_shape = tuple(meta["input_shape"])
-        unique_lbls = dict(meta["unique_lbls"])
+        unique_lbls = list(meta["unique_lbls"])
     except FileNotFoundError:
-        raise RuntimeError("No WSI meta file found. Did you train the model before evaluating?")
+        raise RuntimeError("No meta file found. Did you train the model before evaluating?")
 
     model_class_ = getattr(models, model_name)
     model = model_class_(logger, num_classes=len(unique_lbls), input_shape=input_shape)
-    model.load_weights(str((input_dir / (model_name + "_weights")).resolve()))
+    model.load_weights(str((output_dir / "weights" / model_name).resolve()))
 
-    ds = Dataset.construct_for_test(logger, input_dir, input_meta, batch_size, resize_imgs=input_shape)
+    eval_ds = Dataset.construct_for_test(logger, input_dir, meta, batch_size, resize_imgs=input_shape)
+    test_ds = eval_ds.get_dataset()
+    d = 0
 
 
 def main(args):
     if args.mode == "train":
         train(args.batch_size, args.epochs, args.resize, args.input, args.output, args.model)
     else:
-        eval(args.input, args.input_meta, args.batch_size, args.model)
+        eval(args.input, args.output_dir, args.batch_size, args.model)
 
 
 if __name__ == "__main__":
@@ -154,14 +156,14 @@ if __name__ == "__main__":
                                    'A single number e.g: 128 will result in a 128x128 resize')
 
     # Eval mode
-    eval_parser.add_argument("--input", default=str(script_dir / ".." / "output" /
-                                                    "human-protein-atlas-image-classification" / "test"),
-                             help="The input folder where the data for test are located. "
-                                  "Defaults to ../output/human-protein-atlas-image-classification/test",
+    eval_parser.add_argument("--input", default=str(script_dir / ".." / "input" /
+                                                    "human-protein-atlas-image-classification"),
+                             help="The input folder where the data for test is located. "
+                                  "Defaults to ../input/human-protein-atlas-image-classification",
                              type=str)
-    eval_parser.add_argument("--input_meta", default=str(script_dir / ".." / "output" /
+    eval_parser.add_argument("--output_dir", default=str(script_dir / ".." / "output" /
                                                          "human-protein-atlas-image-classification"),
-                             help="The input folder where the model and the trained weights are located. "
+                             help="The output folder where the model and the trained weights are located. "
                                   "This folder will also serve as an output folder to store the results. "
                                   "It's typically the output folder of the train mode and set to it by default.",
                              type=str)

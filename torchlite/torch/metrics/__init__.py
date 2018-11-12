@@ -10,7 +10,7 @@ from torchlite.common.metrics import Metric
 
 
 class CategoricalAccuracy(Metric):
-    def __call__(self, y_true, y_pred):
+    def __call__(self, logger, y_true, y_pred):
         """
         Return the accuracy of the predictions across the whole batch
          Args:
@@ -40,7 +40,7 @@ class RMSPE(Metric):
         super().__init__()
         self.to_exp = to_exp
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, logger, y_true, y_pred):
         """
         Root-mean-squared percent error
         Args:
@@ -72,7 +72,7 @@ class SSIM(Metric):
             step (str, None): Either "training", "validation" or None to run this metric on all steps
         """
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, logger, y_true, y_pred):
         res = ssim.ssim(y_pred, y_true)
         return res
 
@@ -86,7 +86,7 @@ class PSNR(Metric):
         Calculates the PSNR
         """
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, logger, y_true, y_pred):
         logits, targets = y_pred.cpu().detach().numpy(), y_true.cpu().detach().numpy()
         mse = ((targets - logits) ** 2).mean()
         psnr = 10 * np.log10(1 / mse)
@@ -102,7 +102,7 @@ class RMSE(Metric):
         Calculates the RMSE
         """
 
-    def __call__(self, y_true, y_pred):
+    def __call__(self, logger, y_true, y_pred):
         error = torch.sqrt(F.mse_loss(y_pred, y_true))
         return error
 

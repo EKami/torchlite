@@ -14,6 +14,6 @@ def create_model_meta(model_name, input_shape, unique_lbls, output_dir: Path):
 
 
 def get_model_meta(model_name, input_dir):
-    with open(input_dir / (model_name + ".json"), 'w') as file:
+    with open(input_dir / (model_name + ".json"), 'r') as file:
         meta = json.load(file)
     return meta

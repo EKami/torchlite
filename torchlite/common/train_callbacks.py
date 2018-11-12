@@ -130,23 +130,21 @@ class TQDM(TrainCallback):
             self.train_pbar.close()
             train_logs = logs['epoch_logs']
             train_metrics = logs['metrics_logs']
-            if len(train_logs) > 0:
-                logger.info(*["{}={:03f}".format(k, v) for k, v in train_logs.items()], end=' ')
 
+            logger.info("{:>14}".format(" -- Train logs -- "))
+            if len(train_logs) > 0:
+                logger.info(*["{}={:03f}".format(k, v) for k, v in train_logs.items()])
             if len(train_metrics) > 0:
-                logger.info("{:>14}".format("Train metrics:"), end=' ')
                 logger.info(*["{}={:03f}".format(k, v) for k, v in train_metrics.items()])
-            else:
-                print()
         elif step == 'validation':
             self.val_pbar.close()
             val_logs = logs.get('epoch_logs')
-            if val_logs and len(val_logs) > 0:
-                logger.info(*["{}={:03f}".format(k, v) for k, v in val_logs.items()], end=' ')
-
             val_metrics = logs.get('metrics_logs')
+            logger.info("{:>14}".format(" -- Val logs -- "))
+
+            if val_logs and len(val_logs) > 0:
+                logger.info(*["{}={:03f}".format(k, v) for k, v in val_logs.items()])
             if val_metrics and len(val_metrics) > 0:
-                logger.info("{:>14}".format("Val metrics:"), end=' ')
                 logger.info(*["{}={:03f}".format(k, v) for k, v in val_metrics.items()])
 
     def on_batch_begin(self, logger, batch, logs=None):

@@ -123,7 +123,7 @@ class Learner:
             self.learner_core.on_new_epoch()
             callback_list.on_epoch_begin(self.epoch_id, logs)
 
-            metric_list = MetricsList(metrics)
+            metric_list = MetricsList(self.logger, metrics)
             val_logs = self._run_batch(step, valid_ds, metric_list, callback_list)
 
             val_logs.update(logs)

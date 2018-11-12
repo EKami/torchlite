@@ -40,7 +40,7 @@ class MetricsList:
                     self.train_acc[str(metric)] = result
         elif step == "validation":
             for metric in self.metrics:
-                result = metric(y_true, y_pred)
+                result = metric(self.logger, y_true, y_pred)
                 if str(metric) in self.val_acc.keys():
                     self.val_acc[str(metric)] += result
                 else:
