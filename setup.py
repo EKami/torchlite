@@ -35,7 +35,7 @@ setup(
     install_requires=["isoweek", "tqdm", "bcolz", "kaggle_data", "opencv_python", "torch", "torchvision",
                       "tensorflow-gpu", "scikit_image", "setuptools", "numpy", "matplotlib", "scipy", "Pillow",
                       "scikit_learn", "tensorboardX", "typing", "PyYAML", "Augmentor", "feather-format",
-                      "fuzzywuzzy", "python-Levenshtein", "category_encoders",
+                      "rapidfuzz", "category_encoders",
                       find_packages(exclude=["*.tests", "*.tests.*", "tests.*",
                                              "tests", "torchlite.*", "torchvision.*"])],
 )

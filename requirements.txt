@@ -12,8 +12,7 @@ scikit_learn>=0.19
 tensorboardX>=1.1
 typing>=3.6
 PyYAML>=3.12
-fuzzywuzzy>=0.16
-python-Levenshtein
+rapidfuzz>=0.3.0
 category_encoders
 torch>=0.4.0
 torchvision

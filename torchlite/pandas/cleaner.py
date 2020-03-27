@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from pandas.api.types import is_numeric_dtype, is_float_dtype, is_integer_dtype
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
+from rapidfuzz import fuzz
+from rapidfuzz import process
 
 
 def replace_matches_in_column(df, column, string_to_match, min_ratio=90, limit=10):
