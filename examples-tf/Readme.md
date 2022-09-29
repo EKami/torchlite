@@ -1,1 +1,0 @@
-This directory contains standalone examples scripts based on Tensorflow

@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from pandas.api.types import is_numeric_dtype, is_float_dtype, is_integer_dtype
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
@@ -8,12 +7,12 @@ from fuzzywuzzy import process
 def replace_matches_in_column(df, column, string_to_match, min_ratio=90, limit=10):
     """
     Function used to replace strings in a DataFrame columns by other similar strings.
-    Very similar strings (such as "Paris" and "Paris " have a 100 fuzzy ratio and will
+    Very similar strings (such as "Paris" and "Paris ") have a 100 fuzzy ratio and will
     be merged together by this function.
     E.g:
         replace_matches_in_column(df=df, column='City', string_to_match="Paris")
     Args:
-        df (DataFrame): The DataFrame with fuzzy words
+        df (DataFrame): The DataFrame with fuzzy words'
         column (str): The column name
         string_to_match (str): The string for which you want the similar word to be searched
         min_ratio (int): A fuzzy ratio, the less it is, the more you'll replace the similar words
@@ -43,8 +42,8 @@ def replace_matches_in_column(df, column, string_to_match, min_ratio=90, limit=1
 
 def adjust_data_types(df_list, inplace=False):
     """
-    Adjust the data type of a list of pandas DataFrames to take less space
-    in memory. For instance it will turn int64/float64 to int32/float32 if
+    Adjust the data type of list of pandas DataFrames to take less space
+    in memory. For instance, it will turn int64/float64 to int32/float32 if
     the conversion can be made (sanity checks will be made).
     Args:
         df_list (list): A list of pandas DataFrame

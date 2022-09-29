@@ -1,19 +1,22 @@
 """
 This class contains a generalized learner which works across all kind of models
 """
+from typing import Union
 from datetime import datetime
 import torch
 import numpy as np
 import torchlite.torch.train_callbacks as train_callbacks
 import torchlite.torch.test_callbacks as test_callbacks
 from torch.utils.data import DataLoader
-
 from torchlite.torch.metrics import MetricsList
-from torchlite.torch.learner.cores import BaseCore
+from torchlite.torch.learner.cores import (
+    ClassifierCore,
+    SRPGanCore
+)
 
 
 class Learner:
-    def __init__(self, learner_core: BaseCore, use_cuda=True):
+    def __init__(self, learner_core: Union[ClassifierCore, SRPGanCore], use_cuda=True):
         """
         The learner class used to train deep neural network
         Args:
@@ -117,8 +120,7 @@ class Learner:
         Args:
             epochs (int): number of epochs
             metrics (list, None): Metrics to be evaluated by the model
-                        during training and testing.
-                        Typically you will use `metrics=['accuracy']`.
+                during training and testing. Typically, you will use `metrics=['accuracy']`.
             train_loader (DataLoader): The Dataloader for training
             valid_loader (DataLoader, optional): The Dataloader for validation
             callbacks (list, None): List of train callbacks functions
@@ -146,10 +148,10 @@ class Learner:
     def predict(self, test_loader: DataLoader, callbacks=None, flatten_predictions=True):
         """
             Launch the prediction on the given loader and pass
-            each predictions to the given callbacks.
+            each prediction to the given callbacks.
         Args:
             test_loader (DataLoader): The loader containing the test dataset.
-                This loader is expected to returns items with the same shape
+                This loader is expected to return items with the same shape
                 as the train_loader passed in train() with the difference that
                 the targets will be ignored.
             callbacks (list, None): List of test callbacks functions

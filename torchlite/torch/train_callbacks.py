@@ -2,6 +2,9 @@
 This module contains callbacks used during training/validation phases.
 """
 import os
+from pathlib import Path
+from typing import Union
+
 import torch
 import torch.optim.lr_scheduler as lr_scheduler
 
@@ -243,7 +246,7 @@ class ReduceLROnPlateau(TrainCallback):
 
 
 class ModelSaverCallback(TrainCallback):
-    def __init__(self, to_dir, epochs, every_n_epoch=1):
+    def __init__(self, to_dir: Union[str, Path], epochs, every_n_epoch=1):
         """
             Saves the model every n epochs in to_dir
         Args:
@@ -254,7 +257,7 @@ class ModelSaverCallback(TrainCallback):
         super().__init__()
         self.epochs = epochs
         self.every_n_epoch = every_n_epoch
-        self.to_dir = to_dir
+        self.to_dir = Path(to_dir)
 
     @staticmethod
     def restore_models(models, from_dir, load_with_cpu=False):
@@ -265,7 +268,7 @@ class ModelSaverCallback(TrainCallback):
         Args:
             models (list): A list of models (Pytorch modules)
             from_dir (str): The directory where the model is stored
-            load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
+            load_with_cpu (bool): Whether to load with cpu. If False load with cuda
 
         Returns:
             list: The restored models
@@ -292,7 +295,7 @@ class ModelSaverCallback(TrainCallback):
         Args:
             model (torch.Module): A model module
             file (file): A file containing the pretrained model to load in
-            load_with_cpu (bool): Whether or not to load with cpu. If False load with cuda
+            load_with_cpu (bool): Whether to load with cpu. If False load with cuda
 
         Returns:
             torch.Module: The restored model
@@ -332,7 +335,7 @@ class CycleLenCallback(TrainCallback):
     def __init__(self):
         """
             Number of cycles before lr is reset to the initial value.
-            E.g if cycle_len = 3, then the lr is varied between a maximum
+            E.g. if cycle_len = 3, then the lr is varied between a maximum
             and minimum value over 3 epochs.
         """
         # TODO implement (learner.py in fast.ai)

@@ -8,6 +8,7 @@ import numpy as np
 import torch.nn as nn
 from typing import Union
 import torchvision
+from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 
 import torchlite.data.files as tfiles
@@ -126,8 +127,10 @@ class ImageClassifierShortcut(BaseLoader):
         super().__init__(train_ds, val_ds, batch_size, shuffle, test_ds)
 
     @classmethod
-    def from_paths(cls, train_folder: str, val_folder: Union[str, None], test_folder: Union[str, None] = None,
-                   batch_size=64, transforms=None):
+    def from_paths(
+            cls, train_folder: Union[str, Path], val_folder: Union[str, Path, None],
+            test_folder: Union[str, Path, None] = None, batch_size=64, transforms=None
+    ):
         """
         Read in images and their labels given as sub-folder names
 

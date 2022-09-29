@@ -40,8 +40,10 @@ def main():
     epochs = 2
     root_dir = "/tmp"
     # TODO in the future use https://quiltdata.com/
-    fetcher.WebFetcher.download_dataset("https://f002.backblazeb2.com/file/torchlite-data/dogscats.zip",
-                                        root_dir, True)
+    fetcher.WebFetcher.download_dataset(
+        "https://f002.backblazeb2.com/file/torchlite-data/dogscats.zip",
+        root_dir, True
+    )
     root_dir = "/tmp/dogscats"
     root_dir = Path(root_dir)
     train_folder = root_dir / "train"
@@ -50,16 +52,19 @@ def main():
     test_image_name = "12500.jpg"
 
     # Image augmentation/transformations
-    transformations = transforms.Compose([transforms.Resize((224, 224)),
-                                          transforms.ToTensor(),
-                                          transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                               std=[0.229, 0.224, 0.225]),
-                                          ])
-    shortcut = ImageClassifierShortcut.from_paths(train_folder=train_folder.absolute(),
-                                                  val_folder=val_folder.absolute(),
-                                                  test_folder=test_folder.absolute(),
-                                                  transforms=transformations,
-                                                  batch_size=batch_size)
+    transformations = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
+    shortcut = ImageClassifierShortcut.from_paths(
+        train_folder=train_folder.absolute(),
+        val_folder=val_folder.absolute(),
+        test_folder=test_folder.absolute(),
+        transforms=transformations,
+        batch_size=batch_size
+    )
 
     net = shortcut.get_resnet_model()
     # Don't optimize the frozen layers parameters of resnet

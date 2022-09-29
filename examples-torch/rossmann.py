@@ -16,7 +16,6 @@ import isoweek
 import torch.optim as optim
 from tqdm import tqdm
 
-import datetime
 from sklearn.preprocessing import StandardScaler
 from torchlite.torch.learner import Learner
 from torchlite.torch.learner.cores import ClassifierCore
@@ -27,7 +26,6 @@ import torchlite.pandas.date as edate
 from torchlite.torch.train_callbacks import CosineAnnealingCallback
 from torchlite.pandas.tabular_encoder import TreeEncoder
 import torchlite.pandas.merger as tmerger
-import torchlite.pandas.splitter as tsplitter
 
 
 def to_csv(test_file, output_file, identifier_field, predicted_field,

@@ -7,8 +7,7 @@ with open('README.md') as f:
 setup(
     name='torchlite',
     version=torchlite.__version__,
-
-    description='A high level library on top of machine learning frameworks',
+    description='A high level library on top of Pytorch',
     long_description=long_description,
     # Markdown on pypi https://dustingram.com/articles/2018/03/16/markdown-descriptions-on-pypi
     long_description_content_type="text/markdown",
@@ -25,16 +24,16 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10'
     ],
 
     keywords='development',
     packages=find_packages(exclude=['tests']),
-    install_requires=["isoweek", "tqdm", "bcolz", "kaggle_data", "opencv_python", "torch", "torchvision",
-                      "tensorflow-gpu", "scikit_image", "setuptools", "numpy", "matplotlib", "scipy", "Pillow",
-                      "scikit_learn", "tensorboardX", "typing", "PyYAML", "Augmentor", "feather-format",
+    install_requires=["isoweek", "tqdm", "opencv_python", "torch", "torchvision",
+                      "scikit_image", "setuptools", "numpy", "pandas", "matplotlib", "scipy",
+                      "Pillow", "scikit_learn", "tensorboardX", "PyYAML", "Augmentor",
                       "fuzzywuzzy", "python-Levenshtein", "category_encoders",
                       find_packages(exclude=["*.tests", "*.tests.*", "tests.*",
                                              "tests", "torchlite.*", "torchvision.*"])],

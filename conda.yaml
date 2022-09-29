@@ -1,0 +1,32 @@
+# Dump with `conda env export -n torch > conda.yaml`
+# The user of that lib will need to have the same deps installed
+name: torch
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip=22.1.2
+  - isoweek=1.3.3
+  - tqdm=4.64.1
+  - opencv=4.6.0
+  - Pillow=9.2.0
+  - pandas=1.5.0
+  - scikit-learn=1.1.1
+  - scikit-image=0.19.2
+  - setuptools
+  - numpy=1.23.3
+  - matplotlib=3.5.2
+  - tensorboardX=2.2
+  - category_encoders=1.2.5
+  - fuzzywuzzy=0.18.0
+  - python-levenshtein=0.12.2
+  - wandb=0.13.1
+  - pytorch=1.12.1
+  - torchvision=0.13.1
+  - torchaudio=0.12.1
+  - cudatoolkit=11.6
+  - pip:
+      - pyyaml==6.0
+      - Augmentor==0.2.10
